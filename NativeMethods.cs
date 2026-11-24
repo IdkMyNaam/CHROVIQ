@@ -230,6 +230,45 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
 
+    // ---------- Blur behind a window (undocumented, used by many apps since Windows 10) ----------
+
+    public enum AccentState
+    {
+        Disabled = 0,
+        BlurBehind = 3,
+        AcrylicBlurBehind = 4,
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ACCENT_POLICY
+    {
+        public AccentState AccentState;
+        public int AccentFlags;
+        public uint GradientColor; // tint, 0xAABBGGRR
+        public int AnimationId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WINDOWCOMPOSITIONATTRIBDATA
+    {
+        public int Attribute;
+        public IntPtr Data;
+        public int SizeOfData;
+    }
+
+    public const int WCA_ACCENT_POLICY = 19;
+
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowCompositionAttribute(IntPtr hwnd, ref WINDOWCOMPOSITIONATTRIBDATA data);
+
+    // ---------- Rounded window corners (Windows 11) ----------
+
+    public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    public const int DWMWCP_ROUND = 2;
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
     // ---------- Keyboard (for Win+A / Win+N shortcuts) ----------
 
     public const byte VK_LWIN = 0x5B;

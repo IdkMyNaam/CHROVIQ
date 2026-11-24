@@ -64,10 +64,68 @@ public class TaskbarModule
     public string? ToolTip { get; set; }
 }
 
+/// <summary>How the bar looks. Every value has a default, so a design file only needs what it changes.</summary>
+public class TaskbarLook
+{
+    /// <summary>Bar height in pixels at 100% scaling.</summary>
+    public double Height { get; set; } = 40;
+
+    /// <summary>Background color: "#RRGGBB", or "#AARRGGBB" with transparency (AA: 00 = invisible, FF = solid).</summary>
+    public string Background { get; set; } = "#F01C1C1C";
+
+    /// <summary>Text and icon color.</summary>
+    public string Foreground { get; set; } = "#FFFFFF";
+
+    /// <summary>Color of the line under the active window. Empty: the Windows accent color.</summary>
+    public string? Accent { get; set; }
+
+    public string FontFamily { get; set; } = "Segoe UI";
+
+    public double FontSize { get; set; } = 12;
+
+    /// <summary>Rounded corners of the bar itself (mostly for the floating dock).</summary>
+    public double CornerRadius { get; set; }
+
+    /// <summary>Rounded corners of buttons on the bar.</summary>
+    public double ButtonCornerRadius { get; set; } = 4;
+
+    /// <summary>Window buttons show only the icon (title on hover).</summary>
+    public bool WindowIconsOnly { get; set; }
+
+    /// <summary>Maximum width of a window button with a title.</summary>
+    public double WindowButtonWidth { get; set; } = 200;
+
+    /// <summary>
+    /// Blur what is behind the bar (use a see-through Background, like "#801C1C1C").
+    /// Experimental: uses an undocumented Windows feature; if it fails, the bar is drawn without blur.
+    /// Not used with a floating dock yet (the dock is drawn with its Background color instead).
+    /// </summary>
+    public bool Blur { get; set; }
+
+    /// <summary>Set to float the bar as a dock instead of filling the screen edge. Empty: normal full-width bar.</summary>
+    public FloatingDock? Floating { get; set; }
+}
+
+/// <summary>A bar that floats away from the screen edge and is only as wide as its contents.</summary>
+public class FloatingDock
+{
+    /// <summary>Distance from the screen edge, in pixels at 100% scaling.</summary>
+    public double Margin { get; set; } = 8;
+
+    /// <summary>
+    /// Reserve screen space so maximized windows stay clear of the dock.
+    /// False: the dock floats over windows (and doesn't take space).
+    /// </summary>
+    public bool ReserveSpace { get; set; } = true;
+}
+
 /// <summary>A whole taskbar layout: which modules go in the left, center and right zones.</summary>
 public class TaskbarDesign
 {
     public string Name { get; set; } = "New design";
+
+    /// <summary>Size, colors, font and style. Missing in a file: the default look.</summary>
+    public TaskbarLook Look { get; set; } = new();
 
     /// <summary>Modules aligned to the left edge of the bar.</summary>
     public List<TaskbarModule> Left { get; set; } = new();
@@ -120,7 +178,35 @@ public class TaskbarDesign
         Right = { new TaskbarModule { Type = ModuleType.Clock, TimeFormat = "HH:mm", DateFormat = "" } },
     };
 
-    public static List<TaskbarDesign> BuiltIn() => new() { Classic(), Centered(), Minimal() };
+    /// <summary>A floating, rounded dock at the bottom: launcher icons and window icons, nothing else.</summary>
+    public static TaskbarDesign Dock() => new()
+    {
+        Name = "Dock",
+        Look = new TaskbarLook
+        {
+            Height = 52,
+            Background = "#CC202020",
+            CornerRadius = 14,
+            ButtonCornerRadius = 8,
+            WindowIconsOnly = true,
+            Floating = new FloatingDock { Margin = 8, ReserveSpace = true },
+        },
+        Center =
+        {
+            M(ModuleType.Menu),
+            new TaskbarModule
+            {
+                Type = ModuleType.PinnedApps,
+                Apps = new() { @"%SystemRoot%\explorer.exe", @"%SystemRoot%\System32\notepad.exe" },
+            },
+            new TaskbarModule { Type = ModuleType.Spacer, Width = 8 },
+            M(ModuleType.WindowList),
+            new TaskbarModule { Type = ModuleType.Spacer, Width = 8 },
+            new TaskbarModule { Type = ModuleType.Clock, TimeFormat = "HH:mm", DateFormat = "" },
+        },
+    };
+
+    public static List<TaskbarDesign> BuiltIn() => new() { Classic(), Centered(), Minimal(), Dock() };
 
     private static TaskbarModule M(ModuleType type) => new() { Type = type };
 }

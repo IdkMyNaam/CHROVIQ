@@ -10,7 +10,16 @@ namespace WindowsCustomizer;
 /// </summary>
 public sealed class TaskButtonPanel : Panel
 {
-    public double MaxItemWidth { get; set; } = 200;
+    // A dependency property, so the window list's panel template can set it per design.
+    public static readonly DependencyProperty MaxItemWidthProperty = DependencyProperty.Register(
+        nameof(MaxItemWidth), typeof(double), typeof(TaskButtonPanel),
+        new FrameworkPropertyMetadata(200.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public double MaxItemWidth
+    {
+        get => (double)GetValue(MaxItemWidthProperty);
+        set => SetValue(MaxItemWidthProperty, value);
+    }
 
     private double ItemWidth(double available) =>
         InternalChildren.Count == 0 ? 0

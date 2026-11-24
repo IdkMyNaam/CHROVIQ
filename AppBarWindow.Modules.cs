@@ -23,6 +23,19 @@ public partial class AppBarWindow
     /// </summary>
     private UIElement BuildLayout()
     {
+        // Floating dock: one row, left + center + right after each other, as wide as the contents.
+        if (_look.Floating != null)
+        {
+            var row = new DockPanel { LastChildFill = false };
+            foreach (var module in _design.Left.Concat(_design.Center).Concat(_design.Right))
+            {
+                var element = BuildModuleSafely(module);
+                DockPanel.SetDock(element, Dock.Left);
+                row.Children.Add(element);
+            }
+            return row;
+        }
+
         var grid = new Grid();
         bool hasCenter = _design.Center.Count > 0;
 
@@ -118,7 +131,11 @@ public partial class AppBarWindow
     {
         var squares = new System.Windows.Controls.Primitives.UniformGrid { Rows = 2, Columns = 2, Width = 14, Height = 14 };
         for (int i = 0; i < 4; i++)
-            squares.Children.Add(new Border { Background = Brushes.White, Margin = new Thickness(0.75), CornerRadius = new CornerRadius(1) });
+        {
+            var square = new Border { Margin = new Thickness(0.75), CornerRadius = new CornerRadius(1) };
+            square.SetResourceReference(Border.BackgroundProperty, "BarForeground"); // text color of the design
+            squares.Children.Add(square);
+        }
 
         var button = BarButton(squares, "Start");
         button.Click += (_, _) => PressWinKey();
@@ -127,11 +144,19 @@ public partial class AppBarWindow
 
     private FrameworkElement WindowListModule()
     {
+        // Icon-only buttons are square-ish; titled buttons get the design's maximum width.
+        double maxWidth = _look.WindowIconsOnly
+            ? Math.Max(32, BarHeight)
+            : Math.Clamp(_look.WindowButtonWidth, 40, 600);
+
+        var panel = new FrameworkElementFactory(typeof(TaskButtonPanel));
+        panel.SetValue(TaskButtonPanel.MaxItemWidthProperty, maxWidth);
+
         return new ItemsControl
         {
             ItemsSource = _tracker?.Windows,
-            ItemTemplate = (DataTemplate)Resources["TaskWindowTemplate"],
-            ItemsPanel = (ItemsPanelTemplate)Resources["TaskButtonsPanel"],
+            ItemTemplate = (DataTemplate)Resources[_look.WindowIconsOnly ? "TaskWindowIconTemplate" : "TaskWindowTemplate"],
+            ItemsPanel = new ItemsPanelTemplate(panel),
             Focusable = false,
         };
     }

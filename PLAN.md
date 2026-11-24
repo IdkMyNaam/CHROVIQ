@@ -39,8 +39,8 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [x] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
 - [x] Choose which modules show, their order, and zone (left / center / right) — in the design JSON files for now
 - [x] Save a taskbar design as JSON (`%AppData%\WindowsCustomizer\Taskbars`), reloaded when the file changes
-- [ ] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title
-- [ ] "Floating dock" style (margins from the screen edge, rounded, centered)
+- [x] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title (blur is experimental, not yet with the floating dock)
+- [x] "Floating dock" style (margins from the screen edge, rounded, centered; reserves space or floats over windows)
 - [ ] Link a design to a profile
 - [ ] Taskbar designer window with a live preview
 - [ ] Import/export designs (ties in with "Import/export themes" below)

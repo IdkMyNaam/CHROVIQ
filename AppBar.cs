@@ -25,7 +25,7 @@ public enum TaskbarButtons
 /// Registers a window as an "application desktop toolbar" (SHAppBarMessage), so Windows reserves
 /// a strip of one monitor for it and maximized windows don't cover it.
 /// </summary>
-public sealed class AppBar : IDisposable
+internal sealed class AppBar : IDisposable
 {
     private const int WM_ACTIVATE = 0x0006;
     private const int WM_WINDOWPOSCHANGED = 0x0047;
@@ -37,19 +37,29 @@ public sealed class AppBar : IDisposable
     private readonly uint _callbackMessage;
     private readonly uint _taskbarCreatedMessage;
     private readonly TaskbarEdge _edge;
-    private readonly double _thicknessDip;
+    private readonly double _reserveDip;
     private readonly string _monitorDevice;
+    private readonly PlaceWindow _place;
     private bool _registered;
+
+    /// <summary>
+    /// Moves the bar's window. <paramref name="strip"/> is the reserved strip at the edge
+    /// (zero high when nothing is reserved), in physical pixels; <paramref name="scale"/> is the monitor's scaling.
+    /// </summary>
+    public delegate void PlaceWindow(RECT strip, double scale);
 
     /// <summary>True when a fullscreen app (game, video) covers this bar's monitor, false when that ends.</summary>
     public event Action<bool>? FullscreenChanged;
 
     /// <param name="monitorDevice">Device name of the monitor to dock on, like "\\.\DISPLAY1".</param>
-    public AppBar(Window window, string monitorDevice, TaskbarEdge edge, double thicknessDip)
+    /// <param name="reserveDip">How much screen to reserve at the edge (WPF units); 0 reserves nothing.</param>
+    /// <param name="place">Positions the window inside (or at) the reserved strip.</param>
+    public AppBar(Window window, string monitorDevice, TaskbarEdge edge, double reserveDip, PlaceWindow place)
     {
         _monitorDevice = monitorDevice;
         _edge = edge;
-        _thicknessDip = thicknessDip;
+        _reserveDip = reserveDip;
+        _place = place;
         _hwnd = new WindowInteropHelper(window).EnsureHandle();
         _source = HwndSource.FromHwnd(_hwnd);
         _source.AddHook(WndProc);
@@ -78,7 +88,7 @@ public sealed class AppBar : IDisposable
         UpdatePosition();
     }
 
-    /// <summary>Asks Windows for a free strip at our edge, reserves it, and moves the window there.</summary>
+    /// <summary>Asks Windows for a free strip at our edge, reserves it, and lets the owner place the window.</summary>
     public void UpdatePosition()
     {
         if (!_registered) return;
@@ -89,20 +99,26 @@ public sealed class AppBar : IDisposable
 
         // Win32 works in physical pixels; convert our size from WPF's device-independent units.
         // Use the target monitor's scaling, not the window's: the window may still be on another monitor.
-        int thickness = (int)Math.Round(_thicknessDip * Monitors.ScaleOf(monitor));
+        double scale = Monitors.ScaleOf(monitor);
+        int thickness = (int)Math.Round(_reserveDip * scale);
 
         var data = NewData();
         data.rc = info.Bounds;
         ApplyThickness(ref data.rc, thickness);
 
         // Windows may move the rectangle, for example below another bar on the same edge.
+        // With nothing reserved (thickness 0) we still stay registered, to hear about fullscreen apps.
         SHAppBarMessage(ABM_QUERYPOS, ref data);
         ApplyThickness(ref data.rc, thickness);
         SHAppBarMessage(ABM_SETPOS, ref data);
 
-        var rc = data.rc;
-        SetWindowPos(_hwnd, HWND_TOPMOST, rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top, SWP_NOACTIVATE);
+        _place(data.rc, scale);
     }
+
+    /// <summary>Moves the window to a rectangle in physical pixels, staying on top.</summary>
+    public static void MoveWindow(Window window, RECT rc) =>
+        SetWindowPos(new WindowInteropHelper(window).Handle, HWND_TOPMOST,
+            rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top, SWP_NOACTIVATE);
 
     /// <summary>True if the foreground window covers this bar's whole monitor (a game or fullscreen video).</summary>
     private bool IsFullscreenOnOurMonitor()

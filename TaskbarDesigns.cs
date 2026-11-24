@@ -50,7 +50,8 @@ public static class TaskbarDesigns
                 if (string.IsNullOrWhiteSpace(design.Name))
                     design.Name = Path.GetFileNameWithoutExtension(file);
 
-                // JSON "null" lists would crash the bar later.
+                // JSON "null" values would crash the bar later.
+                design.Look ??= new();
                 design.Left ??= new();
                 design.Center ??= new();
                 design.Right ??= new();

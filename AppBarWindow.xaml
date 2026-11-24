@@ -5,11 +5,23 @@
         Title="Windows Customizer taskbar"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False" Topmost="True"
         WindowStartupLocation="Manual" Width="800" Height="40"
-        Background="#F01C1C1C" Foreground="White" FontFamily="Segoe UI" FontSize="12">
+        AllowsTransparency="True" Background="Transparent"
+        Foreground="{DynamicResource BarForeground}" FontFamily="Segoe UI" FontSize="12">
+    <!-- The window itself is transparent; "Surface" below draws the bar, so the bar can have
+         see-through colors, rounded corners and float as a dock. Colors and sizes come from the
+         design's Look (set in AppBarWindow.ApplyLook). -->
     <Window.Resources>
+        <!-- Defaults; replaced by ApplyLook. -->
+        <SolidColorBrush x:Key="BarBackground" Color="#F01C1C1C" />
+        <SolidColorBrush x:Key="BarForeground" Color="White" />
+        <SolidColorBrush x:Key="BarHover" Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="BarPressed" Color="#14FFFFFF" />
+        <SolidColorBrush x:Key="BarActive" Color="#33FFFFFF" />
+        <CornerRadius x:Key="ButtonCornerRadius">4</CornerRadius>
+
         <!-- Flat button that highlights on hover, used for everything on the bar. -->
         <Style x:Key="BarButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource BarForeground}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Padding" Value="8,0" />
@@ -18,7 +30,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <!-- Bottom border: accent line under the active window's button. -->
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="{DynamicResource ButtonCornerRadius}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center"
@@ -26,10 +39,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BarHover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BarPressed}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -39,11 +52,7 @@
 
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
-        <!-- Window list module: buttons share the space, at most 200 each. -->
-        <ItemsPanelTemplate x:Key="TaskButtonsPanel">
-            <local:TaskButtonPanel MaxItemWidth="200" />
-        </ItemsPanelTemplate>
-
+        <!-- Window list module: icon + title, buttons share the space (max width set in code). -->
         <DataTemplate x:Key="TaskWindowTemplate" DataType="{x:Type local:TaskWindow}">
             <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="8,0"
                     HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}"
@@ -62,13 +71,34 @@
             <DataTemplate.Triggers>
                 <!-- The window that is in front gets a lighter background and an accent-colored border. -->
                 <DataTrigger Binding="{Binding IsActive}" Value="True">
-                    <Setter TargetName="Btn" Property="Background" Value="#33FFFFFF" />
+                    <Setter TargetName="Btn" Property="Background" Value="{DynamicResource BarActive}" />
+                    <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Window list module, icon only (Look.WindowIconsOnly); the title shows on hover. -->
+        <DataTemplate x:Key="TaskWindowIconTemplate" DataType="{x:Type local:TaskWindow}">
+            <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="6,0"
+                    ToolTip="{Binding Title}" Click="WindowButton_Click">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Close window" Click="CloseWindow_Click" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Image Source="{Binding Icon}" Width="24" Height="24" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                    <Setter TargetName="Btn" Property="Background" Value="{DynamicResource BarActive}" />
                     <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
     </Window.Resources>
 
-    <!-- Filled from the taskbar design: left, center and right zones (see TaskbarRenderer). -->
-    <Border x:Name="Root" Margin="4,3" />
+    <!-- The visible bar. Its contents are built from the design (see AppBarWindow.Modules.cs). -->
+    <Border x:Name="Surface" Background="{DynamicResource BarBackground}">
+        <Border x:Name="Root" Margin="4,3" />
+    </Border>
 </Window>
