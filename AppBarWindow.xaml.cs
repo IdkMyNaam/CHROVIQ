@@ -9,7 +9,7 @@ using static WindowsCustomizer.NativeMethods;
 namespace WindowsCustomizer;
 
 /// <summary>
-/// The custom taskbar: an app bar on the top or bottom edge of the primary monitor with
+/// The custom taskbar for one monitor: an app bar on the top or bottom edge with
 /// a button per open window, battery level, Quick Settings and a clock.
 /// The Windows taskbar keeps running; this bar only reserves its own strip of screen.
 /// </summary>
@@ -19,14 +19,20 @@ public partial class AppBarWindow : Window
     private const double MaxButtonWidth = 200;
 
     private readonly TaskbarEdge _edge;
+    private readonly string _monitorDevice;
+    private readonly bool _onlyOwnMonitorWindows;
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private AppBar? _appBar;
     private WindowTracker? _tracker;
     private DateTime _lastBatteryCheck;
 
-    public AppBarWindow(TaskbarEdge edge)
+    /// <param name="monitorDevice">The monitor this bar docks on (see <see cref="Monitors"/>).</param>
+    /// <param name="onlyOwnMonitorWindows">Show only buttons for windows on this monitor, instead of all windows.</param>
+    public AppBarWindow(string monitorDevice, TaskbarEdge edge, bool onlyOwnMonitorWindows)
     {
+        _monitorDevice = monitorDevice;
         _edge = edge;
+        _onlyOwnMonitorWindows = onlyOwnMonitorWindows;
         InitializeComponent();
 
         // Accent line under the active window; follows accent color changes (including from our profiles).
@@ -53,15 +59,17 @@ public partial class AppBarWindow : Window
         long exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
 
-        _appBar = new AppBar(this, _edge, BarHeight);
+        _appBar = new AppBar(this, _monitorDevice, _edge, BarHeight);
         _appBar.FullscreenChanged += fullscreen =>
         {
-            // Get out of the way of games and fullscreen videos.
+            // Get out of the way of games and fullscreen videos on this monitor.
             if (fullscreen) Hide();
             else Show();
         };
 
-        _tracker = new WindowTracker(this);
+        _tracker = _onlyOwnMonitorWindows
+            ? new WindowTracker(this, hwnd => Monitors.DeviceOf(hwnd) == _monitorDevice)
+            : new WindowTracker(this);
         _tracker.Windows.CollectionChanged += (_, _) => UpdateButtonWidth();
         WindowButtons.ItemsSource = _tracker.Windows;
         UpdateButtonWidth();

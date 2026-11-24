@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -78,6 +79,7 @@ public partial class MainWindow : Window
         _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
         ShowTaskbarCheck.IsChecked = _settings.ShowTaskbar;
         TaskbarEdgeBox.SelectedIndex = (int)_settings.TaskbarEdge;
+        TaskbarButtonsBox.SelectedIndex = (int)_settings.TaskbarButtons;
         _loading = false;
         GamesBox.Text = string.Join(", ", _settings.GameProcesses);
 
@@ -94,6 +96,7 @@ public partial class MainWindow : Window
 
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
+        WatchDisplayChanges();
 
         if (_settings.ShowTaskbar)
         {
@@ -122,7 +125,7 @@ public partial class MainWindow : Window
             _hotKey.Dispose();
             // Bring the Windows taskbar back first, but keep the setting, so it is hidden again next start.
             WindowsTaskbar.Restore();
-            _appBarWindow?.Close(); // releases the reserved screen space
+            CloseBars(); // releases the reserved screen space
             _trayIcon.Dispose();
         };
     }
@@ -152,10 +155,10 @@ public partial class MainWindow : Window
         }
 
         yield return AppMenuItem.Separator;
-        yield return new AppMenuItem("Show custom taskbar", () => SetTaskbarVisible(_appBarWindow == null),
-            IsChecked: _appBarWindow != null);
+        yield return new AppMenuItem("Show custom taskbar", () => SetTaskbarVisible(!TaskbarShown),
+            IsChecked: TaskbarShown);
         yield return new AppMenuItem("Hide Windows taskbar", () => SetWindowsTaskbarHidden(!WindowsTaskbar.IsHiding),
-            IsChecked: WindowsTaskbar.IsHiding, IsEnabled: _appBarWindow != null);
+            IsChecked: WindowsTaskbar.IsHiding, IsEnabled: TaskbarShown);
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
@@ -642,34 +645,28 @@ public partial class MainWindow : Window
 
     // ---------- Custom taskbar ----------
 
-    private AppBarWindow? _appBarWindow;
+    // One bar per monitor while the custom taskbar is on.
+    private readonly List<AppBarWindow> _appBars = new();
+    private bool TaskbarShown => _appBars.Count > 0;
+
+    // Monitor layout the bars were made for; compared after display changes.
+    private string _monitorLayout = "";
+    private DispatcherTimer? _displayChangeTimer;
 
     /// <summary>Shows or hides the custom taskbar and remembers the choice.</summary>
     private void SetTaskbarVisible(bool visible)
     {
-        if (visible && _appBarWindow == null)
+        if (visible && !TaskbarShown)
         {
-            var bar = new AppBarWindow(_settings.TaskbarEdge) { GetMenuItems = BuildAppMenu };
-            try
-            {
-                bar.Show();
-                _appBarWindow = bar;
-            }
-            catch (Exception ex)
-            {
-                bar.Close();
-                StatusText.Text = $"Could not show the custom taskbar: {ex.Message}";
-                visible = false;
-            }
+            OpenBars();
+            visible = TaskbarShown;
         }
-        else if (!visible && _appBarWindow != null)
+        else if (!visible && TaskbarShown)
         {
             // Never leave the user without any taskbar.
             if (WindowsTaskbar.IsHiding)
                 SetWindowsTaskbarHidden(false);
-
-            _appBarWindow.Close();
-            _appBarWindow = null;
+            CloseBars();
         }
 
         ShowTaskbarCheck.IsChecked = visible;
@@ -681,10 +678,88 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Opens a bar on every connected monitor.</summary>
+    private void OpenBars()
+    {
+        _monitorLayout = Monitors.Layout();
+        bool onlyOwnMonitor = _settings.TaskbarButtons == TaskbarButtons.OwnMonitor;
+        var errors = new List<string>();
+
+        foreach (var monitor in Monitors.All())
+        {
+            var bar = new AppBarWindow(monitor.Device, _settings.TaskbarEdge, onlyOwnMonitor) { GetMenuItems = BuildAppMenu };
+            try
+            {
+                bar.Show();
+                _appBars.Add(bar);
+            }
+            catch (Exception ex)
+            {
+                bar.Close();
+                errors.Add($"{monitor.Device}: {ex.Message}");
+            }
+        }
+
+        if (errors.Count > 0)
+            StatusText.Text = $"Could not show the custom taskbar on {string.Join("; ", errors)}";
+    }
+
+    private void CloseBars()
+    {
+        foreach (var bar in _appBars)
+            bar.Close(); // each bar gives its reserved screen space back
+        _appBars.Clear();
+    }
+
+    /// <summary>
+    /// Recreates the bars (new settings, or monitors added/removed). The Windows taskbar stays hidden
+    /// meanwhile if it was, unless no bar could be opened at all.
+    /// </summary>
+    private void RebuildBars()
+    {
+        if (!TaskbarShown) return;
+        CloseBars();
+        OpenBars();
+        if (!TaskbarShown && WindowsTaskbar.IsHiding)
+            SetWindowsTaskbarHidden(false);
+        ShowTaskbarCheck.IsChecked = TaskbarShown;
+        UpdateHideWindowsTaskbarCheck();
+    }
+
+    /// <summary>Watches for monitors being added, removed or rearranged.</summary>
+    private void WatchDisplayChanges()
+    {
+        const int WM_DISPLAYCHANGE = 0x007E;
+        var source = HwndSource.FromHwnd(new WindowInteropHelper(this).EnsureHandle());
+        source.AddHook((IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+        {
+            if (msg == WM_DISPLAYCHANGE)
+            {
+                // Windows sends several of these while it rearranges; act once it has settled.
+                _displayChangeTimer ??= CreateDisplayChangeTimer();
+                _displayChangeTimer.Stop();
+                _displayChangeTimer.Start();
+            }
+            return IntPtr.Zero;
+        });
+    }
+
+    private DispatcherTimer CreateDisplayChangeTimer()
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (TaskbarShown && Monitors.Layout() != _monitorLayout)
+                RebuildBars();
+        };
+        return timer;
+    }
+
     /// <summary>Hides or shows the real Windows taskbar. Hiding needs the custom taskbar to be showing.</summary>
     private void SetWindowsTaskbarHidden(bool hide)
     {
-        if (hide && _appBarWindow == null) hide = false;
+        if (hide && !TaskbarShown) hide = false;
 
         try
         {
@@ -714,7 +789,7 @@ public partial class MainWindow : Window
 
     private void UpdateHideWindowsTaskbarCheck()
     {
-        HideWindowsTaskbarCheck.IsEnabled = _appBarWindow != null;
+        HideWindowsTaskbarCheck.IsEnabled = TaskbarShown;
         HideWindowsTaskbarCheck.IsChecked = WindowsTaskbar.IsHiding;
     }
 
@@ -732,16 +807,18 @@ public partial class MainWindow : Window
 
         _settings.TaskbarEdge = edge;
         SaveSettings();
+        RebuildBars(); // the edge is fixed while a bar is registered
+    }
 
-        // The edge is fixed while the bar is registered, so recreate it on the new edge.
-        if (_appBarWindow != null)
-        {
-            bool wasHidingWindowsTaskbar = WindowsTaskbar.IsHiding;
-            SetTaskbarVisible(false); // also shows the Windows taskbar for a moment
-            SetTaskbarVisible(true);
-            if (wasHidingWindowsTaskbar)
-                SetWindowsTaskbarHidden(true);
-        }
+    private void TaskbarButtonsBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || TaskbarButtonsBox.SelectedIndex < 0) return;
+        var mode = (TaskbarButtons)TaskbarButtonsBox.SelectedIndex;
+        if (mode == _settings.TaskbarButtons) return;
+
+        _settings.TaskbarButtons = mode;
+        SaveSettings();
+        RebuildBars();
     }
 
     private void PauseForGamesCheck_Click(object sender, RoutedEventArgs e)

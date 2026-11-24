@@ -88,6 +88,13 @@
                         <ComboBoxItem Content="Bottom" />
                     </ComboBox>
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Window buttons on" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
+                    <ComboBox x:Name="TaskbarButtonsBox" Width="200" SelectionChanged="TaskbarButtonsBox_SelectionChanged">
+                        <ComboBoxItem Content="All bars" />
+                        <ComboBoxItem Content="The bar of the window's monitor" />
+                    </ComboBox>
+                </StackPanel>
 
                 <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"

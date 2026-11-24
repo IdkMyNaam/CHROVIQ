@@ -8,6 +8,12 @@
     <UseWPF>true</UseWPF>
     <!-- Only for the tray icon (NotifyIcon); WPF has none. -->
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- Per-monitor DPI awareness, see app.manifest. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFAC010 suggests WinForms' SetHighDpiMode instead of the manifest. That API only works for
+         apps started by WinForms; this is a WPF app (WinForms is only used for the tray icon),
+         so the manifest is the right place. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

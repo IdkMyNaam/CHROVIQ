@@ -33,6 +33,9 @@ public class AppSettings
     /// </summary>
     public bool? TaskbarAutoHideBefore { get; set; }
 
+    /// <summary>Which bar shows a window's button when the custom taskbar is on several monitors.</summary>
+    public TaskbarButtons TaskbarButtons { get; set; } = TaskbarButtons.AllBars;
+
     /// <summary>Screen edge of the custom taskbar.</summary>
     public TaskbarEdge TaskbarEdge { get; set; } = TaskbarEdge.Top;
 

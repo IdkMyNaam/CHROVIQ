@@ -12,9 +12,18 @@ public enum TaskbarEdge
     Bottom,
 }
 
+/// <summary>Where window buttons appear when there is a bar on each monitor (like the Windows setting).</summary>
+public enum TaskbarButtons
+{
+    /// <summary>Every bar shows every window.</summary>
+    AllBars,
+    /// <summary>Each bar shows only the windows on its own monitor.</summary>
+    OwnMonitor,
+}
+
 /// <summary>
 /// Registers a window as an "application desktop toolbar" (SHAppBarMessage), so Windows reserves
-/// a strip of the primary monitor for it and maximized windows don't cover it.
+/// a strip of one monitor for it and maximized windows don't cover it.
 /// </summary>
 public sealed class AppBar : IDisposable
 {
@@ -29,13 +38,16 @@ public sealed class AppBar : IDisposable
     private readonly uint _taskbarCreatedMessage;
     private readonly TaskbarEdge _edge;
     private readonly double _thicknessDip;
+    private readonly string _monitorDevice;
     private bool _registered;
 
-    /// <summary>True when a fullscreen app (game, video) starts, false when it ends.</summary>
+    /// <summary>True when a fullscreen app (game, video) covers this bar's monitor, false when that ends.</summary>
     public event Action<bool>? FullscreenChanged;
 
-    public AppBar(Window window, TaskbarEdge edge, double thicknessDip)
+    /// <param name="monitorDevice">Device name of the monitor to dock on, like "\\.\DISPLAY1".</param>
+    public AppBar(Window window, string monitorDevice, TaskbarEdge edge, double thicknessDip)
     {
+        _monitorDevice = monitorDevice;
         _edge = edge;
         _thicknessDip = thicknessDip;
         _hwnd = new WindowInteropHelper(window).EnsureHandle();
@@ -71,16 +83,16 @@ public sealed class AppBar : IDisposable
     {
         if (!_registered) return;
 
-        // Win32 works in physical pixels; convert our size from WPF's device-independent units.
-        uint dpi = GetDpiForWindow(_hwnd);
-        double scale = dpi == 0 ? 1.0 : dpi / 96.0;
-        int thickness = (int)Math.Round(_thicknessDip * scale);
+        // The monitor may be gone (unplugged); the owner rebuilds the bars then.
+        if (Monitors.Find(_monitorDevice) is not { } found) return;
+        var (monitor, info) = found;
 
-        var monitorInfo = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        GetMonitorInfo(MonitorFromPoint(new POINT(), MONITOR_DEFAULTTOPRIMARY), ref monitorInfo);
+        // Win32 works in physical pixels; convert our size from WPF's device-independent units.
+        // Use the target monitor's scaling, not the window's: the window may still be on another monitor.
+        int thickness = (int)Math.Round(_thicknessDip * Monitors.ScaleOf(monitor));
 
         var data = NewData();
-        data.rc = monitorInfo.rcMonitor;
+        data.rc = info.Bounds;
         ApplyThickness(ref data.rc, thickness);
 
         // Windows may move the rectangle, for example below another bar on the same edge.
@@ -90,6 +102,19 @@ public sealed class AppBar : IDisposable
 
         var rc = data.rc;
         SetWindowPos(_hwnd, HWND_TOPMOST, rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top, SWP_NOACTIVATE);
+    }
+
+    /// <summary>True if the foreground window covers this bar's whole monitor (a game or fullscreen video).</summary>
+    private bool IsFullscreenOnOurMonitor()
+    {
+        var foreground = GetForegroundWindow();
+        if (foreground == IntPtr.Zero || Monitors.DeviceOf(foreground) != _monitorDevice) return false;
+        if (Monitors.Find(_monitorDevice) is not { } found) return false;
+        var info = found.info;
+        if (!GetWindowRect(foreground, out var rc)) return false;
+
+        var m = info.Bounds;
+        return rc.Left <= m.Left && rc.Top <= m.Top && rc.Right >= m.Right && rc.Bottom >= m.Bottom;
     }
 
     private void ApplyThickness(ref RECT rc, int thickness)
@@ -108,7 +133,8 @@ public sealed class AppBar : IDisposable
                     UpdatePosition(); // another bar or the Windows taskbar moved
                     break;
                 case ABN_FULLSCREENAPP:
-                    FullscreenChanged?.Invoke(lParam != IntPtr.Zero);
+                    // Windows doesn't say which monitor this is about, so check our own monitor.
+                    FullscreenChanged?.Invoke(lParam != IntPtr.Zero && IsFullscreenOnOurMonitor());
                     break;
             }
             handled = true;

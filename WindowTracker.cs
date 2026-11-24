@@ -59,19 +59,30 @@ public sealed class WindowTracker : IDisposable
     private readonly HwndSource _source;
     private readonly uint _shellHookMessage;
     private readonly DispatcherTimer _fallbackTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly Func<IntPtr, bool>? _filter;
+    private readonly WinEventProc _moveSizeEndCallback; // kept in a field so the GC doesn't collect it
+    private readonly IntPtr _moveSizeEndHook;
     private bool _refreshQueued;
 
     public ObservableCollection<TaskWindow> Windows { get; } = new();
 
     /// <param name="host">The window that receives the shell hook messages (the taskbar itself).</param>
-    public WindowTracker(Window host)
+    /// <param name="filter">Optional: only list windows for which this returns true (e.g. "is on my monitor").</param>
+    public WindowTracker(Window host, Func<IntPtr, bool>? filter = null)
     {
+        _filter = filter;
         _hwnd = new WindowInteropHelper(host).EnsureHandle();
         _source = HwndSource.FromHwnd(_hwnd);
         _source.AddHook(WndProc);
 
         _shellHookMessage = RegisterWindowMessage("SHELLHOOK");
         RegisterShellHookWindow(_hwnd);
+
+        // A window dragged to another monitor: the shell hook doesn't report that, so listen for
+        // "move/resize ended" to update the per-monitor lists right away instead of at the next timer tick.
+        _moveSizeEndCallback = (_, _, _, _, _, _, _) => QueueRefresh();
+        _moveSizeEndHook = SetWinEventHook(EVENT_SYSTEM_MOVESIZEEND, EVENT_SYSTEM_MOVESIZEEND, IntPtr.Zero,
+            _moveSizeEndCallback, 0, 0, WINEVENT_OUTOFCONTEXT);
 
         _fallbackTimer.Tick += (_, _) => Refresh();
         _fallbackTimer.Start();
@@ -105,6 +116,8 @@ public sealed class WindowTracker : IDisposable
     {
         _refreshQueued = false;
         var current = FindTaskWindows();
+        if (_filter != null)
+            current = current.Where(c => _filter(c.hwnd)).ToList();
         var foreground = GetForegroundWindow();
         var stillOpen = current.Select(c => c.hwnd).ToHashSet();
 
@@ -193,6 +206,7 @@ public sealed class WindowTracker : IDisposable
     public void Dispose()
     {
         _fallbackTimer.Stop();
+        if (_moveSizeEndHook != IntPtr.Zero) UnhookWinEvent(_moveSizeEndHook);
         DeregisterShellHookWindow(_hwnd);
         _source.RemoveHook(WndProc);
     }
