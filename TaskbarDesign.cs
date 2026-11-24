@@ -62,6 +62,32 @@ public class TaskbarModule
 
     /// <summary>Button and PinnedApps: tooltip text. Default: the file or target name.</summary>
     public string? ToolTip { get; set; }
+
+    /// <summary>Short description for lists in the taskbar designer, like "Clock (HH:mm)".</summary>
+    public override string ToString() => Type switch
+    {
+        ModuleType.Menu => "Menu button",
+        ModuleType.Start => "Start button",
+        ModuleType.WindowList => "Window list",
+        ModuleType.PinnedApps => $"Pinned apps ({Apps?.Count ?? 0})",
+        ModuleType.Clock => string.IsNullOrEmpty(TimeFormat) ? "Clock" : $"Clock ({TimeFormat})",
+        ModuleType.Battery => "Battery",
+        ModuleType.QuickSettings => "Quick Settings",
+        ModuleType.Spacer => $"Spacer ({Width ?? 16:0} px)",
+        ModuleType.Text => $"Text: {Text}",
+        ModuleType.Button => $"Button: {(string.IsNullOrEmpty(Text) ? Target ?? "(no target)" : Text)}",
+        _ => Type.ToString(),
+    };
+
+    /// <summary>A new module with sensible starting options for its type.</summary>
+    public static TaskbarModule Create(ModuleType type) => type switch
+    {
+        ModuleType.PinnedApps => new() { Type = type, Apps = new() },
+        ModuleType.Spacer => new() { Type = type, Width = 16 },
+        ModuleType.Text => new() { Type = type, Text = "Text" },
+        ModuleType.Button => new() { Type = type, Text = "Button", Icon = "E721" },
+        _ => new() { Type = type },
+    };
 }
 
 /// <summary>How the bar looks. Every value has a default, so a design file only needs what it changes.</summary>

@@ -86,6 +86,20 @@ public static class TaskbarDesigns
         File.WriteAllText(PathFor(design.Name), JsonSerializer.Serialize(design, JsonOptions));
     }
 
+    /// <summary>Removes a design's file. A built-in design comes back in its original form at the next load.</summary>
+    public static void Delete(string name)
+    {
+        var path = PathFor(name);
+        if (File.Exists(path)) File.Delete(path);
+    }
+
+    /// <summary>A deep copy (through JSON), for "Duplicate".</summary>
+    public static TaskbarDesign Clone(TaskbarDesign design) =>
+        JsonSerializer.Deserialize<TaskbarDesign>(JsonSerializer.Serialize(design, JsonOptions), JsonOptions)!;
+
+    public static bool IsBuiltIn(string name) =>
+        TaskbarDesign.BuiltIn().Any(d => d.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
+
     /// <summary>File path for a design name; characters not allowed in file names become "_".</summary>
     public static string PathFor(string name)
     {

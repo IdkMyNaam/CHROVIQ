@@ -11,8 +11,8 @@ using static WindowsCustomizer.NativeMethods;
 
 namespace WindowsCustomizer;
 
-/// <summary>Builds the bar's contents from its <see cref="TaskbarDesign"/>.</summary>
-public partial class AppBarWindow
+/// <summary>Builds the bar's contents (zones and modules) from its <see cref="TaskbarDesign"/>.</summary>
+public partial class TaskbarView
 {
     // ---------- Layout: three zones ----------
 

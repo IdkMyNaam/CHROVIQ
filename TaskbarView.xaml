@@ -1,0 +1,99 @@
+<UserControl x:Class="WindowsCustomizer.TaskbarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:WindowsCustomizer"
+             Foreground="{DynamicResource BarForeground}" FontFamily="Segoe UI" FontSize="12">
+    <!-- Draws one taskbar from a design. Used by the real bars (AppBarWindow) and by the
+         designer's preview. Colors and sizes come from the design's Look (see ApplyLook). -->
+    <UserControl.Resources>
+        <!-- Defaults; replaced by ApplyLook. -->
+        <SolidColorBrush x:Key="BarBackground" Color="#F01C1C1C" />
+        <SolidColorBrush x:Key="BarForeground" Color="White" />
+        <SolidColorBrush x:Key="BarHover" Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="BarPressed" Color="#14FFFFFF" />
+        <SolidColorBrush x:Key="BarActive" Color="#33FFFFFF" />
+        <CornerRadius x:Key="ButtonCornerRadius">4</CornerRadius>
+
+        <!-- Flat button that highlights on hover, used for everything on the bar. -->
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource BarForeground}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <!-- Bottom border: accent line under the active window's button. -->
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="{DynamicResource ButtonCornerRadius}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BarHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BarPressed}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Window list module: icon + title, buttons share the space (max width set in code). -->
+        <DataTemplate x:Key="TaskWindowTemplate" DataType="{x:Type local:TaskWindow}">
+            <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="8,0"
+                    HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}"
+                    Click="WindowButton_Click">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Close window" Click="CloseWindow_Click" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="{Binding Icon}" Width="16" Height="16"
+                           Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </DockPanel>
+            </Button>
+            <DataTemplate.Triggers>
+                <!-- The window that is in front gets a lighter background and an accent-colored border. -->
+                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                    <Setter TargetName="Btn" Property="Background" Value="{DynamicResource BarActive}" />
+                    <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Window list module, icon only (Look.WindowIconsOnly); the title shows on hover. -->
+        <DataTemplate x:Key="TaskWindowIconTemplate" DataType="{x:Type local:TaskWindow}">
+            <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="6,0"
+                    ToolTip="{Binding Title}" Click="WindowButton_Click">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Close window" Click="CloseWindow_Click" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Image Source="{Binding Icon}" Width="24" Height="24" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                    <Setter TargetName="Btn" Property="Background" Value="{DynamicResource BarActive}" />
+                    <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- The visible bar. Its contents are built from the design (see TaskbarView.Modules.cs). -->
+    <Border x:Name="Surface" Background="{DynamicResource BarBackground}">
+        <Border x:Name="Root" Margin="4,3" />
+    </Border>
+</UserControl>

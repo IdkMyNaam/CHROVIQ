@@ -42,7 +42,7 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [x] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title (blur is experimental, not yet with the floating dock)
 - [x] "Floating dock" style (margins from the screen edge, rounded, centered; reserves space or floats over windows)
 - [ ] Link a design to a profile
-- [ ] Taskbar designer window with a live preview
+- [x] Taskbar designer window with a live preview
 - [ ] Import/export designs (ties in with "Import/export themes" below)
 - [ ] Later: own widgets as plugins (see open questions)
 

@@ -164,6 +164,7 @@ public partial class MainWindow : Window
             IsChecked: TaskbarShown);
         yield return new AppMenuItem("Hide Windows taskbar", () => SetWindowsTaskbarHidden(!WindowsTaskbar.IsHiding),
             IsChecked: WindowsTaskbar.IsHiding, IsEnabled: TaskbarShown);
+        yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
@@ -859,6 +860,34 @@ public partial class MainWindow : Window
 
         _settings.TaskbarDesign = name;
         SaveSettings();
+        RebuildBars();
+    }
+
+    private TaskbarDesignerWindow? _designer;
+
+    private void OpenDesigner_Click(object sender, RoutedEventArgs e) => OpenDesigner();
+
+    /// <summary>Opens the taskbar designer, or brings it to the front if it is already open.</summary>
+    private void OpenDesigner()
+    {
+        if (_designer != null)
+        {
+            if (_designer.WindowState == WindowState.Minimized) _designer.WindowState = WindowState.Normal;
+            _designer.Activate();
+            return;
+        }
+
+        _designer = new TaskbarDesignerWindow(() => ActiveDesign().Name, UseDesign);
+        _designer.Closed += (_, _) => _designer = null;
+        _designer.Show();
+    }
+
+    /// <summary>Makes <paramref name="name"/> the design the taskbar uses (called by the designer).</summary>
+    private void UseDesign(string name)
+    {
+        _settings.TaskbarDesign = name;
+        SaveSettings();
+        LoadDesigns();  // also selects it in the dropdown
         RebuildBars();
     }
 
