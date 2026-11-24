@@ -443,6 +443,10 @@ public partial class TaskbarDesignerWindow : Window
         m.Apps ??= new List<string>();
         var apps = m.Apps;
 
+        CheckField(ModuleOptions, "Dock style", m.ShowRunning != false, v => m.ShowRunning = v ? null : false,
+            "A dot under running apps; clicking a running app switches to it instead of opening it again, " +
+            "and its windows don't get a second button in the window list.");
+
         Label(ModuleOptions, "Programs and shortcuts");
         var list = new ListBox { Height = 160, ItemsSource = apps };
         ModuleOptions.Children.Add(list);
@@ -542,6 +546,20 @@ public partial class TaskbarDesignerWindow : Window
         Header(LookOptions, "Window buttons");
         CheckField(LookOptions, "Icons only (title on hover)", look.WindowIconsOnly, v => look.WindowIconsOnly = v);
         NumberField(LookOptions, "Maximum button width", look.WindowButtonWidth, v => look.WindowButtonWidth = v, 40, 600);
+        CheckField(LookOptions, "Group windows by app", look.GroupWindows, v => look.GroupWindows = v,
+            "One button per app with a window count; clicking it lets you pick the window.");
+        CheckField(LookOptions, "Preview windows on hover", look.Thumbnails, v => look.Thumbnails = v,
+            "Live thumbnails above the button; click one to switch to that window.");
+        CheckField(LookOptions, "Middle-click closes a window", look.MiddleClickCloses, v => look.MiddleClickCloses = v);
+
+        Header(LookOptions, "Icon colors");
+        CheckField(LookOptions, "Tint icons in one color", look.TintIcons, v => look.TintIcons = v,
+            "Window and app icons in one color for a clean look; full color while the mouse is on them.");
+        ColorField(LookOptions, "Tint color", look.IconTint ?? "", v => look.IconTint = Empty(v), "Empty = the text color.");
+        CheckField(LookOptions, "Glow in each app's own color", look.IconGlow, v => look.IconGlow = v,
+            "Hover and active highlights of window buttons take the main color of the app's icon.");
+        CheckField(LookOptions, "Smooth hover fade", look.HoverFade, v => look.HoverFade = v,
+            "Highlights fade in and out instead of switching instantly.");
 
         Header(LookOptions, "Effects");
         CheckField(LookOptions, "Blur behind the bar (experimental)", look.Blur, v => look.Blur = v,

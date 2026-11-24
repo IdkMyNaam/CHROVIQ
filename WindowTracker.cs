@@ -10,32 +10,79 @@ using static WindowsCustomizer.NativeMethods;
 
 namespace WindowsCustomizer;
 
-/// <summary>One window button on the custom taskbar.</summary>
-public sealed class TaskWindow : INotifyPropertyChanged
+/// <summary>
+/// Something shown as one button in the window list: a single window (<see cref="TaskWindow"/>)
+/// or all windows of one app (<see cref="TaskGroup"/>). Both have the same properties, so one
+/// button template shows either.
+/// </summary>
+public abstract class TaskItem : INotifyPropertyChanged
 {
-    public TaskWindow(IntPtr handle) => Handle = handle;
-
-    public IntPtr Handle { get; }
-
     private string _title = "";
     public string Title { get => _title; set => Set(ref _title, value, nameof(Title)); }
 
     private ImageSource? _icon;
     public ImageSource? Icon { get => _icon; set => Set(ref _icon, value, nameof(Icon)); }
 
+    /// <summary>One-color version of <see cref="Icon"/> for designs with tinted icons; set by the taskbar view.</summary>
+    private ImageSource? _tintedIcon;
+    public ImageSource? TintedIcon { get => _tintedIcon; set => Set(ref _tintedIcon, value, nameof(TintedIcon)); }
+
     private bool _isActive;
     public bool IsActive { get => _isActive; set => Set(ref _isActive, value, nameof(IsActive)); }
 
-    /// <summary>How often loading the icon failed; some windows set their icon a moment after opening.</summary>
-    internal int IconAttempts { get; set; }
+    /// <summary>Badge text, like "3" for a group of three windows; null hides the badge.</summary>
+    private string? _countText;
+    public string? CountText { get => _countText; set => Set(ref _countText, value, nameof(CountText)); }
+
+    // Colors for this button, set by the taskbar view: from the design, or from the icon's own color ("glow").
+    private Brush? _hoverBrush, _activeBrush, _lineBrush;
+    public Brush? HoverBrush { get => _hoverBrush; set => Set(ref _hoverBrush, value, nameof(HoverBrush)); }
+    public Brush? ActiveBrush { get => _activeBrush; set => Set(ref _activeBrush, value, nameof(ActiveBrush)); }
+    public Brush? LineBrush { get => _lineBrush; set => Set(ref _lineBrush, value, nameof(LineBrush)); }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private void Set<T>(ref T field, T value, string name)
+    protected void Set<T>(ref T field, T value, string name)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+}
+
+/// <summary>One open window.</summary>
+public sealed class TaskWindow : TaskItem
+{
+    public TaskWindow(IntPtr handle)
+    {
+        Handle = handle;
+        ProcessPath = ProcessPathOf(handle);
+    }
+
+    public IntPtr Handle { get; }
+
+    /// <summary>The program that owns the window (for grouping and pinned apps); null if Windows won't tell.</summary>
+    public string? ProcessPath { get; }
+
+    /// <summary>How often loading the icon failed; some windows set their icon a moment after opening.</summary>
+    internal int IconAttempts { get; set; }
+
+    /// <summary>Full path of the program that owns a window.</summary>
+    public static string? ProcessPathOf(IntPtr hwnd)
+    {
+        GetWindowThreadProcessId(hwnd, out uint pid);
+        IntPtr process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (process == IntPtr.Zero) return null;
+        try
+        {
+            var path = new StringBuilder(1024);
+            int size = path.Capacity;
+            return QueryFullProcessImageName(process, 0, path, ref size) ? path.ToString() : null;
+        }
+        finally
+        {
+            CloseHandle(process);
+        }
     }
 }
 
@@ -242,25 +289,15 @@ internal static class WindowIcons
 
     private static ImageSource? FromProgramFile(IntPtr hwnd)
     {
-        GetWindowThreadProcessId(hwnd, out uint pid);
-        IntPtr process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (process == IntPtr.Zero) return null;
+        if (TaskWindow.ProcessPathOf(hwnd) is not { } path) return null;
         try
         {
-            var path = new StringBuilder(1024);
-            int size = path.Capacity;
-            if (!QueryFullProcessImageName(process, 0, path, ref size)) return null;
-
-            using var icon = System.Drawing.Icon.ExtractAssociatedIcon(path.ToString());
+            using var icon = System.Drawing.Icon.ExtractAssociatedIcon(path);
             return icon == null ? null : ToImage(icon.Handle);
         }
         catch (Exception)
         {
             return null;
-        }
-        finally
-        {
-            CloseHandle(process);
         }
     }
 

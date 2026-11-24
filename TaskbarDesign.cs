@@ -63,6 +63,12 @@ public class TaskbarModule
     /// <summary>Button and PinnedApps: tooltip text. Default: the file or target name.</summary>
     public string? ToolTip { get; set; }
 
+    /// <summary>
+    /// PinnedApps, dock style: a dot shows which pinned apps are running, clicking a running one switches
+    /// to it, and its windows don't get a second button in the window list. Empty counts as on.
+    /// </summary>
+    public bool? ShowRunning { get; set; }
+
     /// <summary>Short description for lists in the taskbar designer, like "Clock (HH:mm)".</summary>
     public override string ToString() => Type switch
     {
@@ -120,6 +126,27 @@ public class TaskbarLook
 
     /// <summary>Maximum width of a window button with a title.</summary>
     public double WindowButtonWidth { get; set; } = 200;
+
+    /// <summary>One button per app (with a window count) instead of one per window.</summary>
+    public bool GroupWindows { get; set; }
+
+    /// <summary>Show a live preview of the window when the mouse rests on its button.</summary>
+    public bool Thumbnails { get; set; } = true;
+
+    /// <summary>Middle-click a window button to close that window.</summary>
+    public bool MiddleClickCloses { get; set; } = true;
+
+    /// <summary>Draw window and app icons in one color (<see cref="IconTint"/>); full color on hover.</summary>
+    public bool TintIcons { get; set; }
+
+    /// <summary>Color for tinted icons. Empty: the text color.</summary>
+    public string? IconTint { get; set; }
+
+    /// <summary>Hover and active highlights of window buttons take the main color of the app's icon.</summary>
+    public bool IconGlow { get; set; }
+
+    /// <summary>Buttons fade smoothly between colors on hover instead of switching instantly.</summary>
+    public bool HoverFade { get; set; }
 
     /// <summary>
     /// Blur what is behind the bar (use a see-through Background, like "#801C1C1C").
@@ -225,6 +252,9 @@ public class TaskbarDesign
             CornerRadius = 14,
             ButtonCornerRadius = 8,
             WindowIconsOnly = true,
+            GroupWindows = true,
+            IconGlow = true,
+            HoverFade = true,
             Floating = new FloatingDock { Margin = 8, ReserveSpace = true },
         },
         Center =

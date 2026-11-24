@@ -154,33 +154,142 @@ public partial class TaskbarView
 
         return new ItemsControl
         {
-            ItemsSource = _tracker?.Windows,
+            // One button per window, or per app with GroupWindows (see TaskItemList).
+            ItemsSource = _items?.Items,
             ItemTemplate = (DataTemplate)Resources[_look.WindowIconsOnly ? "TaskWindowIconTemplate" : "TaskWindowTemplate"],
             ItemsPanel = new ItemsPanelTemplate(panel),
             Focusable = false,
         };
     }
 
+    /// <summary>
+    /// Launcher buttons. Dock style (ShowRunning, on by default): a dot under running apps; clicking a
+    /// running app switches to its window (or offers a choice of windows) instead of starting it again.
+    /// </summary>
     private FrameworkElement PinnedAppsModule(TaskbarModule module)
     {
+        bool dockStyle = module.ShowRunning != false;
         var row = new StackPanel { Orientation = Orientation.Horizontal };
+
         foreach (var app in module.Apps ?? new List<string>())
         {
             if (string.IsNullOrWhiteSpace(app)) continue;
             var path = Environment.ExpandEnvironmentVariables(app.Trim());
             var name = Path.GetFileNameWithoutExtension(path);
+            var program = PinnedTargets.ProgramOf(app);
 
-            FrameworkElement content = FileIcons.Get(path) is { } icon
-                ? new Image { Source = icon, Width = 20, Height = 20 }
+            // The button's DataContext is a group with this program's running windows (empty when not running),
+            // so clicking, thumbnails and "Close" work exactly like for the window list.
+            var running = new TaskGroup(program ?? path);
+
+            var icon = FileIcons.Get(path);
+            FrameworkElement picture = icon != null
+                ? TintableIcon(icon, 20)
                 : new TextBlock { Text = name.Length > 0 ? name[..1].ToUpperInvariant() : "?", FontWeight = FontWeights.SemiBold };
-            RenderOptions.SetBitmapScalingMode(content, BitmapScalingMode.HighQuality);
+
+            // Running indicator on the screen-edge side of the icon, inside the button so it isn't clipped.
+            var dot = new Border
+            {
+                Width = 5, Height = 3, CornerRadius = new CornerRadius(1.5),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = Edge == TaskbarEdge.Top ? VerticalAlignment.Top : VerticalAlignment.Bottom,
+                Visibility = Visibility.Collapsed,
+            };
+            dot.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
+
+            picture.Margin = new Thickness(0, 5, 0, 5); // room for the dot above or below the icon
+            picture.VerticalAlignment = VerticalAlignment.Center;
+            var content = new Grid();
+            content.Children.Add(picture);
+            content.Children.Add(dot);
 
             var button = BarButton(content, module.ToolTip ?? name);
             button.Padding = new Thickness(6, 0, 6, 0);
-            button.Click += (_, _) => Launch(path, null);
+            button.DataContext = running;
+            button.Click += (_, _) =>
+            {
+                if (running.Windows.Count == 0) Launch(path, null);
+                else ActivateWindows(running.Windows.ToList(), button);
+            };
+            if (dockStyle)
+            {
+                button.MouseUp += TaskButton_MouseUp;
+                button.MouseEnter += TaskButton_MouseEnter;
+                button.MouseLeave += TaskButton_MouseLeave;
+                button.ContextMenu = RunningAppMenu(running, path);
+            }
             row.Children.Add(button);
+
+            // Keep the running windows (and the dot) up to date.
+            if (dockStyle && program != null && _tracker != null)
+            {
+                void Update()
+                {
+                    running.Windows.Clear();
+                    running.Windows.AddRange(_tracker.Windows.Where(w =>
+                        string.Equals(w.ProcessPath, program, StringComparison.OrdinalIgnoreCase)));
+                    dot.Visibility = running.Windows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                    // Front: a wider line instead of a dot, like the active window's line.
+                    dot.Width = running.Windows.Any(w => w.IsActive) ? 14 : 5;
+                }
+                Update();
+                _items!.Updated += Update;
+            }
         }
         return row;
+    }
+
+    /// <summary>Right-click menu of a pinned app: start another one, or close its windows.</summary>
+    private ContextMenu RunningAppMenu(TaskGroup running, string path)
+    {
+        var menu = new ContextMenu();
+        var start = new MenuItem { Header = "Open new" };
+        start.Click += (_, _) => Launch(path, null);
+        var close = new MenuItem { Header = "Close" };
+        close.Click += (_, _) => { foreach (var w in running.Windows) WindowTracker.Close(w.Handle); };
+        menu.Items.Add(start);
+        menu.Items.Add(close);
+        menu.Opened += (_, _) => close.IsEnabled = running.Windows.Count > 0;
+        return menu;
+    }
+
+    /// <summary>
+    /// An app icon that follows the design's tint (Look.TintIcons): a one-color copy over the real icon,
+    /// switching to full color while the mouse is on the button.
+    /// </summary>
+    private FrameworkElement TintableIcon(ImageSource icon, double size)
+    {
+        var color = new Image { Source = icon, Width = size, Height = size };
+        RenderOptions.SetBitmapScalingMode(color, BitmapScalingMode.HighQuality);
+        color.SetResourceReference(OpacityProperty, "ColorIconOpacity");
+
+        // One-color copy that keeps the icon's details (see IconColors.Tinted).
+        var tint = new Image { Source = _look.TintIcons ? IconColors.Tinted(icon, TintColor) : null, Width = size, Height = size };
+        RenderOptions.SetBitmapScalingMode(tint, BitmapScalingMode.HighQuality);
+        tint.SetResourceReference(VisibilityProperty, "TintIconVisibility");
+
+        var grid = new Grid();
+        grid.Children.Add(color);
+        grid.Children.Add(tint);
+
+        if (_look.TintIcons)
+        {
+            // Full color while hovered (the whole button, not just the icon).
+            grid.Loaded += (_, _) =>
+            {
+                if (FindParent<Button>(grid) is not { } button) return;
+                button.MouseEnter += (_, _) => { color.Opacity = 1; tint.Opacity = 0; };
+                button.MouseLeave += (_, _) => { color.SetResourceReference(OpacityProperty, "ColorIconOpacity"); tint.Opacity = 1; };
+            };
+        }
+        return grid;
+    }
+
+    private static T? FindParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        for (var node = VisualTreeHelper.GetParent(child); node != null; node = VisualTreeHelper.GetParent(node))
+            if (node is T found) return found;
+        return null;
     }
 
     private FrameworkElement ClockModule(TaskbarModule module)
@@ -251,7 +360,7 @@ public partial class TaskbarView
         if (TryParseGlyph(module.Icon, out var glyph))
             icon = new TextBlock { Text = glyph, FontFamily = (FontFamily)Resources["IconFont"], FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
         else if (FileIcons.Get(Environment.ExpandEnvironmentVariables(module.Icon ?? target ?? "")) is { } image)
-            icon = new Image { Source = image, Width = 20, Height = 20 };
+            icon = TintableIcon(image, 20);
 
         var content = new StackPanel { Orientation = Orientation.Horizontal };
         if (icon != null) content.Children.Add(icon);

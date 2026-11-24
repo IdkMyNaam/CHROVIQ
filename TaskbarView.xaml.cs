@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -70,14 +71,36 @@ public partial class TaskbarView : UserControl
         Resources["BarBackground"] = new SolidColorBrush(active ? Color.FromArgb(1, 0, 0, 0) : BackgroundColor);
     }
 
+    /// <summary>The window list's buttons (windows or app groups), built from the tracked windows.</summary>
+    private TaskItemList? _items;
+
+    /// <summary>Programs shown by dock-style pinned apps; their windows get no second button.</summary>
+    private readonly HashSet<string> _pinnedPrograms = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Builds the contents once the view is in a window (the window list needs the window).</summary>
     private void Build()
     {
         if (_built) return;
         _built = true;
 
-        if (_design.AllModules.Any(m => m.Type == ModuleType.WindowList) && Window.GetWindow(this) is { } host)
+        // Dock-style pinned apps need to know which programs are running, like the window list does.
+        foreach (var module in _design.AllModules.Where(m => m.Type == ModuleType.PinnedApps && m.ShowRunning != false))
+            foreach (var app in module.Apps ?? new List<string>())
+                if (PinnedTargets.ProgramOf(app) is { } program)
+                    _pinnedPrograms.Add(program);
+
+        bool needsWindows = _design.AllModules.Any(m => m.Type == ModuleType.WindowList) || _pinnedPrograms.Count > 0;
+        if (needsWindows && Window.GetWindow(this) is { } host)
+        {
             _tracker = new WindowTracker(host, WindowFilter);
+            _items = new TaskItemList(_tracker.Windows, _look.GroupWindows,
+                w => w.ProcessPath == null || !_pinnedPrograms.Contains(w.ProcessPath));
+            _items.Items.CollectionChanged += (_, e) =>
+            {
+                if (e.NewItems != null) foreach (TaskItem item in e.NewItems) Decorate(item);
+            };
+            foreach (var item in _items.Items) Decorate(item);
+        }
 
         SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
         Root.Child = BuildLayout();
@@ -87,7 +110,10 @@ public partial class TaskbarView : UserControl
     private void TearDown()
     {
         _secondTimer.Stop();
+        _thumbnailTimer.Stop();
+        _thumbnail?.Close();
         SystemParameters.StaticPropertyChanged -= OnSystemParameterChanged;
+        _items?.Detach();
         _tracker?.Dispose();
         _tracker = null;
     }
@@ -95,6 +121,9 @@ public partial class TaskbarView : UserControl
     // ---------- Look ----------
 
     private Color BackgroundColor => ParseColor(_look.Background, Color.FromArgb(0xF0, 0x1C, 0x1C, 0x1C));
+
+    /// <summary>Color of tinted icons (Look.IconTint, or the text color).</summary>
+    private Color TintColor { get; set; } = Colors.White;
 
     /// <summary>Applies the design's colors, font, sizes and corners.</summary>
     private void ApplyLook()
@@ -104,11 +133,19 @@ public partial class TaskbarView : UserControl
         Resources["BarBackground"] = new SolidColorBrush(BackgroundColor);
         Resources["BarForeground"] = new SolidColorBrush(foreground);
 
-        // Hover/pressed/active highlights are the text color, faintly: works on dark and light bars.
+        // Hover/active highlights are the text color, faintly: works on dark and light bars.
         Resources["BarHover"] = new SolidColorBrush(Color.FromArgb(0x26, foreground.R, foreground.G, foreground.B));
-        Resources["BarPressed"] = new SolidColorBrush(Color.FromArgb(0x14, foreground.R, foreground.G, foreground.B));
         Resources["BarActive"] = new SolidColorBrush(Color.FromArgb(0x33, foreground.R, foreground.G, foreground.B));
         Resources["ButtonCornerRadius"] = new CornerRadius(Math.Max(0, _look.ButtonCornerRadius));
+
+        // Instant or fading hover highlight for every button on the bar.
+        Resources["BarButton"] = Resources[_look.HoverFade ? "BarButtonFade" : "BarButtonInstant"];
+
+        // Tinted icons: a one-color copy over a hidden full-color icon (shown on hover).
+        TintColor = ParseColor(_look.IconTint, foreground);
+        Resources["IconTint"] = new SolidColorBrush(TintColor);
+        Resources["TintIconVisibility"] = _look.TintIcons ? Visibility.Visible : Visibility.Collapsed;
+        Resources["ColorIconOpacity"] = _look.TintIcons ? 0.0 : 1.0;
 
         Surface.CornerRadius = new CornerRadius(Math.Max(0, _look.CornerRadius));
         // Floating dock: only as wide as its contents, centered in the (transparent) window.
@@ -148,23 +185,193 @@ public partial class TaskbarView : UserControl
             ? Color.FromRgb(b.Color.R, b.Color.G, b.Color.B) // drop its transparency
             : Color.FromRgb(0x00, 0x78, 0xD4);
         Resources["AccentBrush"] = new SolidColorBrush(ParseColor(_look.Accent, windowsAccent));
+
+        // Buttons without glow use the accent for their line: update them.
+        if (_items != null)
+            foreach (var item in _items.Items) Decorate(item);
     }
 
     // ---------- Window list ----------
 
-    private void WindowButton_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Sets a button's colors: with glow, from its app icon's main color (when the icon has one);
+    /// otherwise the design's hover and active colors and the accent line.
+    /// </summary>
+    private void Decorate(TaskItem item)
     {
-        if ((sender as FrameworkElement)?.DataContext is TaskWindow window)
+        if (_look.IconGlow && IconColors.MainColor(item.Icon) is { } c)
         {
-            WindowTracker.ActivateOrMinimize(window.Handle);
-            _tracker?.Refresh(); // show the new active window right away
+            item.HoverBrush = Frozen(Color.FromArgb(0x40, c.R, c.G, c.B));
+            item.ActiveBrush = Frozen(Color.FromArgb(0x55, c.R, c.G, c.B));
+            item.LineBrush = Frozen(c);
+        }
+        else
+        {
+            item.HoverBrush = (Brush)Resources["BarHover"];
+            item.ActiveBrush = (Brush)Resources["BarActive"];
+            item.LineBrush = (Brush)Resources["AccentBrush"];
+        }
+
+        if (_look.TintIcons)
+            item.TintedIcon = IconColors.Tinted(item.Icon, TintColor);
+
+        // Icons can arrive a moment after the window opens: decorate again then.
+        if ((_look.IconGlow || _look.TintIcons) && !_decorated.Contains(item))
+        {
+            _decorated.Add(item);
+            item.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(TaskItem.Icon)) Decorate(item); };
         }
     }
 
+    private readonly HashSet<TaskItem> _decorated = new();
+
+    private static SolidColorBrush Frozen(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>The windows behind a button: one window, an app group, or a running pinned app.</summary>
+    private static List<TaskWindow> WindowsOf(object? item) => item switch
+    {
+        TaskWindow w => new List<TaskWindow> { w },
+        TaskGroup g => g.Windows.ToList(),
+        _ => new List<TaskWindow>(),
+    };
+
+    private void TaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement button)
+            ActivateWindows(WindowsOf(button.DataContext), button);
+    }
+
+    /// <summary>
+    /// One window: bring it to the front, or minimize it when it already is in front.
+    /// Several windows (an app group): a menu to pick one.
+    /// </summary>
+    private void ActivateWindows(List<TaskWindow> windows, FrameworkElement anchor)
+    {
+        CloseThumbnails();
+        if (windows.Count == 1)
+        {
+            WindowTracker.ActivateOrMinimize(windows[0].Handle);
+            _tracker?.Refresh(); // show the new active window right away
+            return;
+        }
+        if (windows.Count == 0) return;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = anchor,
+            Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
+        };
+        foreach (var window in windows)
+        {
+            var item = new MenuItem
+            {
+                Header = window.Title,
+                Icon = new Image { Source = window.Icon, Width = 16, Height = 16 },
+                FontWeight = window.IsActive ? FontWeights.SemiBold : FontWeights.Normal,
+            };
+            var handle = window.Handle;
+            item.Click += (_, _) => { WindowTracker.ActivateOrMinimize(handle); _tracker?.Refresh(); };
+            menu.Items.Add(item);
+        }
+        menu.Opened += (_, _) => _openMenus++;
+        menu.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
+        menu.IsOpen = true;
+    }
+
+    /// <summary>Middle-click closes the window (when the design allows it). Not for app groups: that would close several.</summary>
+    private void TaskButton_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle || !_look.MiddleClickCloses) return;
+        if ((sender as FrameworkElement)?.DataContext is { } item && WindowsOf(item) is { Count: 1 } windows)
+        {
+            CloseThumbnails();
+            WindowTracker.Close(windows[0].Handle);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Right-click "Close": closes the window, or every window of an app group (each may still ask to save).</summary>
     private void CloseWindow_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is TaskWindow window)
+        foreach (var window in WindowsOf((sender as FrameworkElement)?.DataContext))
             WindowTracker.Close(window.Handle);
+    }
+
+    // ---------- Thumbnails ----------
+
+    private readonly DispatcherTimer _thumbnailTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    private readonly DispatcherTimer _thumbnailCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private FrameworkElement? _hoverButton;
+    private ThumbnailPopup? _thumbnail;
+    private bool _thumbnailTimersReady;
+
+    private void TaskButton_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (!_look.Thumbnails || sender is not FrameworkElement button) return;
+        PrepareThumbnailTimers();
+        _hoverButton = button;
+        _thumbnailCloseTimer.Stop();
+
+        // Already showing a preview: switch right away; otherwise wait a moment (don't flash while passing over).
+        if (_thumbnail != null) ShowThumbnails();
+        else { _thumbnailTimer.Stop(); _thumbnailTimer.Start(); }
+    }
+
+    private void TaskButton_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (sender != _hoverButton) return;
+        _hoverButton = null;
+        _thumbnailTimer.Stop();
+        _thumbnailCloseTimer.Stop();
+        _thumbnailCloseTimer.Start(); // time to move the mouse onto the preview
+    }
+
+    private void PrepareThumbnailTimers()
+    {
+        if (_thumbnailTimersReady) return;
+        _thumbnailTimersReady = true;
+        _thumbnailTimer.Tick += (_, _) => { _thumbnailTimer.Stop(); ShowThumbnails(); };
+        _thumbnailCloseTimer.Tick += (_, _) =>
+        {
+            _thumbnailCloseTimer.Stop();
+            if (_hoverButton == null && _thumbnail?.IsMouseOver != true) CloseThumbnails();
+            else if (_hoverButton == null) _thumbnailCloseTimer.Start(); // still on the preview: check again
+        };
+    }
+
+    private void ShowThumbnails()
+    {
+        if (_hoverButton is not { IsMouseOver: true } button || IsMenuOpen) return;
+        var windows = WindowsOf(button.DataContext);
+        if (windows.Count == 0) return;
+
+        _thumbnail ??= CreateThumbnailPopup();
+        _thumbnail.ShowFor(windows, button, Edge);
+    }
+
+    private ThumbnailPopup CreateThumbnailPopup()
+    {
+        var popup = new ThumbnailPopup();
+        popup.WindowClicked += handle =>
+        {
+            CloseThumbnails();
+            WindowTracker.ActivateOrMinimize(handle);
+            _tracker?.Refresh();
+        };
+        popup.MouseLeave += (_, _) => { _thumbnailCloseTimer.Stop(); _thumbnailCloseTimer.Start(); };
+        return popup;
+    }
+
+    private void CloseThumbnails()
+    {
+        _thumbnailTimer.Stop();
+        _thumbnail?.Close();
+        _thumbnail = null;
     }
 
     // ---------- App menu ----------
