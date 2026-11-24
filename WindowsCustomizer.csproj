@@ -27,4 +27,9 @@
     <PackageReference Include="ManagedShell" Version="0.0.374" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Next to the .exe: the app's watchdog runs it if the app is killed while it hides the taskbar. -->
+    <None Update="Restore-Taskbar.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

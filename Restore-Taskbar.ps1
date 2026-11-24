@@ -18,9 +18,16 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\Restore-Taskbar.ps1 -KeepAutoHide
     Use -KeepAutoHide if you had auto-hide turned on yourself before using the app.
+
+.EXAMPLE
+    Restore-Taskbar.ps1 -WaitForProcessId 1234 -KeepAutoHide
+    Watchdog mode (started by the app itself, hidden): waits until the app's process ends and then
+    restores the taskbar, for when the app was killed (Task Manager, Visual Studio's stop button) and
+    couldn't clean up. Doesn't close anything, and does nothing if the app was started again meanwhile.
 #>
 param(
-    [switch]$KeepAutoHide
+    [switch]$KeepAutoHide,
+    [int]$WaitForProcessId = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,12 +72,21 @@ public static class TaskbarRestore
 }
 '@
 
-# 1. The app would hide the taskbar again, so close it first.
-$app = Get-Process -Name 'WindowsCustomizer' -ErrorAction SilentlyContinue
-if ($app) {
-    Write-Host 'Closing Windows Customizer...'
-    $app | Stop-Process -Force
+if ($WaitForProcessId -gt 0) {
+    # Watchdog mode: wait for the app to end (normally the app stops this watchdog itself first).
+    Wait-Process -Id $WaitForProcessId -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 1
+    # Started again meanwhile? Then the new instance manages the taskbar; leave it alone.
+    if (Get-Process -Name 'WindowsCustomizer' -ErrorAction SilentlyContinue) { exit 0 }
+}
+else {
+    # 1. The app would hide the taskbar again, so close it first.
+    $app = Get-Process -Name 'WindowsCustomizer' -ErrorAction SilentlyContinue
+    if ($app) {
+        Write-Host 'Closing Windows Customizer...'
+        $app | Stop-Process -Force
+        Start-Sleep -Seconds 1
+    }
 }
 
 # 2. No Explorer means no taskbar at all.

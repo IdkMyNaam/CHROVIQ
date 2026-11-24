@@ -43,6 +43,7 @@ internal static class TrayHost
                     return null;
                 }
                 _area = area;
+                Watchdog.Update(); // icons back to Explorer even if this app gets killed
             }
             catch (Exception)
             {
@@ -72,6 +73,7 @@ internal static class TrayHost
         _area = null;
         _users = 0;
         RaiseExplorerTaskbar();
+        Watchdog.Update();
     }
 
     public static bool IsRunning => _area != null;

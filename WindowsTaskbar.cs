@@ -62,6 +62,7 @@ public static class WindowsTaskbar
             _watchdog.Tick += (_, _) => EnforceHidden();
         }
         _watchdog.Start();
+        Watchdog.Update(); // restores the taskbar even if this app gets killed
     }
 
     /// <summary>Shows the taskbar again with the user's original auto-hide setting. Safe to call anytime.</summary>
@@ -69,6 +70,7 @@ public static class WindowsTaskbar
     {
         _watchdog?.Stop();
         RestoreNative();
+        Watchdog.Update(); // stops the helper when nothing else is taken over
     }
 
     /// <summary>
