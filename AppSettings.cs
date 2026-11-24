@@ -24,6 +24,15 @@ public class AppSettings
     /// <summary>Show the custom taskbar (Phase 2).</summary>
     public bool ShowTaskbar { get; set; }
 
+    /// <summary>Hide the real Windows taskbar while the custom taskbar shows.</summary>
+    public bool HideWindowsTaskbar { get; set; }
+
+    /// <summary>
+    /// The user's own taskbar auto-hide setting from before we hid the taskbar; null when not hiding.
+    /// Kept on disk so it can still be put back correctly after a crash.
+    /// </summary>
+    public bool? TaskbarAutoHideBefore { get; set; }
+
     /// <summary>Screen edge of the custom taskbar.</summary>
     public TaskbarEdge TaskbarEdge { get; set; } = TaskbarEdge.Top;
 

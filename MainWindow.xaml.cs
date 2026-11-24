@@ -96,7 +96,12 @@ public partial class MainWindow : Window
         SetUpTrayAndHotKey();
 
         if (_settings.ShowTaskbar)
+        {
             SetTaskbarVisible(true);
+            if (_settings.HideWindowsTaskbar)
+                SetWindowsTaskbarHidden(true);
+        }
+        UpdateHideWindowsTaskbarCheck();
 
         // Windows shutting down or signing out must not be blocked by "hide instead of close".
         Application.Current.SessionEnding += (_, _) => _exiting = true;
@@ -115,6 +120,8 @@ public partial class MainWindow : Window
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
+            // Bring the Windows taskbar back first, but keep the setting, so it is hidden again next start.
+            WindowsTaskbar.Restore();
             _appBarWindow?.Close(); // releases the reserved screen space
             _trayIcon.Dispose();
         };
@@ -127,16 +134,31 @@ public partial class MainWindow : Window
         _hotKey = new GlobalHotKey(this, ModifierKeys.Control | ModifierKeys.Alt, Key.P);
         _hotKey.Pressed += () => _ = ApplyNextAsync();
 
-        _trayIcon = new TrayIcon(() => _profiles, () => _current, _hotKey.ToString());
-        _trayIcon.ProfileClicked += profile => _ = ApplyProfileAsync(profile, notify: true);
-        _trayIcon.NextClicked += () => _ = ApplyNextAsync();
-        _trayIcon.OpenClicked += ShowFromTray;
-        _trayIcon.ExitClicked += ExitApp;
-        _trayIcon.IsTaskbarShown = () => _appBarWindow != null;
-        _trayIcon.TaskbarToggleClicked += () => SetTaskbarVisible(_appBarWindow == null);
+        _trayIcon = new TrayIcon(BuildAppMenu);
+        _trayIcon.Clicked += ShowFromTray;
 
         if (!_hotKey.IsRegistered && StatusText.Text.Length == 0)
             StatusText.Text = $"The hotkey {_hotKey} is already used by another program, so it is turned off.";
+    }
+
+    /// <summary>The app menu, shown by the tray icon and by the custom taskbar's menu button.</summary>
+    private IEnumerable<AppMenuItem> BuildAppMenu()
+    {
+        foreach (var profile in _profiles.ToList())
+        {
+            var p = profile; // capture this profile, not the loop variable
+            yield return new AppMenuItem(p.Name, () => _ = ApplyProfileAsync(p, notify: true),
+                IsChecked: ReferenceEquals(p, _current));
+        }
+
+        yield return AppMenuItem.Separator;
+        yield return new AppMenuItem("Show custom taskbar", () => SetTaskbarVisible(_appBarWindow == null),
+            IsChecked: _appBarWindow != null);
+        yield return new AppMenuItem("Hide Windows taskbar", () => SetWindowsTaskbarHidden(!WindowsTaskbar.IsHiding),
+            IsChecked: WindowsTaskbar.IsHiding, IsEnabled: _appBarWindow != null);
+        yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
+        yield return new AppMenuItem("Open", ShowFromTray);
+        yield return new AppMenuItem("Exit", ExitApp);
     }
 
     private void HideToTray()
@@ -627,7 +649,7 @@ public partial class MainWindow : Window
     {
         if (visible && _appBarWindow == null)
         {
-            var bar = new AppBarWindow(_settings.TaskbarEdge);
+            var bar = new AppBarWindow(_settings.TaskbarEdge) { GetMenuItems = BuildAppMenu };
             try
             {
                 bar.Show();
@@ -642,17 +664,62 @@ public partial class MainWindow : Window
         }
         else if (!visible && _appBarWindow != null)
         {
+            // Never leave the user without any taskbar.
+            if (WindowsTaskbar.IsHiding)
+                SetWindowsTaskbarHidden(false);
+
             _appBarWindow.Close();
             _appBarWindow = null;
         }
 
         ShowTaskbarCheck.IsChecked = visible;
+        UpdateHideWindowsTaskbarCheck();
         if (_settings.ShowTaskbar != visible)
         {
             _settings.ShowTaskbar = visible;
             SaveSettings();
         }
     }
+
+    /// <summary>Hides or shows the real Windows taskbar. Hiding needs the custom taskbar to be showing.</summary>
+    private void SetWindowsTaskbarHidden(bool hide)
+    {
+        if (hide && _appBarWindow == null) hide = false;
+
+        try
+        {
+            if (hide)
+            {
+                WindowsTaskbar.Hide(_settings.TaskbarAutoHideBefore);
+                // Remember the user's own auto-hide setting, in case the app crashes before restoring it.
+                _settings.TaskbarAutoHideBefore = WindowsTaskbar.OriginalAutoHide;
+            }
+            else
+            {
+                WindowsTaskbar.Restore();
+                _settings.TaskbarAutoHideBefore = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            WindowsTaskbar.Restore();
+            StatusText.Text = $"Could not hide the Windows taskbar: {ex.Message}";
+            hide = false;
+        }
+
+        _settings.HideWindowsTaskbar = hide;
+        SaveSettings();
+        UpdateHideWindowsTaskbarCheck();
+    }
+
+    private void UpdateHideWindowsTaskbarCheck()
+    {
+        HideWindowsTaskbarCheck.IsEnabled = _appBarWindow != null;
+        HideWindowsTaskbarCheck.IsChecked = WindowsTaskbar.IsHiding;
+    }
+
+    private void HideWindowsTaskbarCheck_Click(object sender, RoutedEventArgs e) =>
+        SetWindowsTaskbarHidden(HideWindowsTaskbarCheck.IsChecked == true);
 
     private void ShowTaskbarCheck_Click(object sender, RoutedEventArgs e) =>
         SetTaskbarVisible(ShowTaskbarCheck.IsChecked == true);
@@ -669,8 +736,11 @@ public partial class MainWindow : Window
         // The edge is fixed while the bar is registered, so recreate it on the new edge.
         if (_appBarWindow != null)
         {
-            SetTaskbarVisible(false);
+            bool wasHidingWindowsTaskbar = WindowsTaskbar.IsHiding;
+            SetTaskbarVisible(false); // also shows the Windows taskbar for a moment
             SetTaskbarVisible(true);
+            if (wasHidingWindowsTaskbar)
+                SetWindowsTaskbarHidden(true);
         }
     }
 

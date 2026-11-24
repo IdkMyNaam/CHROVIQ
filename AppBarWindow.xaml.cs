@@ -133,6 +133,41 @@ public partial class AppBarWindow : Window
             WindowTracker.Close(window.Handle);
     }
 
+    /// <summary>Entries for the menu button; set by the main window.</summary>
+    public Func<IEnumerable<AppMenuItem>>? GetMenuItems { get; set; }
+
+    private void MenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetMenuItems == null) return;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = MenuButton,
+            Placement = _edge == TaskbarEdge.Top
+                ? System.Windows.Controls.Primitives.PlacementMode.Bottom
+                : System.Windows.Controls.Primitives.PlacementMode.Top,
+        };
+        foreach (var entry in GetMenuItems())
+        {
+            if (entry.IsSeparator)
+            {
+                menu.Items.Add(new Separator());
+                continue;
+            }
+            var item = new MenuItem
+            {
+                Header = entry.Text,
+                IsChecked = entry.IsChecked,
+                IsEnabled = entry.IsEnabled,
+                InputGestureText = entry.Shortcut ?? "",
+            };
+            var onClick = entry.OnClick;
+            item.Click += (_, _) => onClick?.Invoke();
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
+    }
+
     private void QuickSettings_Click(object sender, RoutedEventArgs e) => PressWinShortcut('A');
 
     private void Clock_Click(object sender, RoutedEventArgs e) => PressWinShortcut('N');

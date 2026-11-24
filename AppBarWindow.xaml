@@ -55,6 +55,13 @@
             </Button>
         </StackPanel>
 
+        <!-- Far left: the app menu (same as the tray icon's), since the tray is out of reach
+             when the Windows taskbar is hidden. -->
+        <Button x:Name="MenuButton" DockPanel.Dock="Left" Style="{StaticResource BarButton}" Margin="0,0,4,0"
+                ToolTip="Windows Customizer" Click="MenuButton_Click">
+            <TextBlock Text="&#xE700;" FontFamily="{StaticResource IconFont}" FontSize="14" />
+        </Button>
+
         <!-- Left: one button per open window. Buttons share the width equally, at most 200 each. -->
         <ItemsControl x:Name="WindowButtons" HorizontalAlignment="Left">
             <ItemsControl.ItemsPanel>

@@ -3,31 +3,20 @@ using Forms = System.Windows.Forms;
 
 namespace WindowsCustomizer;
 
-/// <summary>Notification-area icon with a menu: profiles, next profile, open, exit.</summary>
+/// <summary>Notification-area icon with the app menu (see <see cref="AppMenuItem"/>).</summary>
 public sealed class TrayIcon : IDisposable
 {
     private readonly Forms.NotifyIcon _icon;
     private readonly Forms.ContextMenuStrip _menu = new();
-    private readonly Func<IEnumerable<Profile>> _getProfiles;
-    private readonly Func<Profile?> _getCurrent;
+    private readonly Func<IEnumerable<AppMenuItem>> _getMenuItems;
 
-    public event Action<Profile>? ProfileClicked;
-    public event Action? NextClicked;
-    public event Action? OpenClicked;
-    public event Action? ExitClicked;
-    public event Action? TaskbarToggleClicked;
+    /// <summary>Left-click on the icon.</summary>
+    public event Action? Clicked;
 
-    /// <summary>Whether the custom taskbar is showing (check mark on its menu item).</summary>
-    public Func<bool>? IsTaskbarShown { get; set; }
-
-    /// <param name="getProfiles">Read each time the menu opens, so it always shows the current list.</param>
-    /// <param name="getCurrent">The profile to show with a check mark.</param>
-    /// <param name="hotKeyText">Shown next to "Next profile", for example "Ctrl+Alt+P".</param>
-    public TrayIcon(Func<IEnumerable<Profile>> getProfiles, Func<Profile?> getCurrent, string hotKeyText)
+    /// <param name="getMenuItems">Called each time the menu opens, so it always shows the current state.</param>
+    public TrayIcon(Func<IEnumerable<AppMenuItem>> getMenuItems)
     {
-        _getProfiles = getProfiles;
-        _getCurrent = getCurrent;
-        HotKeyText = hotKeyText;
+        _getMenuItems = getMenuItems;
 
         _menu.Opening += (_, e) =>
         {
@@ -44,11 +33,9 @@ public sealed class TrayIcon : IDisposable
         };
         _icon.MouseClick += (_, e) =>
         {
-            if (e.Button == Forms.MouseButtons.Left) OpenClicked?.Invoke();
+            if (e.Button == Forms.MouseButtons.Left) Clicked?.Invoke();
         };
     }
-
-    public string HotKeyText { get; set; }
 
     public void ShowMessage(string title, string text) =>
         _icon.ShowBalloonTip(3000, title, text, Forms.ToolTipIcon.None);
@@ -56,27 +43,24 @@ public sealed class TrayIcon : IDisposable
     private void BuildMenu()
     {
         _menu.Items.Clear();
-        var current = _getCurrent();
-
-        foreach (var profile in _getProfiles())
+        foreach (var entry in _getMenuItems())
         {
-            var item = new Forms.ToolStripMenuItem(profile.Name) { Checked = ReferenceEquals(profile, current) };
-            var p = profile; // capture this profile, not the loop variable
-            item.Click += (_, _) => ProfileClicked?.Invoke(p);
+            if (entry.IsSeparator)
+            {
+                _menu.Items.Add(new Forms.ToolStripSeparator());
+                continue;
+            }
+
+            var item = new Forms.ToolStripMenuItem(entry.Text)
+            {
+                Checked = entry.IsChecked,
+                Enabled = entry.IsEnabled,
+                ShortcutKeyDisplayString = entry.Shortcut,
+            };
+            var onClick = entry.OnClick;
+            item.Click += (_, _) => onClick?.Invoke();
             _menu.Items.Add(item);
         }
-
-        _menu.Items.Add(new Forms.ToolStripSeparator());
-        _menu.Items.Add(new Forms.ToolStripMenuItem("Show custom taskbar", null, (_, _) => TaskbarToggleClicked?.Invoke())
-        {
-            Checked = IsTaskbarShown?.Invoke() == true,
-        });
-        _menu.Items.Add(new Forms.ToolStripMenuItem("Next profile", null, (_, _) => NextClicked?.Invoke())
-        {
-            ShortcutKeyDisplayString = HotKeyText,
-        });
-        _menu.Items.Add(new Forms.ToolStripMenuItem("Open", null, (_, _) => OpenClicked?.Invoke()));
-        _menu.Items.Add(new Forms.ToolStripMenuItem("Exit", null, (_, _) => ExitClicked?.Invoke()));
     }
 
     /// <summary>The icon of this exe (the default app icon until the project gets its own).</summary>

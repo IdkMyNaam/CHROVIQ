@@ -31,6 +31,18 @@ A C# / WPF app that switches between full Windows "themes" (wallpaper, colors, c
 - [ ] Click to focus / minimize / restore
 - [ ] Clock + basic system tray area
 - [ ] Native taskbar stays running underneath (low risk)
+- [ ] Option to hide the native taskbar (auto-hide + hidden, restored on exit/crash; `Restore-Taskbar.ps1` as fallback)
+
+## Phase 2b: Fully customizable taskbar
+Goal: design your own taskbar instead of using a fixed layout.
+- [ ] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
+- [ ] Choose which modules show, their order, and zone (left / center / right)
+- [ ] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title
+- [ ] "Floating dock" style (margins from the screen edge, rounded, centered)
+- [ ] Save a taskbar design as JSON; optionally link a design to a profile
+- [ ] Editor in the main window with a live preview
+- [ ] Import/export designs (ties in with "Import/export themes" below)
+- [ ] Later: own widgets as plugins (see open questions)
 
 ## Phase 3: Custom start menu / launcher
 - [ ] Read installed apps (Start Menu shortcuts)

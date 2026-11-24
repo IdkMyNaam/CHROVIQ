@@ -78,6 +78,9 @@
 
                 <TextBlock Text="Custom taskbar" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="ShowTaskbarCheck" Content="Show custom taskbar" Click="ShowTaskbarCheck_Click" />
+                <CheckBox x:Name="HideWindowsTaskbarCheck" Content="Hide the Windows taskbar" Margin="20,6,0,0"
+                          Click="HideWindowsTaskbarCheck_Click"
+                          ToolTip="Only while the custom taskbar is showing. If the taskbar ever stays hidden, run Restore-Taskbar.ps1 from the project folder." />
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock Text="Screen edge" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
                     <ComboBox x:Name="TaskbarEdgeBox" Width="100" SelectionChanged="TaskbarEdgeBox_SelectionChanged">
