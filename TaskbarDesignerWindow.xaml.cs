@@ -35,12 +35,13 @@ public partial class TaskbarDesignerWindow : Window
         _getActiveName = getActiveName;
         _setActive = setActive;
         InitializeComponent();
+        LiveCheck.IsChecked = _liveSetting;
 
         AddModuleBox.ItemsSource = Enum.GetValues<ModuleType>().Select(t => new ModuleChoice(t)).ToList();
         AddModuleBox.SelectedIndex = 0;
         _activeZoneList = LeftList;
 
-        _saveTimer.Tick += (_, _) => SaveNow();
+        _saveTimer.Tick += (_, _) => Save(); // live mode: just save
         _previewTimer.Tick += (_, _) => { _previewTimer.Stop(); RefreshPreview(); };
         PreviewFrame.SizeChanged += (_, _) => SchedulePreview();
         Closing += (_, _) => SaveNow(); // don't lose the last change
@@ -628,8 +629,61 @@ public partial class TaskbarDesignerWindow : Window
     private void Changed()
     {
         SchedulePreview();
+        if (Live)
+        {
+            _saveTimer.Stop();
+            _saveTimer.Start();
+        }
+        else
+        {
+            SetUnapplied(true);
+        }
+    }
+
+    // ---------- Live update or Apply ----------
+
+    /// <summary>Remembered while the app runs, so reopening the designer keeps the choice.</summary>
+    private static bool _liveSetting = true;
+
+    private bool Live => LiveCheck.IsChecked == true;
+    private bool _unapplied;
+
+    private void SetUnapplied(bool unapplied)
+    {
+        _unapplied = unapplied;
+        ApplyButton.IsEnabled = unapplied;
+        if (unapplied) ShowStatus("Changes not applied yet: press \"Apply to taskbar\".");
+    }
+
+    private void LiveCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _liveSetting = Live;
+        if (Live && _unapplied) Apply_Click(sender, e); // switching live on applies what's pending
+    }
+
+    private void Apply_Click(object sender, RoutedEventArgs e)
+    {
+        Save();
+        SetUnapplied(false);
+        ShowStatus("Applied to the taskbar.");
+    }
+
+    /// <summary>
+    /// Before leaving a design (switching, closing, renaming...): saves it. With live updates off and
+    /// changes not applied, asks first; "No" throws those changes away.
+    /// </summary>
+    private void SaveNow()
+    {
         _saveTimer.Stop();
-        _saveTimer.Start();
+        if (_design == null) return;
+        if (!Live && _unapplied)
+        {
+            var answer = MessageBox.Show(this, $"Apply your changes to \"{_design.Name}\"?", "Taskbar designer",
+                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+            SetUnapplied(false);
+            if (answer != MessageBoxResult.Yes) return; // the design is read from disk again when shown next
+        }
+        Save();
     }
 
     private void SchedulePreview()
@@ -657,7 +711,7 @@ public partial class TaskbarDesignerWindow : Window
         PreviewHost.Content = view;
     }
 
-    private void SaveNow()
+    private void Save()
     {
         _saveTimer.Stop();
         if (_design == null) return;

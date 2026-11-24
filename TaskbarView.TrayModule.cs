@@ -54,9 +54,20 @@ public partial class TaskbarView
         var more = GlyphButton(Edge == TaskbarEdge.Top ? "" : "", "Show hidden icons", null);
         more.Padding = new Thickness(6, 0, 6, 0);
         popup.PlacementTarget = more;
-        more.Click += (_, _) => popup.IsOpen = !popup.IsOpen;
+        // Clicking ^ while the flyout is open: the mouse press already closed it (it closes on any click
+        // outside), so the click that follows must not open it again.
+        DateTime closedAt = DateTime.MinValue;
+        more.Click += (_, _) =>
+        {
+            if ((DateTime.Now - closedAt).TotalMilliseconds < 300) return;
+            popup.IsOpen = true;
+        };
         popup.Opened += (_, _) => _openMenus++;
-        popup.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
+        popup.Closed += (_, _) =>
+        {
+            _openMenus = Math.Max(0, _openMenus - 1);
+            closedAt = DateTime.Now;
+        };
 
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(more);
