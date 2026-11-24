@@ -71,6 +71,11 @@ public partial class TaskbarDesignerWindow : Window
             ModuleType.WindowList => "Window list",
             ModuleType.PinnedApps => "Pinned apps",
             ModuleType.QuickSettings => "Quick Settings",
+            ModuleType.ShowDesktop => "Show desktop",
+            ModuleType.WindowsSearch => "Windows search button",
+            ModuleType.SearchBox => "Search box (apps + web)",
+            ModuleType.SystemStats => "CPU and memory",
+            ModuleType.Media => "Media controls",
             _ => Type.ToString(),
         };
     }
@@ -424,6 +429,34 @@ public partial class TaskbarDesignerWindow : Window
 
             case ModuleType.PinnedApps:
                 PinnedAppsEditor(m);
+                break;
+
+            case ModuleType.ShowDesktop:
+                Hint(ModuleOptions, "A thin line: click it to minimize all windows, click again to bring them back. No options.");
+                break;
+            case ModuleType.WindowsSearch:
+                Hint(ModuleOptions, "Opens Windows search (Win+S). No options.");
+                break;
+            case ModuleType.SystemStats:
+                Hint(ModuleOptions, "CPU and memory use, updated every second. Click it to open Task Manager. No options.");
+                break;
+
+            case ModuleType.Volume:
+                CheckField(ModuleOptions, "Show the volume as a number", m.ShowValue == true, v => m.ShowValue = v ? true : null);
+                Hint(ModuleOptions, "Click to mute, mouse wheel to change the volume, right-click for sound settings.");
+                break;
+
+            case ModuleType.SearchBox:
+                NumberField(ModuleOptions, "Width (pixels)", m.Width ?? 220, v => m.Width = v, 80, 800);
+                TextField(ModuleOptions, "Placeholder text", m.Text ?? "", v => m.Text = Empty(v), "Empty = \"Search apps and the web\".");
+                TextField(ModuleOptions, "Web search address", m.SearchUrl ?? "", v => m.SearchUrl = Empty(v),
+                    "{0} is replaced by what you typed. Empty = Google. Examples: https://duckduckgo.com/?q={0}, https://www.bing.com/search?q={0}");
+                Hint(ModuleOptions, "Click the box and type: matching apps appear, Enter starts the first one (or searches the web). Esc cancels.");
+                break;
+
+            case ModuleType.Media:
+                NumberField(ModuleOptions, "Maximum width of the title (pixels)", m.Width ?? 240, v => m.Width = v, 60, 800);
+                Hint(ModuleOptions, "Shows what's playing in Spotify, browsers and other media apps, with previous / play-pause / next. Hidden when nothing plays.");
                 break;
         }
     }

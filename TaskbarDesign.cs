@@ -23,6 +23,18 @@ public enum ModuleType
     Text,
     /// <summary>A button that opens <see cref="TaskbarModule.Target"/> (program, file, folder or website).</summary>
     Button,
+    /// <summary>Minimizes all windows (click again to bring them back).</summary>
+    ShowDesktop,
+    /// <summary>Opens Windows search (Win+S).</summary>
+    WindowsSearch,
+    /// <summary>A search box on the bar: finds installed apps, or searches the web (<see cref="TaskbarModule.SearchUrl"/>).</summary>
+    SearchBox,
+    /// <summary>Speaker icon: click to mute, mouse wheel to change the volume.</summary>
+    Volume,
+    /// <summary>Live CPU and memory use.</summary>
+    SystemStats,
+    /// <summary>What's playing (Spotify, browsers, ...) with previous / play-pause / next.</summary>
+    Media,
 }
 
 /// <summary>
@@ -39,8 +51,14 @@ public class TaskbarModule
     /// <summary>Clock: .NET date format, for example "d" (short date, the default) or "ddd d MMM". Empty hides the date.</summary>
     public string? DateFormat { get; set; }
 
-    /// <summary>Spacer: width in pixels (at 100% scaling). Default 16.</summary>
+    /// <summary>Spacer: width in pixels (at 100% scaling), default 16. SearchBox: box width, default 220. Media: maximum width, default 240.</summary>
     public double? Width { get; set; }
+
+    /// <summary>SearchBox: web search address, with {0} where the search text goes. Default: Google.</summary>
+    public string? SearchUrl { get; set; }
+
+    /// <summary>Volume: also show the volume as a number.</summary>
+    public bool? ShowValue { get; set; }
 
     /// <summary>Text: the label. Button: text shown next to (or instead of) the icon.</summary>
     public string? Text { get; set; }
@@ -82,8 +100,17 @@ public class TaskbarModule
         ModuleType.Spacer => $"Spacer ({Width ?? 16:0} px)",
         ModuleType.Text => $"Text: {Text}",
         ModuleType.Button => $"Button: {(string.IsNullOrEmpty(Text) ? Target ?? "(no target)" : Text)}",
+        ModuleType.ShowDesktop => "Show desktop",
+        ModuleType.WindowsSearch => "Windows search",
+        ModuleType.SearchBox => "Search box",
+        ModuleType.Volume => "Volume",
+        ModuleType.SystemStats => "CPU and memory",
+        ModuleType.Media => "Media controls",
         _ => Type.ToString(),
     };
+
+    /// <summary>Default web search for the search box.</summary>
+    public const string DefaultSearchUrl = "https://www.google.com/search?q={0}";
 
     /// <summary>A new module with sensible starting options for its type.</summary>
     public static TaskbarModule Create(ModuleType type) => type switch
@@ -92,6 +119,7 @@ public class TaskbarModule
         ModuleType.Spacer => new() { Type = type, Width = 16 },
         ModuleType.Text => new() { Type = type, Text = "Text" },
         ModuleType.Button => new() { Type = type, Text = "Button", Icon = "E721" },
+        ModuleType.SearchBox => new() { Type = type, Width = 220 },
         _ => new() { Type = type },
     };
 }

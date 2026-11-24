@@ -114,6 +114,12 @@ public partial class TaskbarView
             Margin = new Thickness(8, 0, 8, 0),
         },
         ModuleType.Button => CustomButtonModule(module),
+        ModuleType.ShowDesktop => ShowDesktopModule(),
+        ModuleType.WindowsSearch => GlyphButton("", "Search (Win+S)", () => PressWinShortcut('S')),
+        ModuleType.SearchBox => SearchBoxModule(module),
+        ModuleType.Volume => VolumeModule(module),
+        ModuleType.SystemStats => SystemStatsModule(),
+        ModuleType.Media => MediaModule(module),
         _ => throw new NotSupportedException("Unknown module type."),
     };
 

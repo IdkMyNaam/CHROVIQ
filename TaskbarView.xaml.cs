@@ -50,8 +50,8 @@ public partial class TaskbarView : UserControl
 
     private int _openMenus;
 
-    /// <summary>True while one of the bar's menus is open (auto-hide waits for it).</summary>
-    public bool IsMenuOpen => _openMenus > 0;
+    /// <summary>True while one of the bar's menus is open or the search box is in use (auto-hide waits for it).</summary>
+    public bool IsMenuOpen => _openMenus > 0 || _searchActive;
 
     public bool IsFloating => _look.Floating != null;
 
@@ -116,6 +116,8 @@ public partial class TaskbarView : UserControl
         _items?.Detach();
         _tracker?.Dispose();
         _tracker = null;
+        foreach (var disposable in _disposables) disposable.Dispose();
+        _disposables.Clear();
     }
 
     // ---------- Look ----------
