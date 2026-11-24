@@ -6,7 +6,9 @@
     1. Closes Windows Customizer if it is running (otherwise it would hide the taskbar again).
     2. Starts Explorer if it is not running.
     3. Turns taskbar auto-hide off (unless -KeepAutoHide is given).
-    4. Shows the taskbar on every monitor.
+    4. Shows the taskbar on every monitor and puts it back on top.
+    5. Asks all programs to add their tray icons again, so they show in the Windows tray
+       (the custom taskbar's Tray module collects them while it runs).
 
     Works on its own: it does not need the app to start.
 
@@ -51,6 +53,15 @@ public static class TaskbarRestore
 
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hwnd, int command);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint RegisterWindowMessage(string name);
+
+    [DllImport("user32.dll")]
+    public static extern bool SendNotifyMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 }
 '@
 
@@ -91,5 +102,13 @@ $secondary = [IntPtr]::Zero
 while (($secondary = [TaskbarRestore]::FindWindowEx([IntPtr]::Zero, $secondary, 'Shell_SecondaryTrayWnd', $null)) -ne [IntPtr]::Zero) {
     [void][TaskbarRestore]::ShowWindow($secondary, 5)
 }
+
+# Back on top (HWND_TOPMOST = -1; SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE = 0x13).
+[void][TaskbarRestore]::SetWindowPos($primary, [IntPtr](-1), 0, 0, 0, 0, 0x13)
+
+# 5. "TaskbarCreated" is what Explorer sends when it starts: every program then adds its tray icons again.
+$taskbarCreated = [TaskbarRestore]::RegisterWindowMessage('TaskbarCreated')
+[void][TaskbarRestore]::SendNotifyMessage([IntPtr]0xFFFF, $taskbarCreated, [IntPtr]::Zero, [IntPtr]::Zero)
+Write-Host 'Asked programs to show their tray icons again.'
 
 Write-Host 'Taskbar restored.' -ForegroundColor Green

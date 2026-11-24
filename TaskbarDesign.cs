@@ -35,6 +35,8 @@ public enum ModuleType
     SystemStats,
     /// <summary>What's playing (Spotify, browsers, ...) with previous / play-pause / next.</summary>
     Media,
+    /// <summary>The notification-area (tray) icons of all programs.</summary>
+    Tray,
 }
 
 /// <summary>
@@ -59,6 +61,9 @@ public class TaskbarModule
 
     /// <summary>Volume: also show the volume as a number.</summary>
     public bool? ShowValue { get; set; }
+
+    /// <summary>Tray: show only the system icons (network, volume, battery...) on the bar, the rest behind a ^ button.</summary>
+    public bool? TrayOverflow { get; set; }
 
     /// <summary>Text: the label. Button: text shown next to (or instead of) the icon.</summary>
     public string? Text { get; set; }
@@ -106,6 +111,7 @@ public class TaskbarModule
         ModuleType.Volume => "Volume",
         ModuleType.SystemStats => "CPU and memory",
         ModuleType.Media => "Media controls",
+        ModuleType.Tray => TrayOverflow == true ? "Tray icons (with ^ flyout)" : "Tray icons",
         _ => Type.ToString(),
     };
 

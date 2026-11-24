@@ -157,7 +157,13 @@ internal sealed class AppBar : IDisposable
         }
         else if (msg == _taskbarCreatedMessage)
         {
-            // Explorer restarted: register again. Never throw from a window procedure.
+            // "The taskbar was (re)created": after an Explorer restart, or when the Tray module starts/stops
+            // (ManagedShell announces it so programs re-add their tray icons). Unregister first: if we are
+            // still registered (no Explorer restart), registering again would be refused.
+            var data = NewData();
+            SHAppBarMessage(ABM_REMOVE, ref data);
+            _registered = false;
+            // Never throw from a window procedure.
             try { Register(); }
             catch (InvalidOperationException) { _registered = false; }
         }

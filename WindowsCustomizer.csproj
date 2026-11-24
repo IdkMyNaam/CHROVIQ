@@ -23,4 +23,8 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ManagedShell" Version="0.0.374" />
+  </ItemGroup>
+
 </Project>

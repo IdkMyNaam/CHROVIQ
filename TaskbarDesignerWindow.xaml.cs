@@ -76,6 +76,7 @@ public partial class TaskbarDesignerWindow : Window
             ModuleType.SearchBox => "Search box (apps + web)",
             ModuleType.SystemStats => "CPU and memory",
             ModuleType.Media => "Media controls",
+            ModuleType.Tray => "Tray icons",
             _ => Type.ToString(),
         };
     }
@@ -452,6 +453,16 @@ public partial class TaskbarDesignerWindow : Window
                 TextField(ModuleOptions, "Web search address", m.SearchUrl ?? "", v => m.SearchUrl = Empty(v),
                     "{0} is replaced by what you typed. Empty = Google. Examples: https://duckduckgo.com/?q={0}, https://www.bing.com/search?q={0}");
                 Hint(ModuleOptions, "Click the box and type: matching apps appear, Enter starts the first one (or searches the web). Esc cancels.");
+                break;
+
+            case ModuleType.Tray:
+                CheckField(ModuleOptions, "Only system icons on the bar, the rest behind ^", m.TrayOverflow == true,
+                    v => m.TrayOverflow = v ? true : null);
+                Hint(ModuleOptions,
+                    "The notification-area icons of all programs; clicks and right-click menus go to the programs as usual. " +
+                    "While a bar with this module is showing, programs send their icons here instead of to the Windows taskbar, " +
+                    "so the Windows tray may stop getting new icons (best combined with \"Hide the Windows taskbar\"). " +
+                    "Icons go back to Windows when the bar closes. The preview here shows a placeholder.");
                 break;
 
             case ModuleType.Media:

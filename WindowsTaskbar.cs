@@ -112,7 +112,13 @@ public static class WindowsTaskbar
         SHAppBarMessage(ABM_SETSTATE, ref data);
     }
 
-    private static IntPtr PrimaryTaskbar() => FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Shell_TrayWnd", null);
+    private static IntPtr PrimaryTaskbar() => ExplorerTaskbarWindow();
+
+    /// <summary>
+    /// Explorer's main taskbar window. While the Tray module runs there is a second window with the same
+    /// name ("Shell_TrayWnd") in our own process (ManagedShell's); that one is skipped.
+    /// </summary>
+    public static IntPtr ExplorerTaskbarWindow() => FindExplorerWindows("Shell_TrayWnd").FirstOrDefault();
 
     /// <summary>The main taskbar plus the ones on other monitors.</summary>
     private static List<IntPtr> AllTaskbars()
@@ -120,10 +126,20 @@ public static class WindowsTaskbar
         var result = new List<IntPtr>();
         var primary = PrimaryTaskbar();
         if (primary != IntPtr.Zero) result.Add(primary);
+        result.AddRange(FindExplorerWindows("Shell_SecondaryTrayWnd"));
+        return result;
+    }
 
-        IntPtr secondary = IntPtr.Zero;
-        while ((secondary = FindWindowEx(IntPtr.Zero, secondary, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
-            result.Add(secondary);
+    /// <summary>All top-level windows of a class that don't belong to this app.</summary>
+    private static List<IntPtr> FindExplorerWindows(string className)
+    {
+        var result = new List<IntPtr>();
+        IntPtr window = IntPtr.Zero;
+        while ((window = FindWindowEx(IntPtr.Zero, window, className, null)) != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(window, out uint pid);
+            if (pid != (uint)Environment.ProcessId) result.Add(window);
+        }
         return result;
     }
 

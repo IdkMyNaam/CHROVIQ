@@ -131,6 +131,7 @@ public partial class MainWindow : Window
             // Bring the Windows taskbar back first, but keep the setting, so it is hidden again next start.
             WindowsTaskbar.Restore();
             CloseBars(); // releases the reserved screen space
+            TrayHost.Shutdown(); // tray icons back to Explorer, even if a bar didn't get to clean up
             _trayIcon.Dispose();
         };
     }

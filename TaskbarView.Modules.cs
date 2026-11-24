@@ -120,6 +120,7 @@ public partial class TaskbarView
         ModuleType.Volume => VolumeModule(module),
         ModuleType.SystemStats => SystemStatsModule(),
         ModuleType.Media => MediaModule(module),
+        ModuleType.Tray => TrayModule(module),
         _ => throw new NotSupportedException("Unknown module type."),
     };
 
