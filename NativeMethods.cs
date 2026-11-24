@@ -238,6 +238,36 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extraInfo);
 
+    /// <summary>Presses and releases the Windows key on its own (opens Start).</summary>
+    public static void PressWinKey()
+    {
+        keybd_event(VK_LWIN, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+    }
+
+    // ---------- File icons (pinned apps, custom buttons) ----------
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct SHFILEINFO
+    {
+        public IntPtr hIcon;
+        public int iIcon;
+        public uint dwAttributes;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szDisplayName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+        public string szTypeName;
+    }
+
+    public const uint SHGFI_ICON = 0x000000100;
+    public const uint SHGFI_LARGEICON = 0x000000000;
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHGetFileInfoW")]
+    public static extern IntPtr SHGetFileInfo(string path, uint attributes, ref SHFILEINFO info, uint size, uint flags);
+
+    [DllImport("user32.dll")]
+    public static extern bool DestroyIcon(IntPtr icon);
+
     /// <summary>Presses Win + <paramref name="key"/> (for example 'A' for Quick Settings).</summary>
     public static void PressWinShortcut(char key)
     {

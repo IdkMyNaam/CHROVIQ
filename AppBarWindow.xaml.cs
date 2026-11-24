@@ -1,38 +1,44 @@
-using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using Forms = System.Windows.Forms;
 using static WindowsCustomizer.NativeMethods;
 
 namespace WindowsCustomizer;
 
 /// <summary>
-/// The custom taskbar for one monitor: an app bar on the top or bottom edge with
-/// a button per open window, battery level, Quick Settings and a clock.
+/// The custom taskbar for one monitor: an app bar on the top or bottom edge, filled with the
+/// modules of a <see cref="TaskbarDesign"/> (see AppBarWindow.Modules.cs).
 /// The Windows taskbar keeps running; this bar only reserves its own strip of screen.
 /// </summary>
 public partial class AppBarWindow : Window
 {
-    private const double BarHeight = 40;     // in WPF units; scaled for the display automatically
-    private const double MaxButtonWidth = 200;
+    private const double BarHeight = 40; // in WPF units; scaled for the display automatically
 
     private readonly TaskbarEdge _edge;
     private readonly string _monitorDevice;
     private readonly bool _onlyOwnMonitorWindows;
-    private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly TaskbarDesign _design;
+    private readonly DispatcherTimer _secondTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private AppBar? _appBar;
     private WindowTracker? _tracker;
-    private DateTime _lastBatteryCheck;
+
+    /// <summary>Fires once a second, for modules that change over time (clock, battery).</summary>
+    private event Action? EverySecond;
+
+    /// <summary>Entries for the Menu module; set by the main window.</summary>
+    public Func<IEnumerable<AppMenuItem>>? GetMenuItems { get; set; }
 
     /// <param name="monitorDevice">The monitor this bar docks on (see <see cref="Monitors"/>).</param>
     /// <param name="onlyOwnMonitorWindows">Show only buttons for windows on this monitor, instead of all windows.</param>
-    public AppBarWindow(string monitorDevice, TaskbarEdge edge, bool onlyOwnMonitorWindows)
+    /// <param name="design">Which modules to show where.</param>
+    public AppBarWindow(string monitorDevice, TaskbarEdge edge, bool onlyOwnMonitorWindows, TaskbarDesign design)
     {
         _monitorDevice = monitorDevice;
         _edge = edge;
         _onlyOwnMonitorWindows = onlyOwnMonitorWindows;
+        _design = design;
         InitializeComponent();
 
         // Accent line under the active window; follows accent color changes (including from our profiles).
@@ -43,9 +49,8 @@ public partial class AppBarWindow : Window
         SourceInitialized += (_, _) => SetUp();
         Closed += (_, _) => TearDown();
 
-        _clockTimer.Tick += (_, _) => UpdateClockAndBattery();
-        UpdateClockAndBattery();
-        _clockTimer.Start();
+        _secondTimer.Tick += (_, _) => EverySecond?.Invoke();
+        _secondTimer.Start();
     }
 
     /// <summary>Runs once the window has a handle, before it is first shown.</summary>
@@ -67,17 +72,20 @@ public partial class AppBarWindow : Window
             else Show();
         };
 
-        _tracker = _onlyOwnMonitorWindows
-            ? new WindowTracker(this, hwnd => Monitors.DeviceOf(hwnd) == _monitorDevice)
-            : new WindowTracker(this);
-        _tracker.Windows.CollectionChanged += (_, _) => UpdateButtonWidth();
-        WindowButtons.ItemsSource = _tracker.Windows;
-        UpdateButtonWidth();
+        // Only track windows when the design actually shows them.
+        if (_design.AllModules.Any(m => m.Type == ModuleType.WindowList))
+        {
+            _tracker = _onlyOwnMonitorWindows
+                ? new WindowTracker(this, w => Monitors.DeviceOf(w) == _monitorDevice)
+                : new WindowTracker(this);
+        }
+
+        Root.Child = BuildLayout();
     }
 
     private void TearDown()
     {
-        _clockTimer.Stop();
+        _secondTimer.Stop();
         _tracker?.Dispose();
         _appBar?.Dispose(); // gives the reserved screen space back
     }
@@ -97,34 +105,7 @@ public partial class AppBarWindow : Window
         Resources["AccentBrush"] = new System.Windows.Media.SolidColorBrush(accent);
     }
 
-    /// <summary>The buttons share the space equally, but never get wider than <see cref="MaxButtonWidth"/>.</summary>
-    private void UpdateButtonWidth()
-    {
-        int count = _tracker?.Windows.Count ?? 0;
-        WindowButtons.MaxWidth = Math.Max(1, count) * MaxButtonWidth;
-    }
-
-    private void UpdateClockAndBattery()
-    {
-        var now = DateTime.Now;
-        TimeText.Text = now.ToString("t");
-        DateText.Text = now.ToString("d");
-
-        // Battery doesn't change quickly; checking every 30 seconds is plenty.
-        if (now - _lastBatteryCheck < TimeSpan.FromSeconds(30)) return;
-        _lastBatteryCheck = now;
-
-        var power = Forms.SystemInformation.PowerStatus;
-        bool hasBattery = !power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery)
-                          && power.BatteryChargeStatus != Forms.BatteryChargeStatus.Unknown;
-        BatteryText.Visibility = hasBattery ? Visibility.Visible : Visibility.Collapsed;
-        if (!hasBattery) return;
-
-        int percent = (int)Math.Round(power.BatteryLifePercent * 100);
-        bool charging = power.PowerLineStatus == Forms.PowerLineStatus.Online;
-        BatteryText.Text = charging ? $"{percent}% ⚡" : $"{percent}%";
-        BatteryText.ToolTip = charging ? $"Battery {percent}%, plugged in" : $"Battery {percent}%";
-    }
+    // ---------- Window list ----------
 
     private void WindowButton_Click(object sender, RoutedEventArgs e)
     {
@@ -141,19 +122,17 @@ public partial class AppBarWindow : Window
             WindowTracker.Close(window.Handle);
     }
 
-    /// <summary>Entries for the menu button; set by the main window.</summary>
-    public Func<IEnumerable<AppMenuItem>>? GetMenuItems { get; set; }
+    // ---------- App menu ----------
 
-    private void MenuButton_Click(object sender, RoutedEventArgs e)
+    /// <summary>Opens the app menu next to <paramref name="anchor"/>, on the screen side of the bar.</summary>
+    private void ShowAppMenu(UIElement anchor)
     {
         if (GetMenuItems == null) return;
 
         var menu = new ContextMenu
         {
-            PlacementTarget = MenuButton,
-            Placement = _edge == TaskbarEdge.Top
-                ? System.Windows.Controls.Primitives.PlacementMode.Bottom
-                : System.Windows.Controls.Primitives.PlacementMode.Top,
+            PlacementTarget = anchor,
+            Placement = _edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
         };
         foreach (var entry in GetMenuItems())
         {
@@ -175,8 +154,4 @@ public partial class AppBarWindow : Window
         }
         menu.IsOpen = true;
     }
-
-    private void QuickSettings_Click(object sender, RoutedEventArgs e) => PressWinShortcut('A');
-
-    private void Clock_Click(object sender, RoutedEventArgs e) => PressWinShortcut('N');
 }

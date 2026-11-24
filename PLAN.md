@@ -26,21 +26,23 @@ A C# / WPF app that switches between full Windows "themes" (wallpaper, colors, c
 - [x] Save/load profiles as JSON
 
 ## Phase 2: Custom taskbar / dock
-- [ ] Window that reserves screen space via `SHAppBarMessage` (AppBar API)
-- [ ] List open windows (EnumWindows) with icons
-- [ ] Click to focus / minimize / restore
-- [ ] Clock + basic system tray area
-- [ ] Native taskbar stays running underneath (low risk)
-- [ ] Option to hide the native taskbar (auto-hide + hidden, restored on exit/crash; `Restore-Taskbar.ps1` as fallback)
+- [x] Window that reserves screen space via `SHAppBarMessage` (AppBar API)
+- [x] List open windows (EnumWindows) with icons
+- [x] Click to focus / minimize / restore
+- [x] Clock + basic system tray area
+- [x] Native taskbar stays running underneath (low risk)
+- [x] Option to hide the native taskbar (auto-hide + hidden, restored on exit/crash; `Restore-Taskbar.ps1` as fallback)
+- [x] A bar on every monitor (window buttons on all bars, or only on the window's own monitor)
 
 ## Phase 2b: Fully customizable taskbar
 Goal: design your own taskbar instead of using a fixed layout.
-- [ ] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
-- [ ] Choose which modules show, their order, and zone (left / center / right)
+- [x] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
+- [x] Choose which modules show, their order, and zone (left / center / right) — in the design JSON files for now
+- [x] Save a taskbar design as JSON (`%AppData%\WindowsCustomizer\Taskbars`), reloaded when the file changes
 - [ ] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title
 - [ ] "Floating dock" style (margins from the screen edge, rounded, centered)
-- [ ] Save a taskbar design as JSON; optionally link a design to a profile
-- [ ] Editor in the main window with a live preview
+- [ ] Link a design to a profile
+- [ ] Taskbar designer window with a live preview
 - [ ] Import/export designs (ties in with "Import/export themes" below)
 - [ ] Later: own widgets as plugins (see open questions)
 

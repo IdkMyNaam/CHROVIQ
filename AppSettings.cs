@@ -33,6 +33,9 @@ public class AppSettings
     /// </summary>
     public bool? TaskbarAutoHideBefore { get; set; }
 
+    /// <summary>Name of the taskbar design to use (a file in %AppData%\WindowsCustomizer\Taskbars).</summary>
+    public string TaskbarDesign { get; set; } = TaskbarDesigns.DefaultName;
+
     /// <summary>Which bar shows a window's button when the custom taskbar is on several monitors.</summary>
     public TaskbarButtons TaskbarButtons { get; set; } = TaskbarButtons.AllBars;
 

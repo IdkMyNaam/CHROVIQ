@@ -38,65 +38,37 @@
         </Style>
 
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Window list module: buttons share the space, at most 200 each. -->
+        <ItemsPanelTemplate x:Key="TaskButtonsPanel">
+            <local:TaskButtonPanel MaxItemWidth="200" />
+        </ItemsPanelTemplate>
+
+        <DataTemplate x:Key="TaskWindowTemplate" DataType="{x:Type local:TaskWindow}">
+            <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="8,0"
+                    HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}"
+                    Click="WindowButton_Click">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Close window" Click="CloseWindow_Click" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="{Binding Icon}" Width="16" Height="16"
+                           Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </DockPanel>
+            </Button>
+            <DataTemplate.Triggers>
+                <!-- The window that is in front gets a lighter background and an accent-colored border. -->
+                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                    <Setter TargetName="Btn" Property="Background" Value="#33FFFFFF" />
+                    <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </Window.Resources>
 
-    <DockPanel Margin="4,3">
-        <!-- Right: battery, Quick Settings, clock -->
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-            <TextBlock x:Name="BatteryText" VerticalAlignment="Center" Margin="8,0" Visibility="Collapsed" />
-            <Button Style="{StaticResource BarButton}" ToolTip="Quick Settings (Win+A)" Click="QuickSettings_Click">
-                <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="14" />
-            </Button>
-            <Button Style="{StaticResource BarButton}" ToolTip="Notifications and calendar (Win+N)" Click="Clock_Click">
-                <StackPanel>
-                    <TextBlock x:Name="TimeText" HorizontalAlignment="Right" />
-                    <TextBlock x:Name="DateText" HorizontalAlignment="Right" FontSize="11" Opacity="0.8" />
-                </StackPanel>
-            </Button>
-        </StackPanel>
-
-        <!-- Far left: the app menu (same as the tray icon's), since the tray is out of reach
-             when the Windows taskbar is hidden. -->
-        <Button x:Name="MenuButton" DockPanel.Dock="Left" Style="{StaticResource BarButton}" Margin="0,0,4,0"
-                ToolTip="Windows Customizer" Click="MenuButton_Click">
-            <TextBlock Text="&#xE700;" FontFamily="{StaticResource IconFont}" FontSize="14" />
-        </Button>
-
-        <!-- Left: one button per open window. Buttons share the width equally, at most 200 each. -->
-        <ItemsControl x:Name="WindowButtons" HorizontalAlignment="Left">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <UniformGrid Rows="1" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type local:TaskWindow}">
-                    <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="8,0"
-                            HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}"
-                            Click="WindowButton_Click">
-                        <Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Close window" Click="CloseWindow_Click" />
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                        <Grid>
-                            <DockPanel>
-                                <Image DockPanel.Dock="Left" Source="{Binding Icon}" Width="16" Height="16"
-                                       Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
-                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center" />
-                            </DockPanel>
-                        </Grid>
-                    </Button>
-                    <DataTemplate.Triggers>
-                        <!-- The window that is in front gets a lighter background and an accent-colored border. -->
-                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                            <Setter TargetName="Btn" Property="Background" Value="#33FFFFFF" />
-                            <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </DockPanel>
+    <!-- Filled from the taskbar design: left, center and right zones (see TaskbarRenderer). -->
+    <Border x:Name="Root" Margin="4,3" />
 </Window>

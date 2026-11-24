@@ -82,6 +82,13 @@
                           Click="HideWindowsTaskbarCheck_Click"
                           ToolTip="Only while the custom taskbar is showing. If the taskbar ever stays hidden, run Restore-Taskbar.ps1 from the project folder." />
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Design" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
+                    <ComboBox x:Name="TaskbarDesignBox" Width="150" SelectionChanged="TaskbarDesignBox_SelectionChanged" />
+                    <Button Content="Open designs folder" Margin="8,0,0,0" Padding="6,2"
+                            ToolTip="Designs are JSON files. Edit or add them here; the taskbar updates when you save."
+                            Click="OpenDesignsFolder_Click" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock Text="Screen edge" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
                     <ComboBox x:Name="TaskbarEdgeBox" Width="100" SelectionChanged="TaskbarEdgeBox_SelectionChanged">
                         <ComboBoxItem Content="Top" />

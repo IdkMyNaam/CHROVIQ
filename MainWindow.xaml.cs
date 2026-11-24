@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -97,6 +98,8 @@ public partial class MainWindow : Window
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
         WatchDisplayChanges();
+        LoadDesigns();
+        WatchDesignFiles();
 
         if (_settings.ShowTaskbar)
         {
@@ -687,7 +690,10 @@ public partial class MainWindow : Window
 
         foreach (var monitor in Monitors.All())
         {
-            var bar = new AppBarWindow(monitor.Device, _settings.TaskbarEdge, onlyOwnMonitor) { GetMenuItems = BuildAppMenu };
+            var bar = new AppBarWindow(monitor.Device, _settings.TaskbarEdge, onlyOwnMonitor, ActiveDesign())
+            {
+                GetMenuItems = BuildAppMenu,
+            };
             try
             {
                 bar.Show();
@@ -808,6 +814,108 @@ public partial class MainWindow : Window
         _settings.TaskbarEdge = edge;
         SaveSettings();
         RebuildBars(); // the edge is fixed while a bar is registered
+    }
+
+    // ---------- Taskbar designs ----------
+
+    private List<TaskbarDesign> _designs = new();
+    private FileSystemWatcher? _designWatcher;
+    private DispatcherTimer? _designReloadTimer;
+
+    /// <summary>The design chosen in the settings, or the default one if that file is gone or broken.</summary>
+    private TaskbarDesign ActiveDesign() =>
+        _designs.FirstOrDefault(d => d.Name.Equals(_settings.TaskbarDesign, StringComparison.CurrentCultureIgnoreCase))
+        ?? _designs.FirstOrDefault(d => d.Name == TaskbarDesigns.DefaultName)
+        ?? _designs.FirstOrDefault()
+        ?? TaskbarDesign.Classic();
+
+    /// <summary>Reads all design files and fills the design dropdown. Problems go to the status line.</summary>
+    private void LoadDesigns()
+    {
+        try
+        {
+            var (designs, errors) = TaskbarDesigns.LoadAll();
+            _designs = designs;
+            if (errors.Count > 0)
+                StatusText.Text = "Some taskbar designs could not be read: " + string.Join(" ", errors);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not load taskbar designs: {ex.Message}";
+        }
+
+        _loading = true; // setting the selection raises SelectionChanged
+        TaskbarDesignBox.ItemsSource = _designs.Select(d => d.Name).ToList();
+        TaskbarDesignBox.SelectedItem = ActiveDesign().Name;
+        _loading = false;
+    }
+
+    private void TaskbarDesignBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || TaskbarDesignBox.SelectedItem is not string name) return;
+        if (name == _settings.TaskbarDesign) return;
+
+        _settings.TaskbarDesign = name;
+        SaveSettings();
+        RebuildBars();
+    }
+
+    private void OpenDesignsFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(TaskbarDesigns.Folder);
+            System.Diagnostics.Process.Start("explorer.exe", $"\"{TaskbarDesigns.Folder}\"")?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not open the designs folder: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Reloads designs when a file in the designs folder is saved, added, renamed or deleted,
+    /// so hand edits show up on the taskbar right away.
+    /// </summary>
+    private void WatchDesignFiles()
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(TaskbarDesigns.Folder);
+            _designWatcher = new FileSystemWatcher(TaskbarDesigns.Folder, "*.json")
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                EnableRaisingEvents = true,
+            };
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Design files won't reload automatically: {ex.Message}";
+            return;
+        }
+
+        _designReloadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+        _designReloadTimer.Tick += (_, _) =>
+        {
+            _designReloadTimer.Stop();
+            var before = System.Text.Json.JsonSerializer.Serialize(ActiveDesign());
+            LoadDesigns();
+            // Only rebuild when the design in use actually changed.
+            if (System.Text.Json.JsonSerializer.Serialize(ActiveDesign()) != before)
+                RebuildBars();
+        };
+
+        // Watcher events come from a background thread, often several per save (editors write in steps).
+        void Changed(object? s, EventArgs e) => Dispatcher.InvokeAsync(() =>
+        {
+            _designReloadTimer.Stop();
+            _designReloadTimer.Start();
+        });
+        _designWatcher.Changed += Changed;
+        _designWatcher.Created += Changed;
+        _designWatcher.Deleted += Changed;
+        _designWatcher.Renamed += Changed;
+        Closed += (_, _) => _designWatcher.Dispose();
     }
 
     private void TaskbarButtonsBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
