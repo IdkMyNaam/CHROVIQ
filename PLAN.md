@@ -59,11 +59,14 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [ ] Later: recent files, folders of pinned apps
 
 ## Phase 4: True shell replacement
-- [ ] Set up VM + recovery script first
-- [ ] Replace `explorer.exe` via the `Shell` value in the Winlogon registry key
-- [ ] Own desktop (icons, right-click menu)
-- [ ] Tray icons, notifications
-- [ ] File browsing (fallback: launch Explorer windows on demand)
+- [x] Recovery first: `Restore-Shell.ps1` (with -DryRun), .reg backups, per-user change only (HKCU), `ShellLauncher.ps1` starts Explorer whenever the app ends
+- [ ] VM: not used; testing on the main PC with the safety net above + a second admin account (ask before every risky step)
+- [ ] Replace `explorer.exe` via the `Shell` value in the Winlogon registry key (built: "Use as shell" / "Back to Explorer"; real test pending)
+- [ ] Own desktop (icons, right-click menu) (built and rendered; real test as shell pending)
+- [ ] Startup programs (Run keys, RunOnce, Startup folders; respects Task Manager's on/off) (built, listed; real start pending)
+- [ ] Work area without Explorer (our bars set it directly) (built; real test pending)
+- [ ] Tray icons, notifications (tray via ManagedShell in shell mode; Windows notifications/Win+A/Win+N need Explorer)
+- [ ] File browsing (our desktop registers as the shell window, so explorer.exe only opens file windows) (real test pending)
 - [ ] Note: Windows 11 makes this harder; expect issues
 
 ## Optional extras

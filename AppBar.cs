@@ -80,6 +80,14 @@ internal sealed class AppBar : IDisposable
 
     private void Register()
     {
+        // Windows Customizer is the shell: no Explorer to register with; we manage the work area ourselves.
+        if (ShellMode.IsShell)
+        {
+            _registered = true;
+            UpdatePosition();
+            return;
+        }
+
         var data = NewData();
         data.uCallbackMessage = _callbackMessage;
         _registered = SHAppBarMessage(ABM_NEW, ref data) != UIntPtr.Zero;
@@ -101,6 +109,15 @@ internal sealed class AppBar : IDisposable
         // Use the target monitor's scaling, not the window's: the window may still be on another monitor.
         double scale = Monitors.ScaleOf(monitor);
         int thickness = (int)Math.Round(_reserveDip * scale);
+
+        if (ShellMode.IsShell)
+        {
+            var strip = info.Bounds;
+            ApplyThickness(ref strip, thickness);
+            WorkArea.Reserve(_monitorDevice, _edge, thickness);
+            _place(strip, scale);
+            return;
+        }
 
         var data = NewData();
         data.rc = info.Bounds;
@@ -155,7 +172,7 @@ internal sealed class AppBar : IDisposable
             }
             handled = true;
         }
-        else if (msg == _taskbarCreatedMessage)
+        else if (msg == _taskbarCreatedMessage && !ShellMode.IsShell)
         {
             // "The taskbar was (re)created": after an Explorer restart, or when the Tray module starts/stops
             // (ManagedShell announces it so programs re-add their tray icons). Unregister first: if we are
@@ -167,12 +184,12 @@ internal sealed class AppBar : IDisposable
             try { Register(); }
             catch (InvalidOperationException) { _registered = false; }
         }
-        else if (msg == WM_ACTIVATE && _registered)
+        else if (msg == WM_ACTIVATE && _registered && !ShellMode.IsShell)
         {
             var data = NewData();
             SHAppBarMessage(ABM_ACTIVATE, ref data);
         }
-        else if (msg == WM_WINDOWPOSCHANGED && _registered)
+        else if (msg == WM_WINDOWPOSCHANGED && _registered && !ShellMode.IsShell)
         {
             var data = NewData();
             SHAppBarMessage(ABM_WINDOWPOSCHANGED, ref data);
@@ -187,6 +204,11 @@ internal sealed class AppBar : IDisposable
 
     public void Dispose()
     {
+        if (_registered && ShellMode.IsShell)
+        {
+            WorkArea.Release(_monitorDevice, _edge);
+            _registered = false;
+        }
         if (_registered)
         {
             var data = NewData();

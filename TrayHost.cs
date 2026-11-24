@@ -33,6 +33,8 @@ internal static class TrayHost
         {
             try
             {
+                // As the shell, ManagedShell's tray doesn't read Explorer's icons (there is no Explorer).
+                ManagedShell.Common.Helpers.EnvironmentHelper.IsAppRunningAsShell = ShellMode.IsShell;
                 var pins = SavedPins is { Length: > 0 } saved ? saved : NotificationArea.DEFAULT_PINNED;
                 var area = new NotificationArea(pins, new TrayService(), new ExplorerTrayService());
                 area.SetAppBarMessageCallback(AppBarHandler);

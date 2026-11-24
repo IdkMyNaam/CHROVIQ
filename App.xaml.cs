@@ -6,6 +6,9 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // "--shell" when started by ShellLauncher.ps1 as the user's shell (Phase 4).
+        ShellMode.ReadCommandLine(e.Args);
+
         // If the app crashes or is ended while the Windows taskbar is hidden, bring it back.
         // These don't swallow the error; they only clean up first. (Killing the process from
         // Task Manager skips them: use Restore-Taskbar.ps1 then.)

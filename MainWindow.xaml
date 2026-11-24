@@ -128,6 +128,16 @@
                     <Button Content="Search settings..." Padding="6" Margin="8,0,0,0" Click="SearchSettings_Click" />
                 </StackPanel>
 
+                <TextBlock Text="Shell (replace Explorer)" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <TextBlock x:Name="ShellStatusText" Foreground="Gray" TextWrapping="Wrap" />
+                <WrapPanel Margin="0,8,0,0">
+                    <Button x:Name="UseAsShellButton" Content="Use as shell (from next sign-in)..." Padding="6"
+                            Margin="0,0,8,6" Click="UseAsShell_Click" />
+                    <Button x:Name="BackToExplorerButton" Content="Back to Explorer" Padding="6" Margin="0,0,8,6"
+                            Click="BackToExplorer_Click" />
+                    <Button Content="Backups folder" Padding="6" Margin="0,0,8,6" Click="OpenBackups_Click" />
+                </WrapPanel>
+
                 <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"
                           Click="PauseForGamesCheck_Click" />

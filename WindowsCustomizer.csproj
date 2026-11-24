@@ -30,6 +30,9 @@
   <ItemGroup>
     <!-- Next to the .exe: the app's watchdog runs it if the app is killed while it hides the taskbar. -->
     <None Update="Restore-Taskbar.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Phase 4 safety net: the shell launcher (starts Explorer whenever the app ends) and the undo script. -->
+    <None Update="ShellLauncher.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Restore-Shell.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

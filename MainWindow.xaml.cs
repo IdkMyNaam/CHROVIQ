@@ -101,6 +101,7 @@ public partial class MainWindow : Window
         SetUpTrayAndHotKey();
         WatchDisplayChanges();
         SetUpSearch();
+        UpdateShellStatus();
 
         // Which tray icons stay on the bar (Ctrl+click an icon to change it); remembered in the settings.
         TrayHost.SavedPins = _settings.TrayPinned?.ToArray();
@@ -115,6 +116,8 @@ public partial class MainWindow : Window
                 SetWindowsTaskbarHidden(true);
         }
         UpdateHideWindowsTaskbarCheck();
+
+        if (ShellMode.IsShell) StartShellMode();
 
         // Windows shutting down or signing out must not be blocked by "hide instead of close".
         Application.Current.SessionEnding += (_, _) => _exiting = true;
@@ -778,6 +781,7 @@ public partial class MainWindow : Window
         {
             timer.Stop();
             BuildMonitorDesignBoxes(); // a monitor may have been added or removed
+            if (ShellMode.IsShell) OpenDesktops();
             if (TaskbarShown && Monitors.Layout() != _monitorLayout)
                 RebuildBars();
         };
@@ -1057,6 +1061,112 @@ public partial class MainWindow : Window
         _settings.TaskbarButtons = mode;
         SaveSettings();
         RebuildBars();
+    }
+
+    // ---------- Shell (Phase 4) ----------
+
+    private readonly List<DesktopWindow> _desktops = new();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetShellWindow(IntPtr hwnd);
+
+    /// <summary>
+    /// Started as the user's shell (Explorer isn't running): desktops, a taskbar no matter what,
+    /// the startup programs, and the main window out of sight (it lives in the tray / bar menu).
+    /// </summary>
+    private void StartShellMode()
+    {
+        // Out of sight from the start: no flash of the window at sign-in.
+        Opacity = 0;
+        Loaded += (_, _) => { Hide(); Opacity = 1; };
+
+        OpenDesktops();
+
+        // As the shell, never leave the user without a taskbar, whatever the setting says.
+        if (!TaskbarShown) SetTaskbarVisible(true);
+
+        if (ShellMode.RunStartupPrograms)
+        {
+            var log = Path.Combine(AppSettings.Folder, "startup-programs.log");
+            _ = StartupApps.RunAllAsync(line =>
+            {
+                try { File.AppendAllText(log, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {line}{Environment.NewLine}"); }
+                catch (IOException) { /* logging is optional */ }
+            });
+        }
+        Closed += (_, _) => { foreach (var d in _desktops) d.Close(); };
+    }
+
+    /// <summary>One desktop per monitor (icons on the main one); the main one is registered as the shell window.</summary>
+    private void OpenDesktops()
+    {
+        foreach (var d in _desktops) d.Close();
+        _desktops.Clear();
+        foreach (var monitor in Monitors.All())
+        {
+            var desktop = new DesktopWindow(monitor, showIcons: monitor.IsPrimary) { OpenCustomizer = ShowFromTray };
+            desktop.Show();
+            _desktops.Add(desktop);
+            // The shell window: with one registered, explorer.exe only opens file windows instead of taking over.
+            if (monitor.IsPrimary) SetShellWindow(desktop.Handle);
+        }
+    }
+
+    private void UpdateShellStatus()
+    {
+        bool installed = ShellMode.IsInstalled();
+        string now = ShellMode.IsShell ? "Windows Customizer is your shell right now." : "Explorer is your shell right now.";
+        string next = installed
+            ? "From the next sign-in: Windows Customizer (if it ever closes, Explorer starts automatically)."
+            : ShellMode.CurrentUserShell() is { } other ? $"Your user has another shell set: {other}" : "From the next sign-in: Explorer.";
+        ShellStatusText.Text = $"{now} {next}";
+        UseAsShellButton.IsEnabled = !installed;
+        BackToExplorerButton.IsEnabled = installed || ShellMode.CurrentUserShell() != null;
+    }
+
+    private void UseAsShell_Click(object sender, RoutedEventArgs e)
+    {
+        var answer = MessageBox.Show(this,
+            "Make Windows Customizer your shell instead of Explorer, from your next sign-in?\n\n" +
+            "• Only your user is changed; a backup of the setting is saved first.\n" +
+            "• If Windows Customizer ever closes or crashes, Explorer starts automatically.\n" +
+            "• Not available without Explorer: Quick Settings (Win+A) and the notification center (Win+N).\n\n" +
+            "To go back: the \"Back to Explorer\" button, or Restore-Shell.ps1 next to the app " +
+            "(also from Ctrl+Alt+Del > Task Manager > Run new task).\n\n" +
+            "Tip: have a second administrator account, so you can always undo it from there.",
+            "Use as shell", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var backup = ShellMode.Install();
+            StatusText.Text = $"Windows Customizer will be your shell from the next sign-in. Backup: {backup}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Not changed: {ex.Message}";
+        }
+        UpdateShellStatus();
+    }
+
+    private void BackToExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var backup = ShellMode.Uninstall();
+            StatusText.Text = $"Explorer will be your shell again from the next sign-in. Backup: {backup}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Not changed: {ex.Message}";
+        }
+        UpdateShellStatus();
+    }
+
+    private void OpenBackups_Click(object sender, RoutedEventArgs e)
+    {
+        Directory.CreateDirectory(ShellMode.BackupFolder);
+        System.Diagnostics.Process.Start("explorer.exe", $"\"{ShellMode.BackupFolder}\"")?.Dispose();
     }
 
     // ---------- Search ----------
