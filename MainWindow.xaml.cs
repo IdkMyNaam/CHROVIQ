@@ -693,7 +693,9 @@ public partial class MainWindow : Window
 
         foreach (var monitor in Monitors.All())
         {
-            var bar = new AppBarWindow(monitor.Device, _settings.TaskbarEdge, onlyOwnMonitor, ActiveDesign())
+            var design = DesignFor(monitor);
+            var edge = design.Edge ?? _settings.TaskbarEdge; // the design's own edge wins
+            var bar = new AppBarWindow(monitor.Device, edge, onlyOwnMonitor, design)
             {
                 GetMenuItems = BuildAppMenu,
             };
@@ -759,6 +761,7 @@ public partial class MainWindow : Window
         timer.Tick += (_, _) =>
         {
             timer.Stop();
+            BuildMonitorDesignBoxes(); // a monitor may have been added or removed
             if (TaskbarShown && Monitors.Layout() != _monitorLayout)
                 RebuildBars();
         };
@@ -851,6 +854,62 @@ public partial class MainWindow : Window
         TaskbarDesignBox.ItemsSource = _designs.Select(d => d.Name).ToList();
         TaskbarDesignBox.SelectedItem = ActiveDesign().Name;
         _loading = false;
+        BuildMonitorDesignBoxes();
+    }
+
+    private const string SameAsMain = "(same as main)";
+
+    /// <summary>The design for a monitor: its own choice if it has one that still exists, else the main design.</summary>
+    private TaskbarDesign DesignFor(MonitorInfo monitor)
+    {
+        if (!monitor.IsPrimary
+            && _settings.MonitorDesigns.TryGetValue(monitor.Device, out var name)
+            && _designs.FirstOrDefault(d => d.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)) is { } own)
+            return own;
+        return ActiveDesign();
+    }
+
+    /// <summary>One "Monitor N" dropdown per extra monitor (none with a single monitor).</summary>
+    private void BuildMonitorDesignBoxes()
+    {
+        MonitorDesignsPanel.Children.Clear();
+        var monitors = Monitors.All();
+        int number = 1;
+        foreach (var monitor in monitors)
+        {
+            number++;
+            if (monitor.IsPrimary) { number--; continue; }
+
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            row.Children.Add(new TextBlock
+            {
+                Text = $"Monitor {number}",
+                Width = 70,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = Brushes.Gray,
+                ToolTip = monitor.Device,
+            });
+
+            var box = new ComboBox { Width = 150 };
+            var choices = new List<string> { SameAsMain };
+            choices.AddRange(_designs.Select(d => d.Name));
+            box.ItemsSource = choices;
+            box.SelectedItem = _settings.MonitorDesigns.TryGetValue(monitor.Device, out var chosen) && choices.Contains(chosen)
+                ? chosen
+                : SameAsMain;
+
+            var device = monitor.Device;
+            box.SelectionChanged += (_, _) =>
+            {
+                if (box.SelectedItem is not string name) return;
+                if (name == SameAsMain) _settings.MonitorDesigns.Remove(device);
+                else _settings.MonitorDesigns[device] = name;
+                SaveSettings();
+                RebuildBars();
+            };
+            row.Children.Add(box);
+            MonitorDesignsPanel.Children.Add(row);
+        }
     }
 
     private void TaskbarDesignBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

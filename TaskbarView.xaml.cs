@@ -41,7 +41,16 @@ public partial class TaskbarView : UserControl
         Loaded += (_, _) => Build();
         Unloaded += (_, _) => TearDown();
         _secondTimer.Tick += (_, _) => EverySecond?.Invoke();
+
+        // Right-click menus of window buttons (they bubble up to here).
+        ContextMenuOpening += (_, _) => _openMenus++;
+        ContextMenuClosing += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
     }
+
+    private int _openMenus;
+
+    /// <summary>True while one of the bar's menus is open (auto-hide waits for it).</summary>
+    public bool IsMenuOpen => _openMenus > 0;
 
     public bool IsFloating => _look.Floating != null;
 
@@ -188,6 +197,8 @@ public partial class TaskbarView : UserControl
             item.Click += (_, _) => onClick?.Invoke();
             menu.Items.Add(item);
         }
+        menu.Opened += (_, _) => _openMenus++;
+        menu.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
         menu.IsOpen = true;
     }
 }

@@ -153,6 +153,15 @@ public class TaskbarDesign
     /// <summary>Size, colors, font and style. Missing in a file: the default look.</summary>
     public TaskbarLook Look { get; set; } = new();
 
+    /// <summary>Screen edge for this design. Empty: the "Screen edge" setting in the main window.</summary>
+    public TaskbarEdge? Edge { get; set; }
+
+    /// <summary>
+    /// Slide the bar away when not in use; it comes back when the mouse touches the screen edge.
+    /// An auto-hiding bar never reserves screen space.
+    /// </summary>
+    public bool AutoHide { get; set; }
+
     /// <summary>Modules aligned to the left edge of the bar.</summary>
     public List<TaskbarModule> Left { get; set; } = new();
 
@@ -208,6 +217,7 @@ public class TaskbarDesign
     public static TaskbarDesign Dock() => new()
     {
         Name = "Dock",
+        Edge = TaskbarEdge.Bottom,
         Look = new TaskbarLook
         {
             Height = 52,

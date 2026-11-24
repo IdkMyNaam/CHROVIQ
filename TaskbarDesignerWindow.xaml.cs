@@ -510,6 +510,19 @@ public partial class TaskbarDesignerWindow : Window
         nameBox.KeyDown += (_, e) => { if (e.Key == Key.Enter) RenameDesign(nameBox.Text); };
         LookOptions.Children.Add(nameBox);
 
+        Header(LookOptions, "Behavior");
+        Label(LookOptions, "Screen edge");
+        var edgeBox = new ComboBox { ItemsSource = new[] { "Use the main setting", "Top", "Bottom" } };
+        edgeBox.SelectedIndex = design.Edge switch { TaskbarEdge.Top => 1, TaskbarEdge.Bottom => 2, _ => 0 };
+        edgeBox.SelectionChanged += (_, _) =>
+        {
+            design.Edge = edgeBox.SelectedIndex switch { 1 => TaskbarEdge.Top, 2 => TaskbarEdge.Bottom, _ => null };
+            Changed();
+        };
+        LookOptions.Children.Add(edgeBox);
+        CheckField(LookOptions, "Auto-hide", design.AutoHide, v => design.AutoHide = v,
+            "Slides away when not in use; move the mouse to the screen edge to bring it back. Doesn't reserve screen space.");
+
         Header(LookOptions, "Size and colors");
         NumberField(LookOptions, "Height (pixels)", look.Height, v => look.Height = v, 20, 200);
         ColorField(LookOptions, "Background", look.Background, v => look.Background = v,

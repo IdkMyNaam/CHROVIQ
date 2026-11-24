@@ -192,6 +192,9 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
 
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT point);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct WINDOWPLACEMENT
     {

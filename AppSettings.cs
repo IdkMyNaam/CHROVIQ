@@ -36,6 +36,12 @@ public class AppSettings
     /// <summary>Name of the taskbar design to use (a file in %AppData%\WindowsCustomizer\Taskbars).</summary>
     public string TaskbarDesign { get; set; } = TaskbarDesigns.DefaultName;
 
+    /// <summary>
+    /// A different design for other monitors: monitor device name (like \\.\DISPLAY2) to design name.
+    /// Monitors not listed (and the main monitor) use <see cref="TaskbarDesign"/>.
+    /// </summary>
+    public Dictionary<string, string> MonitorDesigns { get; set; } = new();
+
     /// <summary>Which bar shows a window's button when the custom taskbar is on several monitors.</summary>
     public TaskbarButtons TaskbarButtons { get; set; } = TaskbarButtons.AllBars;
 
