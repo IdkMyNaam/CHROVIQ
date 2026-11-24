@@ -23,12 +23,38 @@ public static class ThemeService
         IntPtr hWnd, uint msg, UIntPtr wParam, string lParam,
         uint flags, uint timeout, out UIntPtr result);
 
-    public static void Apply(Profile profile)
+    public static async Task ApplyAsync(Profile profile)
     {
-        if (profile.WallpaperPath is { Length: > 0 } path && File.Exists(path))
-            SetWallpaper(path);
-
         SetDarkMode(profile.DarkMode);
+
+        var value = profile.WallpaperValue?.Trim();
+        if (string.IsNullOrEmpty(value)) return; // no wallpaper set: leave the current one
+
+        switch (profile.Kind)
+        {
+            case WallpaperKind.Image:
+                if (!File.Exists(value))
+                    throw new FileNotFoundException($"Wallpaper image not found: {value}");
+
+                // Wallpaper Engine draws over the normal wallpaper, so stop it first.
+                if (WallpaperEngine.IsRunning)
+                {
+                    await WallpaperEngine.StopAsync();
+                    await Task.Delay(700);
+                }
+                SetWallpaper(value);
+                break;
+
+            case WallpaperKind.WallpaperEngineFile:
+                if (!File.Exists(value))
+                    throw new FileNotFoundException($"Wallpaper Engine file not found: {value}");
+                await WallpaperEngine.OpenWallpaperAsync(value);
+                break;
+
+            case WallpaperKind.WallpaperEngineProfile:
+                await WallpaperEngine.OpenProfileAsync(value);
+                break;
+        }
     }
 
     public static void SetWallpaper(string path)

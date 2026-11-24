@@ -1,7 +1,7 @@
 <Window x:Class="WindowsCustomizer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Windows Customizer" Height="340" Width="540">
+        Title="Windows Customizer" Height="580" Width="620">
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="180" />
@@ -15,18 +15,43 @@
             <ListBox x:Name="ProfileList" SelectionChanged="ProfileList_SelectionChanged" />
         </DockPanel>
 
-        <!-- Right: settings of the selected profile -->
-        <StackPanel Grid.Column="1" Margin="12,0,0,0">
-            <CheckBox x:Name="DarkCheck" Content="Dark mode" Click="DarkCheck_Click" />
+        <!-- Right: settings of the selected profile, then app-wide settings -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12,0,4,0">
+                <CheckBox x:Name="DarkCheck" Content="Dark mode" Click="DarkCheck_Click" />
 
-            <TextBlock Text="Wallpaper" Margin="0,16,0,4" FontWeight="SemiBold" />
-            <TextBlock x:Name="WallpaperText" TextWrapping="Wrap" Text="(none)" />
-            <Button Content="Choose wallpaper..." Margin="0,8,0,0" Padding="6" HorizontalAlignment="Left"
-                    Click="ChooseWallpaper_Click" />
+                <TextBlock Text="Wallpaper" Margin="0,16,0,4" FontWeight="SemiBold" />
+                <ComboBox x:Name="KindBox" SelectionChanged="KindBox_SelectionChanged">
+                    <ComboBoxItem Content="Image" />
+                    <ComboBoxItem Content="Wallpaper Engine wallpaper" />
+                    <ComboBoxItem Content="Wallpaper Engine profile" />
+                </ComboBox>
 
-            <Button Content="Apply profile" Margin="0,24,0,0" Padding="10,8" HorizontalAlignment="Left"
-                    FontWeight="SemiBold" Click="Apply_Click" />
-            <TextBlock x:Name="StatusText" Margin="0,12,0,0" Foreground="Gray" />
-        </StackPanel>
+                <TextBlock x:Name="ValueLabel" Margin="0,8,0,4" Foreground="Gray" TextWrapping="Wrap" />
+                <DockPanel>
+                    <Button x:Name="BrowseButton" DockPanel.Dock="Right" Content="Browse..." Margin="8,0,0,0"
+                            Padding="8,2" Click="Browse_Click" />
+                    <TextBox x:Name="ValueBox" TextChanged="ValueBox_TextChanged" />
+                </DockPanel>
+
+                <Button x:Name="ApplyButton" Content="Apply profile" Margin="0,24,0,0" Padding="10,8"
+                        HorizontalAlignment="Left" FontWeight="SemiBold" Click="Apply_Click" />
+                <TextBlock x:Name="StatusText" Margin="0,12,0,0" Foreground="Gray" TextWrapping="Wrap" />
+
+                <Separator Margin="0,16" />
+
+                <TextBlock Text="Wallpaper Engine" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock x:Name="WeExeText" Foreground="Gray" TextWrapping="Wrap" />
+                <Button Content="Set path..." Margin="0,8,0,0" Padding="6" HorizontalAlignment="Left"
+                        Click="SetWallpaperEnginePath_Click" />
+
+                <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"
+                          Click="PauseForGamesCheck_Click" />
+                <TextBlock Text="Game process names, comma-separated (for example: cs2, eldenring)"
+                           Margin="0,8,0,4" Foreground="Gray" TextWrapping="Wrap" />
+                <TextBox x:Name="GamesBox" LostFocus="GamesBox_LostFocus" />
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
