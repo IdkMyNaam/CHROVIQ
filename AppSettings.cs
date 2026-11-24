@@ -15,7 +15,8 @@ public class AppSettings
     /// <summary>Path to wallpaper64.exe / wallpaper32.exe chosen by the user. Wins over auto-detection if it exists.</summary>
     public string? WallpaperEngineExe { get; set; }
 
-    private static readonly string Folder = Path.Combine(
+    /// <summary>%AppData%\WindowsCustomizer: where the app keeps all its files.</summary>
+    public static readonly string Folder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsCustomizer");
 
     private static readonly string FilePath = Path.Combine(Folder, "settings.json");

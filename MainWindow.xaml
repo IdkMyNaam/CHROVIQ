@@ -10,15 +10,22 @@
 
         <!-- Left: profile list -->
         <DockPanel Grid.Column="0">
-            <Button DockPanel.Dock="Bottom" Content="Add profile" Margin="0,8,0,0" Padding="6"
-                    Click="AddProfile_Click" />
-            <ListBox x:Name="ProfileList" SelectionChanged="ProfileList_SelectionChanged" />
+            <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,8,0,0">
+                <Button Content="Add" Margin="0,0,4,0" Padding="6" Click="AddProfile_Click" />
+                <Button x:Name="DeleteButton" Content="Delete" Margin="4,0,0,0" Padding="6"
+                        Click="DeleteProfile_Click" />
+            </UniformGrid>
+            <ListBox x:Name="ProfileList" DisplayMemberPath="Name"
+                     SelectionChanged="ProfileList_SelectionChanged" />
         </DockPanel>
 
         <!-- Right: settings of the selected profile, then app-wide settings -->
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="12,0,4,0">
-                <CheckBox x:Name="DarkCheck" Content="Dark mode" Click="DarkCheck_Click" />
+                <TextBlock Text="Name" Margin="0,0,0,4" FontWeight="SemiBold" />
+                <TextBox x:Name="NameBox" TextChanged="NameBox_TextChanged" LostFocus="NameBox_LostFocus" />
+
+                <CheckBox x:Name="DarkCheck" Content="Dark mode" Margin="0,16,0,0" Click="DarkCheck_Click" />
 
                 <TextBlock Text="Wallpaper" Margin="0,16,0,4" FontWeight="SemiBold" />
                 <ComboBox x:Name="KindBox" SelectionChanged="KindBox_SelectionChanged">

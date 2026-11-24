@@ -1,20 +1,23 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace WindowsCustomizer;
 
 public partial class MainWindow : Window
 {
-    private readonly ObservableCollection<Profile> _profiles = new()
-    {
-        new Profile { Name = "Dark", DarkMode = true },
-        new Profile { Name = "Light", DarkMode = false },
-    };
+    private readonly ObservableCollection<Profile> _profiles;
 
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly GameWatcher _gameWatcher;
+
+    // Saves the profiles shortly after the last edit, so typing doesn't write the file on every key.
+    private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
+
+    // Set when profiles.json exists but could not be read: saving would overwrite it.
+    private bool _savingDisabled;
 
     // True while the UI is filled from a profile, so change handlers don't write back.
     private bool _loading;
@@ -22,6 +25,25 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        string? loadWarning;
+        try
+        {
+            _profiles = new ObservableCollection<Profile>(ProfileStore.Load(out loadWarning));
+        }
+        catch (Exception ex)
+        {
+            // For example: the file is locked or access is denied. Keep the file as it is.
+            _profiles = new ObservableCollection<Profile>(ProfileStore.Defaults());
+            _savingDisabled = true;
+            loadWarning = $"Could not read profiles.json ({ex.Message}). Changes will not be saved this session.";
+        }
+
+        _saveTimer.Tick += (_, _) =>
+        {
+            _saveTimer.Stop();
+            SaveProfiles();
+        };
 
         WallpaperEngine.SavedExePath = _settings.WallpaperEngineExe;
         UpdateWallpaperEngineText();
@@ -31,6 +53,10 @@ public partial class MainWindow : Window
 
         ProfileList.ItemsSource = _profiles;
         ProfileList.SelectedIndex = 0;
+        UpdateDeleteButton();
+
+        if (loadWarning != null)
+            StatusText.Text = loadWarning;
 
         _gameWatcher = new GameWatcher(_settings);
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
@@ -40,6 +66,8 @@ public partial class MainWindow : Window
         {
             SaveGameList(); // in case the games box still has focus
             _gameWatcher.Stop();
+            _saveTimer.Stop();
+            SaveProfiles(); // a pending save may not have run yet
         };
     }
 
@@ -53,6 +81,7 @@ public partial class MainWindow : Window
         if (p == null) return;
 
         _loading = true;
+        NameBox.Text = p.Name;
         DarkCheck.IsChecked = p.DarkMode;
         KindBox.SelectedIndex = (int)p.Kind;
         ValueBox.Text = p.WallpaperValue ?? "";
@@ -63,14 +92,86 @@ public partial class MainWindow : Window
 
     private void AddProfile_Click(object sender, RoutedEventArgs e)
     {
-        _profiles.Add(new Profile { Name = $"Profile {_profiles.Count + 1}" });
+        _profiles.Add(new Profile { Name = NextFreeName() });
         ProfileList.SelectedIndex = _profiles.Count - 1;
+        UpdateDeleteButton();
+        ScheduleSave();
+
+        NameBox.Focus();
+        NameBox.SelectAll(); // ready to type a real name
+    }
+
+    private void DeleteProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } profile || _profiles.Count <= 1) return;
+
+        var answer = MessageBox.Show(this, $"Delete the profile \"{profile.Name}\"?", "Delete profile",
+            MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes) return;
+
+        int index = ProfileList.SelectedIndex;
+        _profiles.Remove(profile);
+        ProfileList.SelectedIndex = Math.Min(index, _profiles.Count - 1);
+        UpdateDeleteButton();
+        ScheduleSave();
+    }
+
+    /// <summary>The last profile can't be deleted, so the editor always has something to show.</summary>
+    private void UpdateDeleteButton() => DeleteButton.IsEnabled = _profiles.Count > 1;
+
+    /// <summary>"Profile 1", "Profile 2", ...: the first number not already used.</summary>
+    private string NextFreeName()
+    {
+        for (int n = 1; ; n++)
+        {
+            var name = $"Profile {n}";
+            if (!_profiles.Any(p => string.Equals(p.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+                return name;
+        }
+    }
+
+    private void NameBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_loading || Selected == null) return;
+        Selected.Name = NameBox.Text; // the list updates live through PropertyChanged
+        ScheduleSave();
+    }
+
+    private void NameBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Don't leave a profile without a visible name in the list.
+        if (Selected != null && string.IsNullOrWhiteSpace(Selected.Name))
+        {
+            NameBox.Text = "Unnamed profile"; // TextChanged stores it
+        }
     }
 
     private void DarkCheck_Click(object sender, RoutedEventArgs e)
     {
-        if (Selected != null)
-            Selected.DarkMode = DarkCheck.IsChecked == true;
+        if (Selected == null) return;
+        Selected.DarkMode = DarkCheck.IsChecked == true;
+        ScheduleSave();
+    }
+
+    // ---------- Saving profiles ----------
+
+    private void ScheduleSave()
+    {
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
+
+    private void SaveProfiles()
+    {
+        if (_savingDisabled) return;
+        try
+        {
+            ProfileStore.Save(_profiles);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not save profiles: {ex.Message}";
+        }
     }
 
     // ---------- Wallpaper ----------
@@ -89,6 +190,7 @@ public partial class MainWindow : Window
         _loading = true;
         ValueBox.Text = "";
         _loading = false;
+        ScheduleSave();
     }
 
     private void UpdateKindUi(WallpaperKind kind)
@@ -106,8 +208,9 @@ public partial class MainWindow : Window
 
     private void ValueBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (!_loading && Selected != null)
-            Selected.WallpaperValue = ValueBox.Text;
+        if (_loading || Selected == null) return;
+        Selected.WallpaperValue = ValueBox.Text;
+        ScheduleSave();
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)

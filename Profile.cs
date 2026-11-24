@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace WindowsCustomizer;
 
 /// <summary>Where a profile's wallpaper comes from.</summary>
@@ -12,9 +14,22 @@ public enum WallpaperKind
 }
 
 /// <summary>One saved look: what Windows should look like when this profile is applied.</summary>
-public class Profile
+public class Profile : INotifyPropertyChanged
 {
-    public string Name { get; set; } = "New profile";
+    private string _name = "New profile";
+
+    /// <summary>Raises PropertyChanged so the profile list updates while the name is typed.</summary>
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (_name == value) return;
+            _name = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+        }
+    }
+
     public bool DarkMode { get; set; }
 
     public WallpaperKind Kind { get; set; } = WallpaperKind.Image;
@@ -22,6 +37,7 @@ public class Profile
     /// <summary>Image path, project.json path, or Wallpaper Engine profile name, depending on <see cref="Kind"/>.</summary>
     public string? WallpaperValue { get; set; }
 
-    // The ListBox shows this text.
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public override string ToString() => Name;
 }
