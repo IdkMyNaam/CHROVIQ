@@ -163,6 +163,9 @@ public partial class TaskbarView
 
     // ---------- Search box ----------
 
+    /// <summary>Opens Windows Customizer's start menu next to an element; set by the main window.</summary>
+    public static Action<FrameworkElement, TaskbarEdge>? StartMenuOpener { get; set; }
+
     /// <summary>The look of the search window; set by the main window from the settings.</summary>
     public static Func<SearchLook> SearchLookProvider { get; set; } = () => new SearchLook();
 

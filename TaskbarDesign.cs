@@ -65,6 +65,9 @@ public class TaskbarModule
     /// <summary>Tray: show only the pinned icons on the bar (system icons at first; Ctrl+click to change), the rest behind ^.</summary>
     public bool? TrayOverflow { get; set; }
 
+    /// <summary>Start: open Windows Customizer's start menu instead of the Windows one.</summary>
+    public bool? CustomStart { get; set; }
+
     /// <summary>Tray: icon size in pixels, default 16.</summary>
     public double? IconSize { get; set; }
 

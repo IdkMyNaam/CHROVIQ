@@ -7,8 +7,11 @@ namespace WindowsCustomizer;
 /// <summary>An app the search box can find and start.</summary>
 public sealed record AppEntry(string Name, string LaunchPath, bool IsShellApp)
 {
-    /// <summary>Icon for the results list (Start menu shortcuts have one; Store apps get a symbol instead).</summary>
-    public ImageSource? Icon => IsShellApp ? null : FileIcons.Get(LaunchPath);
+    /// <summary>The app's icon: from its shortcut, or for Store apps the one Windows shows (via the shell).</summary>
+    public ImageSource? Icon => IsShellApp ? ShellIcons.Get(ShellName, 32) : FileIcons.Get(LaunchPath);
+
+    /// <summary>How the shell names this app: the shortcut file, or "shell:AppsFolder\&lt;id&gt;" for apps without one.</summary>
+    public string ShellName => IsShellApp ? $"shell:AppsFolder\\{LaunchPath}" : LaunchPath;
 
     /// <summary>Starts the app: a Start menu shortcut directly, other apps through the Windows "Apps" folder.</summary>
     public void Launch()

@@ -33,8 +33,20 @@ public class AppSettings
     /// </summary>
     public bool? TaskbarAutoHideBefore { get; set; }
 
-    /// <summary>Pressing the Windows key on its own opens our search window instead of the Start menu.</summary>
+    /// <summary>Older setting: Windows key opens our search. Replaced by <see cref="WinKey"/>, still read for old files.</summary>
     public bool WinKeyOpensSearch { get; set; }
+
+    /// <summary>What the Windows key opens. Empty in older files: taken from <see cref="WinKeyOpensSearch"/>.</summary>
+    public WinKeyAction? WinKey { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public WinKeyAction EffectiveWinKey => WinKey ?? (WinKeyOpensSearch ? WinKeyAction.Search : WinKeyAction.WindowsStart);
+
+    /// <summary>Look of the start menu.</summary>
+    public StartMenuLook StartMenu { get; set; } = new();
+
+    /// <summary>Apps pinned to the start menu, in order.</summary>
+    public List<StartPin> StartPinned { get; set; } = new();
 
     /// <summary>Look of the search window.</summary>
     public SearchLook Search { get; set; } = new();

@@ -432,7 +432,10 @@ public partial class TaskbarDesignerWindow : Window
                 Hint(ModuleOptions, "Opens the Windows Customizer menu: profiles, taskbar options, exit. No options.");
                 break;
             case ModuleType.Start:
-                Hint(ModuleOptions, "Opens the Windows Start menu. No options.");
+                CheckField(ModuleOptions, "Open Windows Customizer's start menu", m.CustomStart == true,
+                    v => m.CustomStart = v ? true : null,
+                    "Off: opens the Windows Start menu. On: opens our start menu next to the button " +
+                    "(its look is set in the main window under Start menu > \"Start menu settings...\").");
                 break;
             case ModuleType.Battery:
                 Hint(ModuleOptions, "Battery level; hidden on PCs without a battery. No options.");

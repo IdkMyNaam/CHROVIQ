@@ -100,7 +100,7 @@ public partial class TaskbarView
     private FrameworkElement BuildModule(TaskbarModule module) => module.Type switch
     {
         ModuleType.Menu => MenuModule(),
-        ModuleType.Start => StartModule(),
+        ModuleType.Start => StartModule(module),
         ModuleType.WindowList => WindowListModule(),
         ModuleType.PinnedApps => PinnedAppsModule(module),
         ModuleType.Clock => ClockModule(module),
@@ -134,7 +134,7 @@ public partial class TaskbarView
     }
 
     /// <summary>Four small squares, a generic "apps" symbol; opens the Windows Start menu.</summary>
-    private FrameworkElement StartModule()
+    private FrameworkElement StartModule(TaskbarModule module)
     {
         var squares = new System.Windows.Controls.Primitives.UniformGrid { Rows = 2, Columns = 2, Width = 14, Height = 14 };
         for (int i = 0; i < 4; i++)
@@ -145,7 +145,12 @@ public partial class TaskbarView
         }
 
         var button = BarButton(squares, "Start");
-        button.Click += (_, _) => PressWinKey();
+        button.Click += (_, _) =>
+        {
+            // Our start menu (next to this button) when the design asks for it, otherwise Windows' own.
+            if (module.CustomStart == true && StartMenuOpener != null) StartMenuOpener(button, Edge);
+            else PressWinKey();
+        };
         return button;
     }
 
@@ -453,6 +458,8 @@ internal static class FileIcons
     public static ImageSource? Get(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
+        // Store apps pinned to the taskbar ("shell:AppsFolder\...") have no file: ask the shell.
+        if (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return ShellIcons.Get(path, 32);
         if (Cache.TryGetValue(path, out var cached)) return cached;
 
         ImageSource? result = null;

@@ -172,6 +172,7 @@ public partial class MainWindow : Window
         yield return new AppMenuItem("Hide Windows taskbar", () => SetWindowsTaskbarHidden(!WindowsTaskbar.IsHiding),
             IsChecked: WindowsTaskbar.IsHiding, IsEnabled: TaskbarShown);
         yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
+        yield return new AppMenuItem("Start menu", OpenStartMenu);
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
@@ -1065,45 +1066,119 @@ public partial class MainWindow : Window
 
     private void SetUpSearch()
     {
-        // Search boxes on the bars open the search window with these settings.
+        // Search boxes and Start buttons on the bars open our windows with these settings.
         TaskbarView.SearchLookProvider = () => _settings.Search ??= new SearchLook();
-        WinKeySearchCheck.IsChecked = _settings.WinKeyOpensSearch;
-        if (_settings.WinKeyOpensSearch) SetWinKeySearch(true);
+        TaskbarView.StartMenuOpener = (anchor, edge) => StartMenuWindow.Toggle(StartMenuContext(), anchor, edge);
+
+        var action = _settings.EffectiveWinKey;
+        _loading = true;
+        WinKeyBox.SelectedIndex = (int)action;
+        _loading = false;
+        SetWinKey(action);
     }
 
-    /// <summary>Turns "Windows key opens our search" on or off, and remembers the choice.</summary>
-    private void SetWinKeySearch(bool on)
+    /// <summary>Everything the start menu needs: its look, the search settings, the pins and what its buttons do.</summary>
+    private StartMenuContext StartMenuContext() => new()
     {
-        if (on && _winKeyHook == null)
+        Look = _settings.StartMenu ??= new StartMenuLook(),
+        Search = _settings.Search ??= new SearchLook(),
+        Pins = _settings.StartPinned ??= new List<StartPin>(),
+        Save = SaveSettings,
+        PinToTaskbar = PinToTaskbar,
+        OpenCustomizer = ShowFromTray,
+    };
+
+    private void OpenStartMenu() => StartMenuWindow.Toggle(StartMenuContext());
+
+    /// <summary>
+    /// What the Windows key opens. Anything but the Windows Start menu needs the keyboard hook;
+    /// the Windows Start menu means no hook at all.
+    /// </summary>
+    private void SetWinKey(WinKeyAction action)
+    {
+        bool needsHook = action != WinKeyAction.WindowsStart;
+        if (needsHook && _winKeyHook == null)
         {
             try
             {
                 _winKeyHook = new WinKeyHook();
                 // Raised inside the keyboard hook: open the window a moment later, so the hook returns at once.
-                _winKeyHook.Pressed += () => Dispatcher.InvokeAsync(() => SearchWindow.Toggle(_settings.Search ??= new SearchLook()));
+                _winKeyHook.Pressed += () => Dispatcher.InvokeAsync(() =>
+                {
+                    if (_settings.EffectiveWinKey == WinKeyAction.StartMenu) OpenStartMenu();
+                    else SearchWindow.Toggle(_settings.Search ??= new SearchLook());
+                });
             }
             catch (Exception ex)
             {
                 StatusText.Text = $"Could not take over the Windows key: {ex.Message}";
-                on = false;
+                action = WinKeyAction.WindowsStart;
             }
         }
-        else if (!on && _winKeyHook != null)
+        if (action == WinKeyAction.WindowsStart && _winKeyHook != null)
         {
             _winKeyHook.Dispose();
             _winKeyHook = null;
         }
 
-        WinKeySearchCheck.IsChecked = on;
-        if (_settings.WinKeyOpensSearch != on)
+        if (_settings.WinKey != action)
         {
-            _settings.WinKeyOpensSearch = on;
+            _settings.WinKey = action;
+            _settings.WinKeyOpensSearch = action == WinKeyAction.Search; // keep the older setting consistent
             SaveSettings();
         }
+        _loading = true;
+        WinKeyBox.SelectedIndex = (int)action;
+        _loading = false;
     }
 
-    private void WinKeySearchCheck_Click(object sender, RoutedEventArgs e) =>
-        SetWinKeySearch(WinKeySearchCheck.IsChecked == true);
+    private void WinKeyBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || WinKeyBox.SelectedIndex < 0) return;
+        SetWinKey((WinKeyAction)WinKeyBox.SelectedIndex);
+    }
+
+    private StartMenuSettingsWindow? _startSettings;
+
+    private void StartMenuSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_startSettings != null)
+        {
+            _startSettings.Activate();
+            return;
+        }
+        _startSettings = new StartMenuSettingsWindow(_settings.StartMenu ??= new StartMenuLook(), SaveSettings, OpenStartMenu);
+        _startSettings.Closed += (_, _) => _startSettings = null;
+        _startSettings.Show();
+    }
+
+    /// <summary>
+    /// "Pin to taskbar" from the start menu: adds the app to the first pinned-apps module of the design
+    /// in use (a new one at the start of the left zone if it has none) and saves the design file, which
+    /// rebuilds the bars.
+    /// </summary>
+    private void PinToTaskbar(AppEntry app)
+    {
+        var design = ActiveDesign();
+        var pins = design.AllModules.FirstOrDefault(m => m.Type == ModuleType.PinnedApps);
+        if (pins == null)
+        {
+            pins = TaskbarModule.Create(ModuleType.PinnedApps);
+            int afterMenu = design.Left.FindIndex(m => m.Type is ModuleType.Menu or ModuleType.Start) + 1;
+            design.Left.Insert(afterMenu, pins);
+        }
+        pins.Apps ??= new List<string>();
+        if (pins.Apps.Contains(app.ShellName, StringComparer.OrdinalIgnoreCase)) return;
+        pins.Apps.Add(app.ShellName);
+        try
+        {
+            TaskbarDesigns.Save(design);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not pin to the taskbar: {ex.Message}";
+        }
+    }
 
     private void SearchSettings_Click(object sender, RoutedEventArgs e)
     {

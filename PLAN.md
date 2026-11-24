@@ -51,10 +51,12 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [ ] Later: own widgets as plugins (see open questions)
 
 ## Phase 3: Custom start menu / launcher
-- [ ] Read installed apps (Start Menu shortcuts)
-- [ ] Popup window with search
-- [ ] Launch apps, pinned favorites
-- [ ] Power options (sleep, restart, shut down)
+- [x] Read installed apps (Start Menu shortcuts + the shell Apps folder, so Store apps too, with their real icons)
+- [x] Popup window with search (start menu, plus a separate search window)
+- [x] Launch apps, pinned favorites (pin/unpin/reorder; pin to taskbar; open file location; run as administrator)
+- [x] Power options (lock, sleep, sign out, restart, shut down; the last three ask first)
+- [x] Open it from the Start module, the Windows key or the app menu; look settings in "Start menu settings..."
+- [ ] Later: recent files, folders of pinned apps
 
 ## Phase 4: True shell replacement
 - [ ] Set up VM + recovery script first

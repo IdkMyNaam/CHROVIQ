@@ -113,12 +113,20 @@
                     </ComboBox>
                 </StackPanel>
 
-                <TextBlock Text="Search" FontWeight="SemiBold" Margin="0,16,0,4" />
-                <CheckBox x:Name="WinKeySearchCheck" Content="Windows key opens Windows Customizer search"
-                          Click="WinKeySearchCheck_Click"
-                          ToolTip="Pressing the Windows key on its own opens our search instead of Start. Shortcuts like Win+E keep working; Ctrl+Esc still opens Start." />
-                <Button Content="Search settings..." Margin="0,8,0,0" Padding="6" HorizontalAlignment="Left"
-                        Click="SearchSettings_Click" />
+                <TextBlock Text="Start menu and search" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Windows key opens" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
+                    <ComboBox x:Name="WinKeyBox" Width="230" SelectionChanged="WinKeyBox_SelectionChanged"
+                              ToolTip="Pressing the Windows key on its own. Shortcuts like Win+E keep working; Ctrl+Esc always opens the Windows Start menu.">
+                        <ComboBoxItem Content="The Windows Start menu" />
+                        <ComboBoxItem Content="Windows Customizer search" />
+                        <ComboBoxItem Content="Windows Customizer start menu" />
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Content="Start menu settings..." Padding="6" Click="StartMenuSettings_Click" />
+                    <Button Content="Search settings..." Padding="6" Margin="8,0,0,0" Click="SearchSettings_Click" />
+                </StackPanel>
 
                 <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"
