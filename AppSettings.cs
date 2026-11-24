@@ -21,13 +21,23 @@ public class AppSettings
     /// <summary>True once the "still running in the tray" message was shown.</summary>
     public bool TrayHintShown { get; set; }
 
+    /// <summary>Show the custom taskbar (Phase 2).</summary>
+    public bool ShowTaskbar { get; set; }
+
+    /// <summary>Screen edge of the custom taskbar.</summary>
+    public TaskbarEdge TaskbarEdge { get; set; } = TaskbarEdge.Top;
+
     /// <summary>%AppData%\WindowsCustomizer: where the app keeps all its files.</summary>
     public static readonly string Folder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsCustomizer");
 
     private static readonly string FilePath = Path.Combine(Folder, "settings.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }, // "Top" instead of 0
+    };
 
     public static AppSettings Load()
     {

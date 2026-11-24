@@ -1,0 +1,95 @@
+<Window x:Class="WindowsCustomizer.AppBarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:WindowsCustomizer"
+        Title="Windows Customizer taskbar"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False" Topmost="True"
+        WindowStartupLocation="Manual" Width="800" Height="40"
+        Background="#F01C1C1C" Foreground="White" FontFamily="Segoe UI" FontSize="12">
+    <Window.Resources>
+        <!-- Flat button that highlights on hover, used for everything on the bar. -->
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <!-- Bottom border: accent line under the active window's button. -->
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    </Window.Resources>
+
+    <DockPanel Margin="4,3">
+        <!-- Right: battery, Quick Settings, clock -->
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <TextBlock x:Name="BatteryText" VerticalAlignment="Center" Margin="8,0" Visibility="Collapsed" />
+            <Button Style="{StaticResource BarButton}" ToolTip="Quick Settings (Win+A)" Click="QuickSettings_Click">
+                <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="14" />
+            </Button>
+            <Button Style="{StaticResource BarButton}" ToolTip="Notifications and calendar (Win+N)" Click="Clock_Click">
+                <StackPanel>
+                    <TextBlock x:Name="TimeText" HorizontalAlignment="Right" />
+                    <TextBlock x:Name="DateText" HorizontalAlignment="Right" FontSize="11" Opacity="0.8" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Left: one button per open window. Buttons share the width equally, at most 200 each. -->
+        <ItemsControl x:Name="WindowButtons" HorizontalAlignment="Left">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type local:TaskWindow}">
+                    <Button x:Name="Btn" Style="{StaticResource BarButton}" Margin="1,0" Padding="8,0"
+                            HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}"
+                            Click="WindowButton_Click">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Close window" Click="CloseWindow_Click" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <Grid>
+                            <DockPanel>
+                                <Image DockPanel.Dock="Left" Source="{Binding Icon}" Width="16" Height="16"
+                                       Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Grid>
+                    </Button>
+                    <DataTemplate.Triggers>
+                        <!-- The window that is in front gets a lighter background and an accent-colored border. -->
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter TargetName="Btn" Property="Background" Value="#33FFFFFF" />
+                            <Setter TargetName="Btn" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </DockPanel>
+</Window>

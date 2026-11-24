@@ -76,6 +76,16 @@
                 <Button Content="Set path..." Margin="0,8,0,0" Padding="6" HorizontalAlignment="Left"
                         Click="SetWallpaperEnginePath_Click" />
 
+                <TextBlock Text="Custom taskbar" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <CheckBox x:Name="ShowTaskbarCheck" Content="Show custom taskbar" Click="ShowTaskbarCheck_Click" />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Screen edge" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray" />
+                    <ComboBox x:Name="TaskbarEdgeBox" Width="100" SelectionChanged="TaskbarEdgeBox_SelectionChanged">
+                        <ComboBoxItem Content="Top" />
+                        <ComboBoxItem Content="Bottom" />
+                    </ComboBox>
+                </StackPanel>
+
                 <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"
                           Click="PauseForGamesCheck_Click" />

@@ -15,6 +15,10 @@ public sealed class TrayIcon : IDisposable
     public event Action? NextClicked;
     public event Action? OpenClicked;
     public event Action? ExitClicked;
+    public event Action? TaskbarToggleClicked;
+
+    /// <summary>Whether the custom taskbar is showing (check mark on its menu item).</summary>
+    public Func<bool>? IsTaskbarShown { get; set; }
 
     /// <param name="getProfiles">Read each time the menu opens, so it always shows the current list.</param>
     /// <param name="getCurrent">The profile to show with a check mark.</param>
@@ -63,6 +67,10 @@ public sealed class TrayIcon : IDisposable
         }
 
         _menu.Items.Add(new Forms.ToolStripSeparator());
+        _menu.Items.Add(new Forms.ToolStripMenuItem("Show custom taskbar", null, (_, _) => TaskbarToggleClicked?.Invoke())
+        {
+            Checked = IsTaskbarShown?.Invoke() == true,
+        });
         _menu.Items.Add(new Forms.ToolStripMenuItem("Next profile", null, (_, _) => NextClicked?.Invoke())
         {
             ShortcutKeyDisplayString = HotKeyText,

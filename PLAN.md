@@ -16,14 +16,14 @@ A C# / WPF app that switches between full Windows "themes" (wallpaper, colors, c
 - Back up registry keys before changing them (export to .reg).
 
 ## Phase 1: Theme engine
-- [ ] Create WPF project + git repo
-- [ ] Profile model (name, wallpaper, accent color, dark/light, cursor)
-- [ ] Apply wallpaper via `SystemParametersInfo`
-- [ ] Apply accent color + dark/light mode via registry
-- [ ] Apply cursor scheme
-- [ ] Settings UI to create/edit/delete profiles
-- [ ] Tray icon + global hotkey to cycle profiles
-- [ ] Save/load profiles as JSON
+- [x] Create WPF project + git repo
+- [x] Profile model (name, wallpaper, accent color, dark/light, cursor)
+- [x] Apply wallpaper via `SystemParametersInfo`
+- [x] Apply accent color + dark/light mode via registry
+- [x] Apply cursor scheme
+- [x] Settings UI to create/edit/delete profiles
+- [x] Tray icon + global hotkey to cycle profiles
+- [x] Save/load profiles as JSON
 
 ## Phase 2: Custom taskbar / dock
 - [ ] Window that reserves screen space via `SHAppBarMessage` (AppBar API)

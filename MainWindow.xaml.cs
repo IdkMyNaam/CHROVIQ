@@ -74,6 +74,11 @@ public partial class MainWindow : Window
         UpdateWallpaperEngineText();
 
         PauseForGamesCheck.IsChecked = _settings.PauseForGames;
+
+        _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
+        ShowTaskbarCheck.IsChecked = _settings.ShowTaskbar;
+        TaskbarEdgeBox.SelectedIndex = (int)_settings.TaskbarEdge;
+        _loading = false;
         GamesBox.Text = string.Join(", ", _settings.GameProcesses);
 
         ProfileList.ItemsSource = _profiles;
@@ -89,6 +94,9 @@ public partial class MainWindow : Window
 
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
+
+        if (_settings.ShowTaskbar)
+            SetTaskbarVisible(true);
 
         // Windows shutting down or signing out must not be blocked by "hide instead of close".
         Application.Current.SessionEnding += (_, _) => _exiting = true;
@@ -107,6 +115,7 @@ public partial class MainWindow : Window
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
+            _appBarWindow?.Close(); // releases the reserved screen space
             _trayIcon.Dispose();
         };
     }
@@ -123,6 +132,8 @@ public partial class MainWindow : Window
         _trayIcon.NextClicked += () => _ = ApplyNextAsync();
         _trayIcon.OpenClicked += ShowFromTray;
         _trayIcon.ExitClicked += ExitApp;
+        _trayIcon.IsTaskbarShown = () => _appBarWindow != null;
+        _trayIcon.TaskbarToggleClicked += () => SetTaskbarVisible(_appBarWindow == null);
 
         if (!_hotKey.IsRegistered && StatusText.Text.Length == 0)
             StatusText.Text = $"The hotkey {_hotKey} is already used by another program, so it is turned off.";
@@ -605,6 +616,62 @@ public partial class MainWindow : Window
         WallpaperEngine.SavedExePath = path;
         SaveSettings();
         UpdateWallpaperEngineText();
+    }
+
+    // ---------- Custom taskbar ----------
+
+    private AppBarWindow? _appBarWindow;
+
+    /// <summary>Shows or hides the custom taskbar and remembers the choice.</summary>
+    private void SetTaskbarVisible(bool visible)
+    {
+        if (visible && _appBarWindow == null)
+        {
+            var bar = new AppBarWindow(_settings.TaskbarEdge);
+            try
+            {
+                bar.Show();
+                _appBarWindow = bar;
+            }
+            catch (Exception ex)
+            {
+                bar.Close();
+                StatusText.Text = $"Could not show the custom taskbar: {ex.Message}";
+                visible = false;
+            }
+        }
+        else if (!visible && _appBarWindow != null)
+        {
+            _appBarWindow.Close();
+            _appBarWindow = null;
+        }
+
+        ShowTaskbarCheck.IsChecked = visible;
+        if (_settings.ShowTaskbar != visible)
+        {
+            _settings.ShowTaskbar = visible;
+            SaveSettings();
+        }
+    }
+
+    private void ShowTaskbarCheck_Click(object sender, RoutedEventArgs e) =>
+        SetTaskbarVisible(ShowTaskbarCheck.IsChecked == true);
+
+    private void TaskbarEdgeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || TaskbarEdgeBox.SelectedIndex < 0) return;
+        var edge = (TaskbarEdge)TaskbarEdgeBox.SelectedIndex;
+        if (edge == _settings.TaskbarEdge) return;
+
+        _settings.TaskbarEdge = edge;
+        SaveSettings();
+
+        // The edge is fixed while the bar is registered, so recreate it on the new edge.
+        if (_appBarWindow != null)
+        {
+            SetTaskbarVisible(false);
+            SetTaskbarVisible(true);
+        }
     }
 
     private void PauseForGamesCheck_Click(object sender, RoutedEventArgs e)
