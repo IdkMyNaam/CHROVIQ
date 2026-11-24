@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
@@ -22,9 +24,32 @@ public partial class MainWindow : Window
     // True while the UI is filled from a profile, so change handlers don't write back.
     private bool _loading;
 
+    private const string KeepCursors = "(don't change)";
+    private readonly ObservableCollection<string> _cursorChoices = new();
+
+    private static readonly string[] AccentPresets =
+    {
+        "#0078D4", "#0063B1", "#8764B8", "#E3008C", "#E81123", "#FF8C00",
+        "#FFB900", "#107C10", "#00B7C3", "#2D7D9A", "#767676", "#4C4A48",
+    };
+
+    private TrayIcon _trayIcon = null!;
+    private GlobalHotKey _hotKey = null!;
+
+    // The profile applied last (check mark in the tray, starting point for "next").
+    private Profile? _current;
+
+    // Ignores hotkey/tray requests while a profile is still being applied (Wallpaper Engine can take seconds).
+    private bool _applying;
+
+    // False: the close button hides to the tray. True: really close (Exit in the tray menu, or Windows shutting down).
+    private bool _exiting;
+
     public MainWindow()
     {
         InitializeComponent();
+        BuildAccentSwatches();
+        LoadCursorChoices();
 
         string? loadWarning;
         try
@@ -62,13 +87,316 @@ public partial class MainWindow : Window
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
         _gameWatcher.Start();
 
+        _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
+        SetUpTrayAndHotKey();
+
+        // Windows shutting down or signing out must not be blocked by "hide instead of close".
+        Application.Current.SessionEnding += (_, _) => _exiting = true;
+
+        Closing += (_, e) =>
+        {
+            if (_exiting) return;
+            e.Cancel = true;
+            HideToTray();
+        };
+
         Closed += (_, _) =>
         {
             SaveGameList(); // in case the games box still has focus
             _gameWatcher.Stop();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
+            _hotKey.Dispose();
+            _trayIcon.Dispose();
         };
+    }
+
+    // ---------- Tray icon, hotkey, applying ----------
+
+    private void SetUpTrayAndHotKey()
+    {
+        _hotKey = new GlobalHotKey(this, ModifierKeys.Control | ModifierKeys.Alt, Key.P);
+        _hotKey.Pressed += () => _ = ApplyNextAsync();
+
+        _trayIcon = new TrayIcon(() => _profiles, () => _current, _hotKey.ToString());
+        _trayIcon.ProfileClicked += profile => _ = ApplyProfileAsync(profile, notify: true);
+        _trayIcon.NextClicked += () => _ = ApplyNextAsync();
+        _trayIcon.OpenClicked += ShowFromTray;
+        _trayIcon.ExitClicked += ExitApp;
+
+        if (!_hotKey.IsRegistered && StatusText.Text.Length == 0)
+            StatusText.Text = $"The hotkey {_hotKey} is already used by another program, so it is turned off.";
+    }
+
+    private void HideToTray()
+    {
+        Hide();
+        if (_settings.TrayHintShown) return;
+
+        _trayIcon.ShowMessage("Windows Customizer is still running",
+            $"Press {_hotKey} to switch profiles. Right-click the tray icon to exit.");
+        _settings.TrayHintShown = true;
+        SaveSettings();
+    }
+
+    private void ShowFromTray()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    private void ExitApp()
+    {
+        _exiting = true;
+        Close();
+    }
+
+    /// <summary>Applies the profile after the last applied one, wrapping around at the end.</summary>
+    private Task ApplyNextAsync()
+    {
+        if (_profiles.Count == 0) return Task.CompletedTask;
+        int index = _current == null ? 0 : (_profiles.IndexOf(_current) + 1) % _profiles.Count;
+        return ApplyProfileAsync(_profiles[index], notify: true);
+    }
+
+    /// <param name="notify">Show a tray message with the result (for the hotkey and tray menu, when the window may be hidden).</param>
+    private async Task ApplyProfileAsync(Profile profile, bool notify)
+    {
+        if (_applying) return;
+        _applying = true;
+        ApplyButton.IsEnabled = false;
+        StatusText.Text = $"Applying \"{profile.Name}\"...";
+        try
+        {
+            await ThemeService.ApplyAsync(profile);
+            _current = profile;
+            _settings.LastAppliedProfile = profile.Name;
+            SaveSettings();
+
+            StatusText.Text = $"Applied \"{profile.Name}\".";
+            if (notify) _trayIcon.ShowMessage("Profile applied", profile.Name);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Failed: {ex.Message}";
+            if (notify) _trayIcon.ShowMessage($"Could not apply \"{profile.Name}\"", ex.Message);
+        }
+        finally
+        {
+            _applying = false;
+            ApplyButton.IsEnabled = true;
+        }
+    }
+
+    // ---------- Accent color ----------
+
+    private void BuildAccentSwatches()
+    {
+        foreach (var hex in AccentPresets)
+        {
+            var swatch = new Button
+            {
+                Width = 22,
+                Height = 22,
+                Margin = new Thickness(0, 0, 4, 4),
+                Background = BrushFromHex(hex),
+                BorderBrush = Brushes.Gray,
+                ToolTip = hex,
+                Cursor = Cursors.Hand,
+            };
+            swatch.Click += (_, _) => AccentBox.Text = hex; // TextChanged stores it in the profile
+            AccentSwatches.Children.Add(swatch);
+        }
+    }
+
+    private void AccentBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var text = AccentBox.Text.Trim();
+        AccentPreview.Background = BrushFromHex(text);
+
+        if (_loading || Selected == null) return;
+        Selected.AccentColor = text.Length == 0 ? null : text;
+        ScheduleSave();
+    }
+
+    /// <summary>A brush for "#RRGGBB", or transparent if the text isn't a valid color.</summary>
+    private static Brush BrushFromHex(string hex) =>
+        AccentService.TryParse(hex, out var r, out var g, out var b)
+            ? new SolidColorBrush(Color.FromRgb(r, g, b))
+            : Brushes.Transparent;
+
+    // ---------- Cursor scheme ----------
+
+    private void LoadCursorChoices()
+    {
+        _cursorChoices.Add(KeepCursors);
+        _cursorChoices.Add(CustomCursorsChoice);
+        try
+        {
+            foreach (var name in CursorSchemes.List())
+                _cursorChoices.Add(name);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not list cursor schemes: {ex.Message}";
+        }
+        CursorBox.ItemsSource = _cursorChoices;
+    }
+
+    private void ShowCursorChoice(Profile p)
+    {
+        if (p.UseCustomCursors)
+        {
+            CursorBox.SelectedItem = CustomCursorsChoice;
+        }
+        else if (string.IsNullOrEmpty(p.CursorScheme))
+        {
+            CursorBox.SelectedItem = KeepCursors;
+        }
+        else
+        {
+            // A scheme saved in the profile but no longer installed: still show it instead of hiding the setting.
+            if (!_cursorChoices.Contains(p.CursorScheme))
+                _cursorChoices.Add(p.CursorScheme);
+            CursorBox.SelectedItem = p.CursorScheme;
+        }
+        UpdateCustomCursorPanel();
+    }
+
+    private void CursorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateCustomCursorPanel();
+        if (_loading || Selected == null || CursorBox.SelectedItem is not string choice) return;
+
+        // Switching away from Custom keeps the custom set, so switching back restores it.
+        Selected.UseCustomCursors = choice == CustomCursorsChoice;
+        Selected.CursorScheme = choice == KeepCursors || choice == CustomCursorsChoice ? null : choice;
+        ScheduleSave();
+    }
+
+    // ---------- Custom cursors ----------
+
+    private const string CustomCursorsChoice = "Custom...";
+
+    // Cursors loaded for the hover preview; disposed when the rows are rebuilt.
+    private readonly List<Cursor> _previewCursors = new();
+
+    private void UpdateCustomCursorPanel()
+    {
+        bool custom = (CursorBox.SelectedItem as string) == CustomCursorsChoice;
+        CustomCursorPanel.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
+        if (custom) BuildCustomCursorRows();
+    }
+
+    private void BuildCustomCursorRows()
+    {
+        foreach (var c in _previewCursors) c.Dispose();
+        _previewCursors.Clear();
+        CustomCursorRows.Children.Clear();
+        if (Selected is not { } profile) return;
+
+        foreach (var role in CustomCursors.Roles)
+        {
+            profile.CustomCursors.TryGetValue(role.Name, out var file);
+
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 2), Background = Brushes.Transparent };
+            row.ToolTip = file ?? "Windows default";
+
+            var clear = new Button { Content = "✕", Width = 24, Margin = new Thickness(4, 0, 0, 0), IsEnabled = file != null, ToolTip = "Use the Windows default" };
+            clear.Click += (_, _) => ChangeCustomCursor(() => CustomCursors.ClearRole(profile, role.Name));
+            DockPanel.SetDock(clear, Dock.Right);
+
+            var browse = new Button { Content = "Browse...", Padding = new Thickness(6, 0, 6, 0), Margin = new Thickness(4, 0, 0, 0) };
+            browse.Click += (_, _) =>
+            {
+                var path = PickFile($"Cursor for \"{role.Label}\"", "Cursors|*.cur;*.ani");
+                if (path != null)
+                    ChangeCustomCursor(() => CustomCursors.SetRole(profile, role.Name, path));
+            };
+            DockPanel.SetDock(browse, Dock.Right);
+
+            var label = new TextBlock { Text = role.Label, Width = 140, VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(label, Dock.Left);
+
+            var fileText = new TextBlock
+            {
+                Text = file != null ? System.IO.Path.GetFileName(file) : "(Windows default)",
+                Foreground = Brushes.Gray,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            };
+
+            row.Children.Add(clear);
+            row.Children.Add(browse);
+            row.Children.Add(label);
+            row.Children.Add(fileText);
+
+            // Hover preview: show the actual cursor while the mouse is over this row.
+            if (file != null && System.IO.File.Exists(file))
+            {
+                try
+                {
+                    var cursor = new Cursor(file);
+                    _previewCursors.Add(cursor);
+                    row.Cursor = cursor;
+                }
+                catch (Exception)
+                {
+                    row.ToolTip = $"{file} (cannot preview this file)";
+                }
+            }
+
+            CustomCursorRows.Children.Add(row);
+        }
+    }
+
+    /// <summary>Runs a change to the custom set, then refreshes the rows and saves. Errors go to the status line.</summary>
+    private void ChangeCustomCursor(Action change)
+    {
+        try
+        {
+            change();
+            StatusText.Text = "";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Cursor change failed: {ex.Message}";
+        }
+        BuildCustomCursorRows();
+        ScheduleSave();
+    }
+
+    private void ImportCursorFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } profile) return;
+
+        var dialog = new OpenFolderDialog { Title = "Choose a cursor pack folder" };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            var (found, method) = CustomCursors.ImportFolder(profile, dialog.FolderName);
+            var missing = CustomCursors.Roles.Where(r => !found.Contains(r.Name)).Select(r => r.Label).ToList();
+            StatusText.Text = $"Imported {found.Count} of {CustomCursors.Roles.Count} cursors (matched by {method})."
+                + (missing.Count > 0 ? $" Windows default for: {string.Join(", ", missing)}." : "");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Import failed: {ex.Message}";
+        }
+        BuildCustomCursorRows();
+        ScheduleSave();
+    }
+
+    private void ClearCursors_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } profile || profile.CustomCursors.Count == 0) return;
+
+        var answer = MessageBox.Show(this, $"Remove all custom cursors from \"{profile.Name}\"?", "Clear cursors",
+            MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer == MessageBoxResult.Yes)
+            ChangeCustomCursor(() => CustomCursors.ClearAll(profile));
     }
 
     private Profile? Selected => ProfileList.SelectedItem as Profile;
@@ -83,6 +411,8 @@ public partial class MainWindow : Window
         _loading = true;
         NameBox.Text = p.Name;
         DarkCheck.IsChecked = p.DarkMode;
+        AccentBox.Text = p.AccentColor ?? "";
+        ShowCursorChoice(p); // also rebuilds the custom cursor rows for this profile
         KindBox.SelectedIndex = (int)p.Kind;
         ValueBox.Text = p.WallpaperValue ?? "";
         _loading = false;
@@ -109,8 +439,18 @@ public partial class MainWindow : Window
             MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
 
+        try
+        {
+            CustomCursors.DeleteFolder(profile); // its copied cursor files are no longer needed
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not remove the profile's cursor files: {ex.Message}";
+        }
+
         int index = ProfileList.SelectedIndex;
         _profiles.Remove(profile);
+        if (ReferenceEquals(_current, profile)) _current = null; // "next" then starts at the top
         ProfileList.SelectedIndex = Math.Min(index, _profiles.Count - 1);
         UpdateDeleteButton();
         ScheduleSave();
@@ -242,23 +582,8 @@ public partial class MainWindow : Window
 
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
-        if (Selected is not { } profile) return;
-
-        ApplyButton.IsEnabled = false;
-        StatusText.Text = $"Applying \"{profile.Name}\"...";
-        try
-        {
-            await ThemeService.ApplyAsync(profile);
-            StatusText.Text = $"Applied \"{profile.Name}\".";
-        }
-        catch (Exception ex)
-        {
-            StatusText.Text = $"Failed: {ex.Message}";
-        }
-        finally
-        {
-            ApplyButton.IsEnabled = true;
-        }
+        if (Selected is { } profile)
+            await ApplyProfileAsync(profile, notify: false);
     }
 
     // ---------- App settings ----------

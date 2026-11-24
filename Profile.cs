@@ -37,6 +37,21 @@ public class Profile : INotifyPropertyChanged
     /// <summary>Image path, project.json path, or Wallpaper Engine profile name, depending on <see cref="Kind"/>.</summary>
     public string? WallpaperValue { get; set; }
 
+    /// <summary>Accent color as "#RRGGBB". Empty or null leaves the current accent unchanged.</summary>
+    public string? AccentColor { get; set; }
+
+    /// <summary>Name of an installed cursor scheme. Null leaves the current cursors unchanged.</summary>
+    public string? CursorScheme { get; set; }
+
+    /// <summary>Use <see cref="CustomCursors"/> instead of <see cref="CursorScheme"/>.</summary>
+    public bool UseCustomCursors { get; set; }
+
+    /// <summary>Cursor role (for example "Arrow", "Wait") to the file copied into this profile's cursor folder.</summary>
+    public Dictionary<string, string> CustomCursors { get; set; } = new();
+
+    /// <summary>Stable id, so files that belong to this profile (custom cursors) survive a rename.</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public override string ToString() => Name;

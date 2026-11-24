@@ -27,6 +27,30 @@
 
                 <CheckBox x:Name="DarkCheck" Content="Dark mode" Margin="0,16,0,0" Click="DarkCheck_Click" />
 
+                <TextBlock Text="Accent color" Margin="0,16,0,4" FontWeight="SemiBold" />
+                <DockPanel>
+                    <Border x:Name="AccentPreview" DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,8,0"
+                            BorderBrush="Gray" BorderThickness="1" />
+                    <TextBox x:Name="AccentBox" VerticalContentAlignment="Center" TextChanged="AccentBox_TextChanged" />
+                </DockPanel>
+                <TextBlock Text="#RRGGBB, or leave empty to keep the current accent" Margin="0,2,0,0"
+                           Foreground="Gray" FontSize="11" />
+                <WrapPanel x:Name="AccentSwatches" Margin="0,6,0,0" />
+
+                <TextBlock Text="Cursor scheme" Margin="0,16,0,4" FontWeight="SemiBold" />
+                <ComboBox x:Name="CursorBox" SelectionChanged="CursorBox_SelectionChanged" />
+
+                <!-- Shown when the cursor scheme is "Custom..." -->
+                <StackPanel x:Name="CustomCursorPanel" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Import folder..." Padding="8,4" Click="ImportCursorFolder_Click" />
+                        <Button Content="Clear all" Padding="8,4" Margin="8,0,0,0" Click="ClearCursors_Click" />
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,4" Foreground="Gray" FontSize="11" TextWrapping="Wrap"
+                               Text="Hover over a row to try its cursor. Empty rows use the Windows default." />
+                    <StackPanel x:Name="CustomCursorRows" />
+                </StackPanel>
+
                 <TextBlock Text="Wallpaper" Margin="0,16,0,4" FontWeight="SemiBold" />
                 <ComboBox x:Name="KindBox" SelectionChanged="KindBox_SelectionChanged">
                     <ComboBoxItem Content="Image" />

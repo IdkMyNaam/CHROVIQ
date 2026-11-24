@@ -15,6 +15,12 @@ public class AppSettings
     /// <summary>Path to wallpaper64.exe / wallpaper32.exe chosen by the user. Wins over auto-detection if it exists.</summary>
     public string? WallpaperEngineExe { get; set; }
 
+    /// <summary>Name of the last applied profile, so the hotkey continues cycling from there after a restart.</summary>
+    public string? LastAppliedProfile { get; set; }
+
+    /// <summary>True once the "still running in the tray" message was shown.</summary>
+    public bool TrayHintShown { get; set; }
+
     /// <summary>%AppData%\WindowsCustomizer: where the app keeps all its files.</summary>
     public static readonly string Folder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsCustomizer");
