@@ -90,6 +90,8 @@ public partial class MainWindow : Window
 
         if (loadWarning != null)
             StatusText.Text = loadWarning;
+        if (AppSettings.LoadWarning != null)
+            StatusText.Text = AppSettings.LoadWarning;
 
         _gameWatcher = new GameWatcher(_settings);
         _gameWatcher.StatusChanged += message => StatusText.Text = message;

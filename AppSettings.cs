@@ -54,16 +54,29 @@ public class AppSettings
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }, // "Top" instead of 0
     };
 
+    /// <summary>Set by <see cref="Load"/> when settings.json could not be read; shown in the status line.</summary>
+    public static string? LoadWarning { get; private set; }
+
     public static AppSettings Load()
     {
+        LoadWarning = null;
+        if (!File.Exists(FilePath)) return new AppSettings();
+
         try
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings();
+            // Same options as Save, so values written as words ("Top", "AllBars") read back.
+            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
-            // A broken settings file should not stop the app from starting; fall back to defaults.
+            // Don't silently overwrite the user's file with defaults: keep it next to the new one.
+            try { File.Move(FilePath, FilePath + ".bad", overwrite: true); }
+            catch (IOException) { /* still start; the warning says what happened */ }
+            LoadWarning = $"settings.json could not be read ({ex.Message}). It was kept as settings.json.bad; using default settings.";
+        }
+        catch (IOException ex)
+        {
+            LoadWarning = $"settings.json could not be read ({ex.Message}); using default settings for now.";
         }
         return new AppSettings();
     }
