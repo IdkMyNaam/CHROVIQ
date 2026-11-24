@@ -55,6 +55,10 @@
                     <Button Content="Delete" Margin="0,3,3,0" Padding="4" Click="DeleteDesign_Click" />
                     <Button x:Name="UseButton" Content="Use this" Margin="3,3,0,0" Padding="4" FontWeight="SemiBold"
                             Click="UseDesign_Click" />
+                    <Button Content="Import..." Margin="0,6,3,0" Padding="4" Click="ImportDesign_Click"
+                            ToolTip="Add a design from a .json file (for example one someone shared)" />
+                    <Button Content="Export..." Margin="3,6,0,0" Padding="4" Click="ExportDesign_Click"
+                            ToolTip="Save this design as a .json file to share or keep" />
                 </UniformGrid>
                 <ListBox x:Name="DesignList" SelectionChanged="DesignList_SelectionChanged" />
             </DockPanel>

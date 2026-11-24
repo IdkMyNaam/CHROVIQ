@@ -219,6 +219,13 @@ public partial class MainWindow : Window
         try
         {
             await ThemeService.ApplyAsync(profile);
+
+            // The profile's taskbar design (if it has one that still exists, and it isn't already in use).
+            if (profile.TaskbarDesign is { } designName
+                && _designs.Any(d => d.Name.Equals(designName, StringComparison.CurrentCultureIgnoreCase))
+                && !designName.Equals(ActiveDesign().Name, StringComparison.CurrentCultureIgnoreCase))
+                UseDesign(designName);
+
             _current = profile;
             _settings.LastAppliedProfile = profile.Name;
             SaveSettings();
@@ -462,6 +469,7 @@ public partial class MainWindow : Window
         DarkCheck.IsChecked = p.DarkMode;
         AccentBox.Text = p.AccentColor ?? "";
         ShowCursorChoice(p); // also rebuilds the custom cursor rows for this profile
+        ShowProfileDesign(p);
         KindBox.SelectedIndex = (int)p.Kind;
         ValueBox.Text = p.WallpaperValue ?? "";
         _loading = false;
@@ -862,6 +870,30 @@ public partial class MainWindow : Window
         TaskbarDesignBox.SelectedItem = ActiveDesign().Name;
         _loading = false;
         BuildMonitorDesignBoxes();
+        if (Selected is { } profile) ShowProfileDesign(profile); // the list of designs may have changed
+    }
+
+    private const string KeepDesign = "(don't change)";
+
+    /// <summary>Fills the profile's "Taskbar design" box. A design that no longer exists is still shown, so it isn't lost silently.</summary>
+    private void ShowProfileDesign(Profile p)
+    {
+        bool wasLoading = _loading;
+        _loading = true;
+        var choices = new List<string> { KeepDesign };
+        choices.AddRange(_designs.Select(d => d.Name));
+        if (p.TaskbarDesign != null && !choices.Contains(p.TaskbarDesign, StringComparer.CurrentCultureIgnoreCase))
+            choices.Add(p.TaskbarDesign);
+        ProfileDesignBox.ItemsSource = choices;
+        ProfileDesignBox.SelectedItem = choices.FirstOrDefault(c => c.Equals(p.TaskbarDesign ?? KeepDesign, StringComparison.CurrentCultureIgnoreCase));
+        _loading = wasLoading;
+    }
+
+    private void ProfileDesignBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || Selected == null || ProfileDesignBox.SelectedItem is not string choice) return;
+        Selected.TaskbarDesign = choice == KeepDesign ? null : choice;
+        ScheduleSave();
     }
 
     private const string SameAsMain = "(same as main)";

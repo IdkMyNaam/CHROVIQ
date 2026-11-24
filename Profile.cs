@@ -49,6 +49,9 @@ public class Profile : INotifyPropertyChanged
     /// <summary>Cursor role (for example "Arrow", "Wait") to the file copied into this profile's cursor folder.</summary>
     public Dictionary<string, string> CustomCursors { get; set; } = new();
 
+    /// <summary>Taskbar design to switch to when this profile is applied. Null leaves the current design.</summary>
+    public string? TaskbarDesign { get; set; }
+
     /// <summary>Stable id, so files that belong to this profile (custom cursors) survive a rename.</summary>
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 

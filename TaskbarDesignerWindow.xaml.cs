@@ -197,6 +197,47 @@ public partial class TaskbarDesignerWindow : Window
         }
     }
 
+    private void ImportDesign_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = "Import a taskbar design", Filter = "Taskbar design|*.json|All files|*.*" };
+        if (dialog.ShowDialog(this) != true) return;
+        SaveNow();
+        try
+        {
+            var design = TaskbarDesigns.Import(dialog.FileName);
+            design.Name = UniqueName(design.Name); // never overwrite a design you already have
+            TaskbarDesigns.Save(design);
+            LoadDesignList(design.Name);
+            ShowStatus($"Imported \"{design.Name}\".");
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Could not import that file: {ex.Message}", error: true);
+        }
+    }
+
+    private void ExportDesign_Click(object sender, RoutedEventArgs e)
+    {
+        if (_design == null) return;
+        SaveNow();
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export a taskbar design",
+            Filter = "Taskbar design|*.json",
+            FileName = System.IO.Path.GetFileName(TaskbarDesigns.PathFor(_design.Name)),
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            TaskbarDesigns.Export(_design, dialog.FileName);
+            ShowStatus($"Exported \"{_design.Name}\" to {dialog.FileName}. Pinned apps and buttons keep their paths from this PC.");
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Could not export: {ex.Message}", error: true);
+        }
+    }
+
     private void UseDesign_Click(object sender, RoutedEventArgs e)
     {
         if (_design == null) return;

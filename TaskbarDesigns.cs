@@ -93,6 +93,28 @@ public static class TaskbarDesigns
         if (File.Exists(path)) File.Delete(path);
     }
 
+    /// <summary>Writes a design to any file (to share it). Same format as the files in the designs folder.</summary>
+    public static void Export(TaskbarDesign design, string path) =>
+        File.WriteAllText(path, JsonSerializer.Serialize(design, JsonOptions));
+
+    /// <summary>
+    /// Reads a shared design file. Throws (JsonException, IOException) if it isn't a readable design.
+    /// The caller picks a free name and saves it into the designs folder.
+    /// </summary>
+    public static TaskbarDesign Import(string path)
+    {
+        var design = JsonSerializer.Deserialize<TaskbarDesign>(File.ReadAllText(path), JsonOptions)
+                     ?? throw new JsonException("The file is empty.");
+        if (string.IsNullOrWhiteSpace(design.Name)) design.Name = Path.GetFileNameWithoutExtension(path);
+        design.Look ??= new();
+        design.Left ??= new();
+        design.Center ??= new();
+        design.Right ??= new();
+        foreach (var list in new[] { design.Left, design.Center, design.Right })
+            list.RemoveAll(m => m == null);
+        return design;
+    }
+
     /// <summary>A deep copy (through JSON), for "Duplicate".</summary>
     public static TaskbarDesign Clone(TaskbarDesign design) =>
         JsonSerializer.Deserialize<TaskbarDesign>(JsonSerializer.Serialize(design, JsonOptions), JsonOptions)!;

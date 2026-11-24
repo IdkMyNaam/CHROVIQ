@@ -51,6 +51,10 @@
                     <StackPanel x:Name="CustomCursorRows" />
                 </StackPanel>
 
+                <TextBlock Text="Taskbar design" Margin="0,16,0,4" FontWeight="SemiBold" />
+                <ComboBox x:Name="ProfileDesignBox" SelectionChanged="ProfileDesignBox_SelectionChanged"
+                          ToolTip="Applying this profile switches the custom taskbar to this design" />
+
                 <TextBlock Text="Wallpaper" Margin="0,16,0,4" FontWeight="SemiBold" />
                 <ComboBox x:Name="KindBox" SelectionChanged="KindBox_SelectionChanged">
                     <ComboBoxItem Content="Image" />

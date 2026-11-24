@@ -37,13 +37,17 @@ A C# / WPF app that switches between full Windows "themes" (wallpaper, colors, c
 ## Phase 2b: Fully customizable taskbar
 Goal: design your own taskbar instead of using a fixed layout.
 - [x] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
-- [x] Choose which modules show, their order, and zone (left / center / right) — in the design JSON files for now
+- [x] Choose which modules show, their order, and zone (left / center / right), in the designer or the JSON files
 - [x] Save a taskbar design as JSON (`%AppData%\WindowsCustomizer\Taskbars`), reloaded when the file changes
 - [x] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title (blur is experimental, not yet with the floating dock)
 - [x] "Floating dock" style (margins from the screen edge, rounded, centered; reserves space or floats over windows)
-- [ ] Link a design to a profile
-- [x] Taskbar designer window with a live preview
-- [ ] Import/export designs (ties in with "Import/export themes" below)
+- [x] Link a design to a profile (applying the profile switches the taskbar design)
+- [x] Taskbar designer window with a live preview (live updates can be switched off; "Apply to taskbar")
+- [x] Import/export designs as .json files (ties in with "Import/export themes" below)
+- [x] Extras: auto-hide, screen edge per design, a design per monitor
+- [x] Extras: window buttons grouped by app, live thumbnails, middle-click close, dock-style pinned apps, tinted icons, icon-color glow, hover fade
+- [x] Extras: modules for show desktop, Windows search, search box, volume, CPU/memory, media controls, tray icons (ManagedShell)
+- [x] Extras: search window (also on the Windows key) with its own look settings; watchdog restores the taskbar if the app is killed
 - [ ] Later: own widgets as plugins (see open questions)
 
 ## Phase 3: Custom start menu / launcher
