@@ -163,49 +163,34 @@ public partial class TaskbarView
 
     // ---------- Search box ----------
 
-    /// <summary>True while the search box has the keyboard (auto-hide keeps the bar visible then).</summary>
+    /// <summary>The look of the search window; set by the main window from the settings.</summary>
+    public static Func<SearchLook> SearchLookProvider { get; set; } = () => new SearchLook();
+
+    /// <summary>True while the search window opened from this bar is open (auto-hide keeps the bar visible then).</summary>
     private bool _searchActive;
 
-    /// <summary>A web search entry in the results list.</summary>
-    private sealed record WebSearch(string Text)
-    {
-        public override string ToString() => $"Search the web for \"{Text}\"";
-    }
-
+    /// <summary>
+    /// A search box on the bar. Clicking it opens the search window right next to it (the same window
+    /// the Windows key opens), so the search looks and works the same everywhere.
+    /// </summary>
     private FrameworkElement SearchBoxModule(TaskbarModule module)
     {
         double width = Math.Clamp(module.Width ?? 220, 80, 800);
         string placeholderText = string.IsNullOrWhiteSpace(module.Text) ? "Search apps and the web" : module.Text!;
-        string searchUrl = string.IsNullOrWhiteSpace(module.SearchUrl) ? TaskbarModule.DefaultSearchUrl : module.SearchUrl!;
 
-        var box = new TextBox
-        {
-            BorderThickness = new Thickness(0),
-            Background = Brushes.Transparent,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Padding = new Thickness(0),
-        };
-        box.SetResourceReference(ForegroundProperty, "BarForeground");
-        box.SetResourceReference(TextBoxBase.CaretBrushProperty, "BarForeground");
-
-        var placeholder = new TextBlock { Text = placeholderText, Opacity = 0.6, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
         var icon = new TextBlock
         {
-            Text = "",
+            Text = "\uE721", // magnifier
             FontFamily = (FontFamily)Resources["IconFont"],
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
             Opacity = 0.8,
         };
-        DockPanel.SetDock(icon, Dock.Left);
-
-        var field = new Grid();
-        field.Children.Add(placeholder);
-        field.Children.Add(box);
-        var inner = new DockPanel();
+        var label = new TextBlock { Text = placeholderText, Opacity = 0.6, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var inner = new StackPanel { Orientation = Orientation.Horizontal };
         inner.Children.Add(icon);
-        inner.Children.Add(field);
+        inner.Children.Add(label);
 
         var frame = new Border
         {
@@ -215,179 +200,18 @@ public partial class TaskbarView
             Margin = new Thickness(4, 0, 4, 0),
             Child = inner,
             Cursor = Cursors.IBeam,
+            ToolTip = "Search apps and the web",
         };
         frame.SetResourceReference(Border.BackgroundProperty, "BarHover");
         frame.SetResourceReference(Border.CornerRadiusProperty, "ButtonCornerRadius");
 
-        // Results: matching apps, then a web search.
-        var results = new ListBox
+        frame.MouseLeftButtonUp += (_, _) =>
         {
-            MinWidth = Math.Max(width, 260),
-            MaxHeight = 360,
-            BorderThickness = new Thickness(0),
-            Background = Brushes.Transparent,
-            Foreground = Brushes.White,
-        };
-        results.ItemTemplate = SearchResultTemplate();
-        var popup = new Popup
-        {
-            PlacementTarget = frame,
-            Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
-            VerticalOffset = Edge == TaskbarEdge.Top ? 6 : -6,
-            StaysOpen = true,
-            AllowsTransparency = true,
-            Child = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(0xF5, 0x24, 0x24, 0x24)),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(4),
-                Child = results,
-            },
-        };
-
-        List<AppEntry> apps = new();
-        void UpdatePlaceholder() =>
-            placeholder.Visibility = box.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-
-        void UpdateResults()
-        {
-            UpdatePlaceholder();
-            var text = box.Text.Trim();
-            if (text.Length == 0) { popup.IsOpen = false; return; }
-
-            var items = new List<object>(AppSearch.Find(apps, text, 7)) { new WebSearch(text) };
-            results.ItemsSource = items;
-            results.SelectedIndex = 0;
-            popup.IsOpen = true;
-        }
-
-        void Finish()
-        {
-            popup.IsOpen = false;
-            box.Text = "";
-            UpdatePlaceholder();
-            SetKeyboardMode(false);
-            _searchActive = false;
-        }
-
-        void Run(object? choice)
-        {
-            try
-            {
-                switch (choice)
-                {
-                    case AppEntry app:
-                        app.Launch();
-                        break;
-                    case WebSearch web:
-                        var query = Uri.EscapeDataString(web.Text);
-                        var url = searchUrl.Contains("{0}") ? searchUrl.Replace("{0}", query) : searchUrl + query;
-                        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Could not open it:\n{ex.Message}", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-            Finish();
-        }
-
-        // The bar normally never takes the keyboard (so clicking it doesn't steal focus from your app).
-        // Clicking the search box is the exception: let the bar take the keyboard until you're done.
-        frame.PreviewMouseLeftButtonDown += async (_, e) =>
-        {
-            if (_searchActive) return;
+            var window = SearchWindow.Toggle(SearchLookProvider(), frame, Edge, module.SearchUrl);
+            if (window == null) return;
             _searchActive = true;
-            SetKeyboardMode(true);
-            box.Focus();
-            Keyboard.Focus(box);
-            e.Handled = true;
-            apps = await AppSearch.Index(); // built in the background on first use
-            UpdateResults();
+            window.Closed += (_, _) => _searchActive = false;
         };
-
-        box.TextChanged += (_, _) => UpdateResults();
-        box.PreviewKeyDown += (_, e) =>
-        {
-            switch (e.Key)
-            {
-                case Key.Down when results.Items.Count > 0:
-                    results.SelectedIndex = Math.Min(results.SelectedIndex + 1, results.Items.Count - 1);
-                    results.ScrollIntoView(results.SelectedItem);
-                    e.Handled = true;
-                    break;
-                case Key.Up when results.Items.Count > 0:
-                    results.SelectedIndex = Math.Max(results.SelectedIndex - 1, 0);
-                    results.ScrollIntoView(results.SelectedItem);
-                    e.Handled = true;
-                    break;
-                case Key.Enter:
-                    if (box.Text.Trim().Length > 0) Run(results.SelectedItem ?? new WebSearch(box.Text.Trim()));
-                    e.Handled = true;
-                    break;
-                case Key.Escape:
-                    Finish();
-                    e.Handled = true;
-                    break;
-            }
-        };
-        results.PreviewMouseLeftButtonUp += (_, e) =>
-        {
-            if ((e.OriginalSource as FrameworkElement)?.DataContext is { } item and (AppEntry or WebSearch))
-                Run(item);
-        };
-
-        // Clicking somewhere else (another app, the desktop) ends the search.
-        box.LostKeyboardFocus += (_, e) =>
-        {
-            if (e.NewFocus is DependencyObject target && popup.Child.IsAncestorOf(target)) return;
-            Dispatcher.InvokeAsync(() => { if (!box.IsKeyboardFocusWithin) Finish(); });
-        };
-
-        UpdatePlaceholder();
         return frame;
-    }
-
-    /// <summary>A result row: the app's icon (or a symbol) and its name.</summary>
-    private DataTemplate SearchResultTemplate()
-    {
-        var row = new FrameworkElementFactory(typeof(StackPanel));
-        row.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
-        row.SetValue(MarginProperty, new Thickness(4, 3, 8, 3));
-
-        var image = new FrameworkElementFactory(typeof(Image));
-        image.SetBinding(Image.SourceProperty, new System.Windows.Data.Binding("Icon"));
-        image.SetValue(WidthProperty, 20.0);
-        image.SetValue(HeightProperty, 20.0);
-        image.SetValue(MarginProperty, new Thickness(0, 0, 10, 0));
-        row.AppendChild(image);
-
-        var name = new FrameworkElementFactory(typeof(TextBlock));
-        name.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding());
-        name.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
-        row.AppendChild(name);
-
-        return new DataTemplate { VisualTree = row };
-    }
-
-    /// <summary>
-    /// Lets the bar's window take the keyboard (for the search box) or gives it back. The bar normally
-    /// has WS_EX_NOACTIVATE, so clicking it never takes the focus away from the app you're using.
-    /// </summary>
-    private void SetKeyboardMode(bool on)
-    {
-        if (Window.GetWindow(this) is not { } host) return;
-        var hwnd = new WindowInteropHelper(host).Handle;
-        if (hwnd == IntPtr.Zero) return;
-
-        long exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
-        exStyle = on ? exStyle & ~WS_EX_NOACTIVATE : exStyle | WS_EX_NOACTIVATE;
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle));
-        if (on)
-        {
-            SetForegroundWindow(hwnd); // allowed: the click on the box was ours
-            host.Activate();
-        }
     }
 }

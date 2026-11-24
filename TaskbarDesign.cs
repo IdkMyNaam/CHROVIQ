@@ -62,8 +62,20 @@ public class TaskbarModule
     /// <summary>Volume: also show the volume as a number.</summary>
     public bool? ShowValue { get; set; }
 
-    /// <summary>Tray: show only the system icons (network, volume, battery...) on the bar, the rest behind a ^ button.</summary>
+    /// <summary>Tray: show only the pinned icons on the bar (system icons at first; Ctrl+click to change), the rest behind ^.</summary>
     public bool? TrayOverflow { get; set; }
+
+    /// <summary>Tray: icon size in pixels, default 16.</summary>
+    public double? IconSize { get; set; }
+
+    /// <summary>Tray: space on each side of an icon, default 5.</summary>
+    public double? IconSpacing { get; set; }
+
+    /// <summary>Tray: icons per row in the ^ flyout, default 5.</summary>
+    public int? FlyoutColumns { get; set; }
+
+    /// <summary>Tray: background of the ^ flyout ("#AARRGGBB"). Empty: dark gray.</summary>
+    public string? FlyoutBackground { get; set; }
 
     /// <summary>Text: the label. Button: text shown next to (or instead of) the icon.</summary>
     public string? Text { get; set; }

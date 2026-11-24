@@ -3,7 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:local="clr-namespace:WindowsCustomizer"
-             Foreground="{DynamicResource BarForeground}" FontFamily="Segoe UI" FontSize="12">
+             Foreground="{DynamicResource BarForeground}" FontFamily="Segoe UI" FontSize="12"
+             UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <!-- Layout rounding: icons land on whole pixels instead of being smeared over two. -->
     <!-- Draws one taskbar from a design. Used by the real bars (AppBarWindow) and by the
          designer's preview. Colors and sizes come from the design's Look (see ApplyLook). -->
     <UserControl.Resources>

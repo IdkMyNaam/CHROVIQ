@@ -264,11 +264,13 @@ internal static class WindowIcons
 {
     public static ImageSource? Get(IntPtr hwnd)
     {
-        IntPtr icon = AskWindow(hwnd, ICON_SMALL2);
-        if (icon == IntPtr.Zero) icon = AskWindow(hwnd, ICON_SMALL);
-        if (icon == IntPtr.Zero) icon = AskWindow(hwnd, ICON_BIG);
-        if (icon == IntPtr.Zero) icon = GetClassLongPtr(hwnd, GCLP_HICONSM);
+        // Large (32 px) first: scaled down it stays sharp; a 16 px icon scaled up (icon-only buttons,
+        // display scaling above 100%) looks blurry. Small icons only when an app has no large one.
+        IntPtr icon = AskWindow(hwnd, ICON_BIG);
         if (icon == IntPtr.Zero) icon = GetClassLongPtr(hwnd, GCLP_HICON);
+        if (icon == IntPtr.Zero) icon = AskWindow(hwnd, ICON_SMALL2);
+        if (icon == IntPtr.Zero) icon = AskWindow(hwnd, ICON_SMALL);
+        if (icon == IntPtr.Zero) icon = GetClassLongPtr(hwnd, GCLP_HICONSM);
 
         if (icon != IntPtr.Zero)
         {

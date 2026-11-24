@@ -109,6 +109,13 @@
                     </ComboBox>
                 </StackPanel>
 
+                <TextBlock Text="Search" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <CheckBox x:Name="WinKeySearchCheck" Content="Windows key opens Windows Customizer search"
+                          Click="WinKeySearchCheck_Click"
+                          ToolTip="Pressing the Windows key on its own opens our search instead of Start. Shortcuts like Win+E keep working; Ctrl+Esc still opens Start." />
+                <Button Content="Search settings..." Margin="0,8,0,0" Padding="6" HorizontalAlignment="Left"
+                        Click="SearchSettings_Click" />
+
                 <TextBlock Text="Game mode" FontWeight="SemiBold" Margin="0,16,0,4" />
                 <CheckBox x:Name="PauseForGamesCheck" Content="Pause Wallpaper Engine while a game is running"
                           Click="PauseForGamesCheck_Click" />

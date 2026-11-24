@@ -33,7 +33,8 @@ internal static class TrayHost
         {
             try
             {
-                var area = new NotificationArea(NotificationArea.DEFAULT_PINNED, new TrayService(), new ExplorerTrayService());
+                var pins = SavedPins is { Length: > 0 } saved ? saved : NotificationArea.DEFAULT_PINNED;
+                var area = new NotificationArea(pins, new TrayService(), new ExplorerTrayService());
                 area.SetAppBarMessageCallback(AppBarHandler);
                 area.Initialize();
                 if (area.IsFailed)
@@ -74,6 +75,22 @@ internal static class TrayHost
     }
 
     public static bool IsRunning => _area != null;
+
+    /// <summary>Icons kept on the bar from an earlier session (ManagedShell identifiers); set by the main window.</summary>
+    public static string[]? SavedPins { get; set; }
+
+    /// <summary>Called with the new list after an icon was pinned or unpinned, so it can be saved.</summary>
+    public static Action<string[]>? PinsChanged { get; set; }
+
+    /// <summary>Moves a tray icon between the bar and the ^ flyout.</summary>
+    public static void TogglePin(ManagedShell.WindowsTray.NotifyIcon icon)
+    {
+        if (_area == null) return;
+        if (icon.IsPinned) icon.Unpin();
+        else icon.Pin();
+        SavedPins = _area.PinnedNotifyIcons;
+        PinsChanged?.Invoke(_area.PinnedNotifyIcons);
+    }
 
     // ---------- App-bar requests while ManagedShell owns "Shell_TrayWnd" ----------
 

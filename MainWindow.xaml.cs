@@ -100,6 +100,11 @@ public partial class MainWindow : Window
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
         WatchDisplayChanges();
+        SetUpSearch();
+
+        // Which tray icons stay on the bar (Ctrl+click an icon to change it); remembered in the settings.
+        TrayHost.SavedPins = _settings.TrayPinned?.ToArray();
+        TrayHost.PinsChanged = pins => { _settings.TrayPinned = pins.ToList(); SaveSettings(); };
         LoadDesigns();
         WatchDesignFiles();
 
@@ -132,6 +137,7 @@ public partial class MainWindow : Window
             WindowsTaskbar.Restore();
             CloseBars(); // releases the reserved screen space
             TrayHost.Shutdown(); // tray icons back to Explorer, even if a bar didn't get to clean up
+            _winKeyHook?.Dispose(); // the Windows key opens Start again
             _trayIcon.Dispose();
         };
     }
@@ -1018,6 +1024,65 @@ public partial class MainWindow : Window
         _settings.TaskbarButtons = mode;
         SaveSettings();
         RebuildBars();
+    }
+
+    // ---------- Search ----------
+
+    private WinKeyHook? _winKeyHook;
+    private SearchSettingsWindow? _searchSettings;
+
+    private void SetUpSearch()
+    {
+        // Search boxes on the bars open the search window with these settings.
+        TaskbarView.SearchLookProvider = () => _settings.Search ??= new SearchLook();
+        WinKeySearchCheck.IsChecked = _settings.WinKeyOpensSearch;
+        if (_settings.WinKeyOpensSearch) SetWinKeySearch(true);
+    }
+
+    /// <summary>Turns "Windows key opens our search" on or off, and remembers the choice.</summary>
+    private void SetWinKeySearch(bool on)
+    {
+        if (on && _winKeyHook == null)
+        {
+            try
+            {
+                _winKeyHook = new WinKeyHook();
+                // Raised inside the keyboard hook: open the window a moment later, so the hook returns at once.
+                _winKeyHook.Pressed += () => Dispatcher.InvokeAsync(() => SearchWindow.Toggle(_settings.Search ??= new SearchLook()));
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = $"Could not take over the Windows key: {ex.Message}";
+                on = false;
+            }
+        }
+        else if (!on && _winKeyHook != null)
+        {
+            _winKeyHook.Dispose();
+            _winKeyHook = null;
+        }
+
+        WinKeySearchCheck.IsChecked = on;
+        if (_settings.WinKeyOpensSearch != on)
+        {
+            _settings.WinKeyOpensSearch = on;
+            SaveSettings();
+        }
+    }
+
+    private void WinKeySearchCheck_Click(object sender, RoutedEventArgs e) =>
+        SetWinKeySearch(WinKeySearchCheck.IsChecked == true);
+
+    private void SearchSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_searchSettings != null)
+        {
+            _searchSettings.Activate();
+            return;
+        }
+        _searchSettings = new SearchSettingsWindow(_settings.Search ??= new SearchLook(), SaveSettings);
+        _searchSettings.Closed += (_, _) => _searchSettings = null;
+        _searchSettings.Show();
     }
 
     private void PauseForGamesCheck_Click(object sender, RoutedEventArgs e)

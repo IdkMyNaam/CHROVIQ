@@ -452,13 +452,20 @@ public partial class TaskbarDesignerWindow : Window
                 NumberField(ModuleOptions, "Width (pixels)", m.Width ?? 220, v => m.Width = v, 80, 800);
                 TextField(ModuleOptions, "Placeholder text", m.Text ?? "", v => m.Text = Empty(v), "Empty = \"Search apps and the web\".");
                 TextField(ModuleOptions, "Web search address", m.SearchUrl ?? "", v => m.SearchUrl = Empty(v),
-                    "{0} is replaced by what you typed. Empty = Google. Examples: https://duckduckgo.com/?q={0}, https://www.bing.com/search?q={0}");
-                Hint(ModuleOptions, "Click the box and type: matching apps appear, Enter starts the first one (or searches the web). Esc cancels.");
+                    "{0} is replaced by what you typed. Empty = the one from Search settings (main window).");
+                Hint(ModuleOptions, "Clicking the box opens the search window next to it. Its look (colors, size, results) " +
+                    "is set in the main window under Search > \"Search settings...\", shared with the Windows key search.");
                 break;
 
             case ModuleType.Tray:
-                CheckField(ModuleOptions, "Only system icons on the bar, the rest behind ^", m.TrayOverflow == true,
-                    v => m.TrayOverflow = v ? true : null);
+                CheckField(ModuleOptions, "Only pinned icons on the bar, the rest behind ^", m.TrayOverflow == true,
+                    v => m.TrayOverflow = v ? true : null,
+                    "At first the system icons are pinned. Ctrl+click an icon on the bar or in the ^ flyout to move it.");
+                NumberField(ModuleOptions, "Icon size (pixels)", m.IconSize ?? 16, v => m.IconSize = v, 10, 48);
+                NumberField(ModuleOptions, "Space around each icon", m.IconSpacing ?? 5, v => m.IconSpacing = v, 0, 30);
+                NumberField(ModuleOptions, "Icons per row in the ^ flyout", m.FlyoutColumns ?? 5, v => m.FlyoutColumns = (int)v, 1, 20);
+                ColorField(ModuleOptions, "Flyout background", m.FlyoutBackground ?? "", v => m.FlyoutBackground = Empty(v),
+                    "Empty = dark gray. #AARRGGBB for see-through.");
                 Hint(ModuleOptions,
                     "The notification-area icons of all programs; clicks and right-click menus go to the programs as usual. " +
                     "While a bar with this module is showing, programs send their icons here instead of to the Windows taskbar, " +

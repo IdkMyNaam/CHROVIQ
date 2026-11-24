@@ -33,11 +33,11 @@ public partial class TaskbarView
         _disposables.Add(new Disposer(TrayHost.Release));
 
         bool overflow = module.TrayOverflow == true;
-        var icons = TrayIconList(overflow ? area.PinnedIcons : area.AllIcons, wrap: false);
+        var icons = TrayIconList(overflow ? area.PinnedIcons : area.AllIcons, wrap: false, module);
         if (!overflow) return icons;
 
         // ^ button with the other icons in a flyout.
-        var flyoutIcons = TrayIconList(area.UnpinnedIcons, wrap: true);
+        var flyoutIcons = TrayIconList(area.UnpinnedIcons, wrap: true, module);
         var popup = new Popup
         {
             Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
@@ -45,7 +45,7 @@ public partial class TaskbarView
             AllowsTransparency = true,
             Child = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(0xF5, 0x24, 0x24, 0x24)),
+                Background = new SolidColorBrush(ParseColor(module.FlyoutBackground, Color.FromArgb(0xF5, 0x24, 0x24, 0x24))),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(6),
                 Child = flyoutIcons,
@@ -76,29 +76,33 @@ public partial class TaskbarView
     }
 
     /// <summary>A row (or, in the flyout, a wrapping grid) of tray icon buttons.</summary>
-    private ItemsControl TrayIconList(ICollectionView icons, bool wrap)
+    private ItemsControl TrayIconList(ICollectionView icons, bool wrap, TaskbarModule module)
     {
+        double iconSize = Math.Clamp(module.IconSize ?? 16, 10, 48);
+        double spacing = Math.Clamp(module.IconSpacing ?? 5, 0, 30);
+        int columns = Math.Clamp(module.FlyoutColumns ?? 5, 1, 20);
+
         var panel = new FrameworkElementFactory(wrap ? typeof(WrapPanel) : typeof(StackPanel));
-        if (wrap) panel.SetValue(MaxWidthProperty, 5 * 32.0);
+        if (wrap) panel.SetValue(MaxWidthProperty, columns * (iconSize + 2 * spacing + 2));
         else panel.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
 
         return new ItemsControl
         {
             ItemsSource = icons,
             ItemsPanel = new ItemsPanelTemplate(panel),
-            ItemTemplate = TrayIconTemplate(),
+            ItemTemplate = TrayIconTemplate(iconSize, spacing),
             Focusable = false,
         };
     }
 
     /// <summary>One icon: a bar button with the program's icon, passing every mouse event to that program.</summary>
-    private DataTemplate TrayIconTemplate()
+    private DataTemplate TrayIconTemplate(double iconSize, double spacing)
     {
         var button = new FrameworkElementFactory(typeof(Button));
         button.SetResourceReference(StyleProperty, "BarButton");
-        button.SetValue(PaddingProperty, new Thickness(5, 0, 5, 0));
-        button.SetValue(MinHeightProperty, 28.0);
-        button.SetBinding(ToolTipProperty, new Binding(nameof(ShellTrayIcon.Title)));
+        button.SetValue(PaddingProperty, new Thickness(spacing, 0, spacing, 0));
+        button.SetValue(MinHeightProperty, Math.Max(28.0, iconSize + 8));
+        button.SetBinding(ToolTipProperty, new Binding(nameof(ShellTrayIcon.Title)) { StringFormat = "{0}\n(Ctrl+click: move between the bar and ^)" });
         button.AddHandler(MouseEnterEvent, new MouseEventHandler(TrayIcon_MouseEnter));
         button.AddHandler(MouseLeaveEvent, new MouseEventHandler(TrayIcon_MouseLeave));
         button.AddHandler(MouseMoveEvent, new MouseEventHandler(TrayIcon_MouseMove));
@@ -108,8 +112,8 @@ public partial class TaskbarView
 
         var image = new FrameworkElementFactory(typeof(Image));
         image.SetBinding(Image.SourceProperty, new Binding(nameof(ShellTrayIcon.Icon)));
-        image.SetValue(WidthProperty, 16.0);
-        image.SetValue(HeightProperty, 16.0);
+        image.SetValue(WidthProperty, iconSize);
+        image.SetValue(HeightProperty, iconSize);
         image.SetValue(RenderOptions.BitmapScalingModeProperty, BitmapScalingMode.HighQuality);
         button.AppendChild(image);
 
@@ -136,11 +140,26 @@ public partial class TaskbarView
     private void TrayIcon_MouseMove(object sender, MouseEventArgs e) =>
         IconOf(sender)?.IconMouseMove(MouseHelper.GetCursorPositionParam());
 
-    private void TrayIcon_MouseDown(object sender, MouseButtonEventArgs e) =>
-        IconOf(sender)?.IconMouseDown(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);
+    /// <summary>Ctrl + left click is ours (pin/unpin); everything else goes to the program.</summary>
+    private static bool IsPinClick(MouseButtonEventArgs e) =>
+        e.ChangedButton == MouseButton.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
 
-    private void TrayIcon_MouseUp(object sender, MouseButtonEventArgs e) =>
+    private void TrayIcon_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (IsPinClick(e)) { e.Handled = true; return; }
+        IconOf(sender)?.IconMouseDown(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);
+    }
+
+    private void TrayIcon_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (IsPinClick(e))
+        {
+            if (IconOf(sender) is { } icon) TrayHost.TogglePin(icon);
+            e.Handled = true;
+            return;
+        }
         IconOf(sender)?.IconMouseUp(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);
+    }
 
     /// <summary>Runs an action when disposed (for cleanups in <see cref="_disposables"/>).</summary>
     private sealed class Disposer : IDisposable

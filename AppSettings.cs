@@ -33,6 +33,15 @@ public class AppSettings
     /// </summary>
     public bool? TaskbarAutoHideBefore { get; set; }
 
+    /// <summary>Pressing the Windows key on its own opens our search window instead of the Start menu.</summary>
+    public bool WinKeyOpensSearch { get; set; }
+
+    /// <summary>Look of the search window.</summary>
+    public SearchLook Search { get; set; } = new();
+
+    /// <summary>Tray icons kept on the bar (the rest go behind ^), by ManagedShell identifier. Empty: the system icons.</summary>
+    public List<string>? TrayPinned { get; set; }
+
     /// <summary>Name of the taskbar design to use (a file in %AppData%\WindowsCustomizer\Taskbars).</summary>
     public string TaskbarDesign { get; set; } = TaskbarDesigns.DefaultName;
 
