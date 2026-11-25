@@ -16,6 +16,7 @@ public partial class WorkshopPicker : Wpf.Ui.Controls.FluentWindow
     public WorkshopPicker()
     {
         InitializeComponent();
+        AppThemes.Register(this); // the app theme, now and when it changes
         Loaded += async (_, _) =>
         {
             CountText.Text = "Searching...";

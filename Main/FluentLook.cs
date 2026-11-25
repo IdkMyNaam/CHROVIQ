@@ -28,6 +28,7 @@ internal static class FluentLook
         Grid.SetRow((UIElement)content, 1);
         root.Children.Add(content);
         window.Content = root;
+        AppThemes.Register(window); // the app theme, now and when it changes
     }
 
     /// <summary>

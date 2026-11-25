@@ -83,11 +83,18 @@
 
             <!-- ============ Sidebar ============ -->
             <ListBox x:Name="NavList" Grid.Column="0" Margin="8,4,4,8" Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionChanged="Nav_SelectionChanged" ItemContainerStyle="{StaticResource TileItem}">
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="PaintBrush24" Margin="0,0,12,0" />
                         <TextBlock Text="Profiles" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="PaintBucket24" Margin="0,0,12,0" />
+                        <TextBlock Text="Appearance" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem>
@@ -255,6 +262,160 @@
 
                                 <ui:Button x:Name="ApplyButton" Content="Apply profile" Appearance="Primary" Icon="{ui:SymbolIcon Play24}"
                                            Margin="0,16,0,0" Padding="16,8" Click="Apply_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Appearance (app themes) -->
+                <ScrollViewer x:Name="PageAppearance" VerticalScrollBarVisibility="Auto" Padding="24,8,24,24" Visibility="Collapsed">
+                    <StackPanel MaxWidth="1000">
+                        <TextBlock Text="Appearance" Style="{StaticResource PageTitle}" />
+                        <TextBlock Style="{StaticResource CardText}" Margin="0,-8,0,16"
+                                   Text="How Windows Customizer's own windows look. Pick a theme, or make your own: every change shows right away. (The taskbar, desktop and start menu have their own designs.)" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="250" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:Card Grid.Column="0" VerticalAlignment="Top" Margin="0,0,12,0" Padding="8">
+                                <DockPanel>
+                                    <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,8,0,0">
+                                        <ui:Button Content="New" Icon="{ui:SymbolIcon Add24}" Margin="0,0,3,4" HorizontalAlignment="Stretch" Click="NewTheme_Click" />
+                                        <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="3,0,0,4" HorizontalAlignment="Stretch" Click="DuplicateTheme_Click" />
+                                        <ui:Button x:Name="DeleteThemeButton" Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="0,0,3,4"
+                                                   HorizontalAlignment="Stretch" Click="DeleteTheme_Click" />
+                                        <ui:Button Content="Import..." Icon="{ui:SymbolIcon ArrowDownload24}" Margin="3,0,0,4" HorizontalAlignment="Stretch"
+                                                   Click="ImportTheme_Click" />
+                                        <ui:Button Content="Export..." Icon="{ui:SymbolIcon Share24}" Margin="0,0,3,0" HorizontalAlignment="Stretch"
+                                                   Click="ExportTheme_Click" />
+                                    </UniformGrid>
+                                    <ListBox x:Name="ThemeList" MinHeight="240" Background="Transparent" BorderThickness="0"
+                                             ItemContainerStyle="{StaticResource TileItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             SelectionChanged="ThemeList_SelectionChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="13" Margin="0,0,10,0"
+                                                            Background="{Binding Swatch}" BorderBrush="{Binding AccentBrush}" BorderThickness="3" />
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </ui:Card>
+
+                            <StackPanel Grid.Column="1">
+                                <ui:InfoBar x:Name="BuiltInThemeNote" Title="Built-in theme" IsOpen="True" IsClosable="False" Severity="Informational"
+                                            Margin="0,0,0,8" Message="Built-in themes can't be changed. Press Duplicate to make your own version of it." />
+                                <StackPanel x:Name="ThemeEditorFields">
+                                    <ui:CardControl Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="Edit24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header><TextBlock Text="Name" Style="{StaticResource CardTitle}" /></ui:CardControl.Header>
+                                        <TextBox x:Name="ThemeNameBox" Width="240" LostFocus="ThemeNameBox_LostFocus" />
+                                    </ui:CardControl>
+
+                                    <ui:CardControl Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="WeatherMoon24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header>
+                                            <StackPanel>
+                                                <TextBlock Text="Light or dark" Style="{StaticResource CardTitle}" />
+                                                <TextBlock Text="&quot;Follow Windows&quot; switches along with Windows' app mode" Style="{StaticResource CardText}" />
+                                            </StackPanel>
+                                        </ui:CardControl.Header>
+                                        <ComboBox x:Name="ThemeModeBox" Width="240" SelectionChanged="ThemeField_Changed">
+                                            <ComboBoxItem Content="Follow Windows" />
+                                            <ComboBoxItem Content="Light" />
+                                            <ComboBoxItem Content="Dark" />
+                                        </ComboBox>
+                                    </ui:CardControl>
+
+                                    <ui:CardControl Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="Color24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header>
+                                            <StackPanel>
+                                                <TextBlock Text="Accent color" Style="{StaticResource CardTitle}" />
+                                                <TextBlock Text="Windows' own accent, or your color (#RRGGBB)" Style="{StaticResource CardText}" />
+                                            </StackPanel>
+                                        </ui:CardControl.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox x:Name="ThemeWindowsAccentCheck" Content="Windows' accent" Margin="0,0,12,0" VerticalAlignment="Center"
+                                                      Click="ThemeField_Changed" />
+                                            <Border x:Name="ThemeAccentSwatch" Width="28" Height="28" Margin="0,0,8,0" CornerRadius="4"
+                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" />
+                                            <TextBox x:Name="ThemeAccentBox" Width="110" TextChanged="ThemeField_Changed" />
+                                        </StackPanel>
+                                    </ui:CardControl>
+
+                                    <ui:CardControl Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="Image24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header>
+                                            <StackPanel>
+                                                <TextBlock Text="Background" Style="{StaticResource CardTitle}" />
+                                                <TextBlock Text="Windows' materials (Mica, Acrylic, Tabbed), a color, or a picture" Style="{StaticResource CardText}" />
+                                            </StackPanel>
+                                        </ui:CardControl.Header>
+                                        <ComboBox x:Name="ThemeBackgroundBox" Width="240" SelectionChanged="ThemeField_Changed">
+                                            <ComboBoxItem Content="Mica" />
+                                            <ComboBoxItem Content="Acrylic (see-through)" />
+                                            <ComboBoxItem Content="Tabbed (Mica, stronger)" />
+                                            <ComboBoxItem Content="A color" />
+                                            <ComboBoxItem Content="A picture" />
+                                        </ComboBox>
+                                    </ui:CardControl>
+
+                                    <ui:CardControl x:Name="ThemeColorCard" Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="PaintBucket24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header>
+                                            <StackPanel>
+                                                <TextBlock Text="Background color" Style="{StaticResource CardTitle}" />
+                                                <TextBlock Text="#RRGGBB; also shows under the picture. Empty: the light or dark default" Style="{StaticResource CardText}" />
+                                            </StackPanel>
+                                        </ui:CardControl.Header>
+                                        <TextBox x:Name="ThemeBgColorBox" Width="240" TextChanged="ThemeField_Changed" />
+                                    </ui:CardControl>
+
+                                    <ui:Card x:Name="ThemePictureCard" Margin="0,0,0,4">
+                                        <StackPanel>
+                                            <TextBlock Text="Picture" Style="{StaticResource CardTitle}" />
+                                            <DockPanel Margin="0,8,0,0">
+                                                <ui:Button DockPanel.Dock="Right" Content="Browse..." Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                                                           Click="ThemeBrowseImage_Click" />
+                                                <TextBox x:Name="ThemeImageBox" TextChanged="ThemeField_Changed" />
+                                            </DockPanel>
+                                            <TextBlock Text="How strongly the picture shows" Style="{StaticResource CardText}" Margin="0,10,0,0" />
+                                            <Slider x:Name="ThemeImageOpacitySlider" Minimum="0.05" Maximum="1" ValueChanged="ThemeField_Changed" />
+                                        </StackPanel>
+                                    </ui:Card>
+
+                                    <ui:Card Margin="0,0,0,4">
+                                        <StackPanel>
+                                            <TextBlock Text="Rounded corners" Style="{StaticResource CardTitle}" />
+                                            <TextBlock Text="Buttons, boxes, cards and menus: 0 is square, 4 is Windows' own" Style="{StaticResource CardText}" />
+                                            <Slider x:Name="ThemeCornerSlider" Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                    Margin="0,8,0,0" ValueChanged="ThemeField_Changed" />
+                                        </StackPanel>
+                                    </ui:Card>
+
+                                    <ui:Card Margin="0,0,0,4">
+                                        <StackPanel>
+                                            <TextBlock Text="Card transparency" Style="{StaticResource CardTitle}" />
+                                            <TextBlock Text="Lower lets the background (Acrylic, a picture) show through the cards" Style="{StaticResource CardText}" />
+                                            <Slider x:Name="ThemeCardSlider" Minimum="0.2" Maximum="1" Margin="0,8,0,0" ValueChanged="ThemeField_Changed" />
+                                        </StackPanel>
+                                    </ui:Card>
+
+                                    <ui:CardControl Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="TextFont24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header><TextBlock Text="Font" Style="{StaticResource CardTitle}" /></ui:CardControl.Header>
+                                        <ComboBox x:Name="ThemeFontBox" Width="240" SelectionChanged="ThemeField_Changed" />
+                                    </ui:CardControl>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                     </StackPanel>

@@ -35,6 +35,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         _getActiveName = getActiveName;
         _setActive = setActive;
         InitializeComponent();
+        AppThemes.Register(this); // the app theme, now and when it changes
         FluentLook.Shield(PreviewFrame); // the preview looks exactly like the real bar, not like this window
         LiveCheck.IsChecked = _liveSetting;
 

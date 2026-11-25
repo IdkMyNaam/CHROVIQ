@@ -49,10 +49,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     public MainWindow()
     {
-        // Light or dark like Windows' app mode, and follow it when it changes.
-        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        // The app theme (how this app's own windows look); "Windows" follows Windows' light/dark.
+        AppThemes.Apply(AppThemes.Find(_settings.AppTheme));
         InitializeComponent();
-        Loaded += (_, _) => Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
+        AppThemes.Register(this);
+        SetUpAppearance();
         NavList.SelectedIndex = 0;
         VersionText.Text = $"Version {typeof(App).Assembly.GetName().Version?.ToString(3)}";
         BuildAccentSwatches();
@@ -199,7 +200,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PageProfiles == null) return; // during InitializeComponent
-        var pages = new FrameworkElement[] { PageProfiles, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageAbout };
+        var pages = new FrameworkElement[] { PageProfiles, PageAppearance, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageAbout };
         for (int i = 0; i < pages.Length; i++)
             pages[i].Visibility = i == NavList.SelectedIndex ? Visibility.Visible : Visibility.Collapsed;
     }
