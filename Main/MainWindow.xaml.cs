@@ -231,10 +231,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _settings.LiveGlass = LiveGlassCheck.IsChecked == true;
         SaveSettings();
         WallpaperBehind.Live = _settings.LiveGlass;
+        if (!_settings.LiveGlass) ScreenBehind.StopAll(); // the bars show in screenshots and screen sharing again
         RebuildBars(); // the bars pick up the new glass source
         StatusText.Text = _settings.LiveGlass
-            ? "Live glass on. Windows already left out of screenshots stay so until Windows Customizer restarts."
-            : "Live glass off (the wallpaper picture). Restart Windows Customizer to show the bars in screenshots again.";
+            ? "Live glass on: glass materials on the taskbar show what's behind them; those bars don't show in screen sharing."
+            : "Live glass off: glass shows the wallpaper picture, and the bars show in screenshots and screen sharing again.";
     }
 
     private static readonly int[] FpsChoices = { 15, 30, 60 };
@@ -464,7 +465,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         foreach (var c in _previewCursors) c.Dispose();
         _previewCursors.Clear();
-        CustomCursorRows.Children.Clear();
+        SafeUi.Clear(CustomCursorRows);
         if (Selected is not { } profile) return;
 
         foreach (var role in CustomCursors.Roles)
@@ -1027,7 +1028,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>One "Monitor N" dropdown per extra monitor (none with a single monitor).</summary>
     private void BuildMonitorDesignBoxes()
     {
-        MonitorDesignsPanel.Children.Clear();
+        SafeUi.Clear(MonitorDesignsPanel);
         var monitors = Monitors.All();
         int number = 1;
         foreach (var monitor in monitors)

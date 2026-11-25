@@ -49,7 +49,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
 
     private void FillMaterial(StackPanel panel, Material? material, Func<Dictionary<string, string>> values)
     {
-        panel.Children.Clear();
+        SafeUi.Clear(panel);
         if (material == null) return;
         var previous = Target;
         Target = panel;

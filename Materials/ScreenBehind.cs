@@ -20,6 +20,8 @@ internal static class ScreenBehind
     {
         public required WeakReference<FrameworkElement> Surface { get; init; }
         public required WeakReference<MaterialEffect> Effect { get; init; }
+        /// <summary>The window left out of capture for this surface.</summary>
+        public IntPtr Window { get; init; }
         public WriteableBitmap? Bitmap;
         public IntPtr MemoryDc, Dib, Bits;
         public int Width, Height;
@@ -35,10 +37,14 @@ internal static class ScreenBehind
     public static bool Track(FrameworkElement surface, MaterialEffect effect)
     {
         var window = Window.GetWindow(surface);
-        var hwnd = window == null ? IntPtr.Zero : new WindowInteropHelper(window).EnsureHandle();
+        // Only the taskbar bars: everything else (the designer's preview, Windows Customizer's own windows, menus)
+        // must keep showing in screenshots and screen sharing, so those use the wallpaper picture instead.
+        if (window is not AppBarWindow) return false;
+        var hwnd = new WindowInteropHelper(window).EnsureHandle();
         if (hwnd == IntPtr.Zero || !ExcludeFromCapture(hwnd)) return false;
 
-        Entries.Add(new Entry { Surface = new WeakReference<FrameworkElement>(surface), Effect = new WeakReference<MaterialEffect>(effect) });
+        Entries.Add(new Entry { Surface = new WeakReference<FrameworkElement>(surface), Effect = new WeakReference<MaterialEffect>(effect), Window = hwnd });
+        window.Closed += (_, _) => Excluded.Remove(hwnd);
         if (_timer == null)
         {
             _timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -61,6 +67,24 @@ internal static class ScreenBehind
         return ok;
     }
 
+    private const uint WDA_NONE = 0;
+
+    /// <summary>The window shows in screenshots and screen sharing again (no live glass on it any more).</summary>
+    private static void IncludeInCapture(IntPtr hwnd)
+    {
+        if (!Excluded.Remove(hwnd)) return;
+        SetWindowDisplayAffinity(hwnd, WDA_NONE); // fails harmlessly if the window is gone
+    }
+
+    /// <summary>Live glass switched off: every window shows in capture again (the bars are rebuilt with the picture).</summary>
+    public static void StopAll()
+    {
+        foreach (var entry in Entries) Release(entry);
+        Entries.Clear();
+        foreach (var hwnd in Excluded.Keys.ToList()) IncludeInCapture(hwnd);
+        _timer?.Stop();
+    }
+
     private static void Tick()
     {
         if (MaterialClock.ForegroundIsFullscreen()) return; // a game or a video: leave the GPU and CPU to it
@@ -70,7 +94,8 @@ internal static class ScreenBehind
             if (!entry.Surface.TryGetTarget(out var surface) || !entry.Effect.TryGetTarget(out var effect) || !ReferenceEquals(surface.Effect, effect))
             {
                 Release(entry);
-                Entries.RemoveAt(i); // the surface was rebuilt or closed
+                Entries.RemoveAt(i); // the surface was rebuilt or closed, or has another material now
+                if (!Entries.Any(e => e.Window == entry.Window)) IncludeInCapture(entry.Window);
                 continue;
             }
             if (!surface.IsVisible || surface.ActualWidth <= 0 || PresentationSource.FromVisual(surface) == null) continue;

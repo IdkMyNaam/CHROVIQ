@@ -417,7 +417,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
 
     private void BuildModuleOptions()
     {
-        ModuleOptions.Children.Clear();
+        SafeUi.Clear(ModuleOptions);
         var m = _selected;
         if (m == null)
         {
@@ -605,7 +605,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
 
     private void BuildLookOptions()
     {
-         LookOptions.Children.Clear();
+         SafeUi.Clear(LookOptions);
         if (_design == null) return;
         var design = _design;
         var look = design.Look ??= new TaskbarLook();
@@ -733,7 +733,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>The chosen material's description, compile error (if any) and settings.</summary>
     private void FillMaterialDetails(Panel details, TaskbarLook look, Material? current)
     {
-        details.Children.Clear();
+        SafeUi.Clear(details);
         if (current == null)
         {
             Hint(details, "A material draws the bar's surface with a shader: glass, glow, painted styles, animations. Icons and text stay sharp on top.");

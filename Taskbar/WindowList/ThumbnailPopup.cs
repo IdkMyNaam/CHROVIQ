@@ -57,7 +57,7 @@ internal sealed class ThumbnailPopup : Window
     {
         _hwnd = new WindowInteropHelper(this).EnsureHandle();
         Unregister();
-        _cells.Children.Clear();
+        SafeUi.Clear(_cells);
 
         foreach (var window in windows.Take(MaxWindows))
             _cells.Children.Add(BuildCell(window));

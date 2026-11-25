@@ -273,7 +273,7 @@ internal sealed class AltTabSwitcher : IDisposable
         {
             ApplyLook(look);
             Unregister();
-            _tiles.Children.Clear();
+            SafeUi.Clear(_tiles);
             _tileBorders.Clear();
             if (_hwnd == IntPtr.Zero) new WindowInteropHelper(this).EnsureHandle();
 

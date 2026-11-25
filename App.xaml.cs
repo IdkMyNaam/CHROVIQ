@@ -16,13 +16,26 @@ public partial class App : Application
         // If the app crashes or is ended while the Windows taskbar is hidden, bring it back.
         // These don't swallow the error; they only clean up first. (Killing the process from
         // Task Manager skips them: use Restore-Taskbar.ps1 then.)
-        DispatcherUnhandledException += (_, _) =>
+        DispatcherUnhandledException += (_, e) =>
         {
+            // A known, harmless WPF animation glitch (a control removed mid-animation): note it and carry on,
+            // instead of crashing (or, started from Visual Studio, freezing while Windows waits for a debugger).
+            if (SafeUi.IsAnimationGlitch(e.Exception))
+            {
+                AppTrace.Log("WPF animation glitch caught (harmless): " + e.Exception.Message);
+                e.Handled = true;
+                return;
+            }
+            AppTrace.Log($"CRASH: {e.Exception}");
             WindowsTaskbar.RestoreNative();
             // Tray icons back to Explorer (this handler runs on the UI thread, which the tray needs).
             try { TrayHost.Shutdown(); } catch (Exception) { /* Restore-Taskbar.ps1 also does this */ }
         };
-        AppDomain.CurrentDomain.UnhandledException += (_, _) => WindowsTaskbar.RestoreNative();
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            AppTrace.Log($"CRASH (background thread): {e.ExceptionObject}");
+            WindowsTaskbar.RestoreNative();
+        };
         AppDomain.CurrentDomain.ProcessExit += (_, _) => WindowsTaskbar.RestoreNative();
 
         base.OnStartup(e);
