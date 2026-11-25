@@ -17,7 +17,9 @@ public sealed class GlobalHotKey : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    private const int Id = 0x5743; // any number unique within this app
+    // Each hotkey has its own id: Windows tells which one was pressed by it (several can share a window).
+    private static int _nextId = 0x5743;
+    private readonly int Id = Interlocked.Increment(ref _nextId);
 
     private readonly HwndSource _source;
     private readonly bool _registered;

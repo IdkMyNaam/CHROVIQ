@@ -81,6 +81,9 @@ public class AppSettings
     /// <summary>A new wallpaper every day (Bing, Spotlight or a folder).</summary>
     public DailyWallpaperSettings DailyWallpaper { get; set; } = new();
 
+    /// <summary>Snap layouts: zones to drop windows in, hotkeys, own layouts.</summary>
+    public SnapSettings Snap { get; set; } = new();
+
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;
 

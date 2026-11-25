@@ -173,6 +173,59 @@ public partial class TaskbarView
 
     // ---------- Search box ----------
 
+    /// <summary>
+    /// Virtual desktops: a button per desktop (the current one marked like the active window), + to add one.
+    /// Follows Windows: switching with Ctrl+Win+arrows or Task View updates it too.
+    /// </summary>
+    private FrameworkElement DesktopsModule(TaskbarModule module)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        if (ShellMode.IsShell)
+        {
+            row.Children.Add(new TextBlock { Text = "(no desktops as the shell)", Opacity = 0.6, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 6, 0) });
+            return row;
+        }
+
+        void Fill()
+        {
+            row.Children.Clear();
+            var (desktops, current) = VirtualDesktops.Read();
+            for (int i = 0; i < desktops.Count; i++)
+            {
+                int index = i;
+                string text = module.ShowNames == true ? desktops[i].Name : (i + 1).ToString();
+                var button = BarButton(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center }, desktops[i].Name);
+                button.MinWidth = 30;
+                if (i == current)
+                {
+                    // Marked like the active window: lighter background and the marker (line, dot, ...).
+                    button.SetResourceReference(BackgroundProperty, "BarActive");
+                    button.SetResourceReference(BorderBrushProperty, "AccentBrush");
+                }
+                button.Click += async (_, _) => await VirtualDesktops.SwitchToAsync(index);
+                var menu = new ContextMenu();
+                var add = new MenuItem { Header = "New desktop" };
+                add.Click += (_, _) => VirtualDesktops.Add();
+                var close = new MenuItem { Header = "Close the current desktop", ToolTip = "Its windows move to the desktop next to it" };
+                close.Click += (_, _) => VirtualDesktops.CloseCurrent();
+                var view = new MenuItem { Header = "Task View (all desktops)" };
+                view.Click += (_, _) => PressWinShortcut('\t');
+                menu.Items.Add(add);
+                menu.Items.Add(close);
+                menu.Items.Add(view);
+                button.ContextMenu = menu;
+                row.Children.Add(button);
+            }
+            var plus = GlyphButton("\uE710", "New desktop (Ctrl+Win+D)", VirtualDesktops.Add);
+            row.Children.Add(plus);
+        }
+        Fill();
+        Action changed = () => Dispatcher.InvokeAsync(Fill);
+        VirtualDesktops.Changed += changed;
+        _disposables.Add(new Unsubscribe(() => VirtualDesktops.Changed -= changed));
+        return row;
+    }
+
     /// <summary>Opens Windows Customizer's Quick Settings next to an element; set by the main window.</summary>
     public static Action<FrameworkElement, TaskbarEdge>? QuickSettingsOpener { get; set; }
 

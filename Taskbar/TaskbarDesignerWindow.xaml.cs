@@ -85,6 +85,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             ModuleType.SystemStats => "CPU and memory",
             ModuleType.Media => "Media controls",
             ModuleType.Tray => "Tray icons",
+            ModuleType.Desktops => "Virtual desktops",
             _ => Type.ToString(),
         };
     }
@@ -430,6 +431,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             ModuleType.WindowList => "Window list",
             ModuleType.PinnedApps => "Pinned apps",
             ModuleType.QuickSettings => "Quick Settings",
+            ModuleType.Desktops => "Virtual desktops",
             _ => m.Type.ToString(),
         });
 
@@ -531,6 +533,13 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                     "While a bar with this module is showing, programs send their icons here instead of to the Windows taskbar, " +
                     "so the Windows tray may stop getting new icons (best combined with \"Hide the Windows taskbar\"). " +
                     "Icons go back to Windows when the bar closes. The preview here shows a placeholder.");
+                break;
+
+            case ModuleType.Desktops:
+                CheckField(ModuleOptions, "Show names instead of numbers", m.ShowNames == true, v => m.ShowNames = v ? true : null,
+                    "Names are set in Windows' Task View (Win+Tab, right-click a desktop > Rename).");
+                Hint(ModuleOptions, "One button per virtual desktop; click one to switch to it, + adds a desktop, right-click for more. " +
+                    "Needs Explorer, so it's empty as the shell.");
                 break;
 
             case ModuleType.Media:

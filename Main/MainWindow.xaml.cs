@@ -18,6 +18,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly GameWatcher _gameWatcher;
     private readonly ProfileSwitcher _profileSwitcher;
     private readonly DailyWallpaper _dailyWallpaper;
+    private readonly SnapEngine _snap;
+    private SnapSettingsWindow? _snapSettings;
 
     // Saves the profiles shortly after the last edit, so typing doesn't write the file on every key.
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
@@ -126,6 +128,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ShowDailyWallpaper();
         Dispatcher.BeginInvoke(async () => await _dailyWallpaper.UpdateAsync(), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
+        // Snap layouts.
+        _snap = new SnapEngine(_settings.Snap ??= new SnapSettings(), this);
+        _snap.Status += text => StatusText.Text = text;
+        SnapCheck.IsChecked = _settings.Snap.Enabled;
+        Dispatcher.BeginInvoke(_snap.Update, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
         // Desktop widgets.
         ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
         WidgetManager.Start(_settings, SaveSettings);
@@ -185,6 +193,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             _profileSwitcher.Stop();
             WidgetManager.CloseAll();
             _dailyWallpaper.Stop();
+            _snap.Dispose();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
@@ -744,6 +753,22 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     private async void DailyNext_Click(object sender, RoutedEventArgs e) => await _dailyWallpaper.NextAsync();
+
+    private void SnapCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.Snap.Enabled = SnapCheck.IsChecked == true;
+        SaveSettings();
+        _snap.Update();
+    }
+
+    private void SnapSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_snapSettings != null) { _snapSettings.Activate(); return; }
+        // Every change is saved and used at once (hotkeys on or off, say).
+        _snapSettings = new SnapSettingsWindow(_settings.Snap, () => { SaveSettings(); _snap.Update(); }, _snap.PickForActiveWindow);
+        _snapSettings.Closed += (_, _) => _snapSettings = null;
+        _snapSettings.Show();
+    }
 
     private void ShowWidgetsCheck_Click(object sender, RoutedEventArgs e)
     {

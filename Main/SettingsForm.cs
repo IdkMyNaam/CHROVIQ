@@ -301,6 +301,9 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
 
     protected void Hint(string text) => Fields.Children.Add(HintText(text));
 
+    /// <summary>Any control of your own on the current section's page.</summary>
+    protected void Add(UIElement element) => Fields.Children.Add(element);
+
     protected void Text(string label, string value, Action<string> set, string? hint = null)
     {
         var box = new TextBox { Text = value };

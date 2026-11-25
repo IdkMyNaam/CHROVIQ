@@ -678,6 +678,20 @@
                         </ui:CardControl>
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Grid24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Snap layouts" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Drag a window to the top of a screen to pick a layout, or hold Shift while dragging to see the zones. Win+Alt+Left/Right moves windows between zones. Make your own layouts." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Snap settings..." Icon="{ui:SymbolIcon Settings24}" Margin="0,0,12,0" Click="SnapSettings_Click" />
+                                <ui:ToggleSwitch x:Name="SnapCheck" Click="SnapCheck_Click" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Board24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>

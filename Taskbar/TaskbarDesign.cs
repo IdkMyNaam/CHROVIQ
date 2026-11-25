@@ -37,6 +37,8 @@ public enum ModuleType
     Media,
     /// <summary>The notification-area (tray) icons of all programs.</summary>
     Tray,
+    /// <summary>Windows' virtual desktops: click to switch, + to add one.</summary>
+    Desktops,
 }
 
 /// <summary>
@@ -82,6 +84,9 @@ public class TaskbarModule
 
     /// <summary>Tray: background of the ^ flyout ("#AARRGGBB"). Empty: dark gray.</summary>
     public string? FlyoutBackground { get; set; }
+
+    /// <summary>Desktops: show each desktop's name instead of its number.</summary>
+    public bool? ShowNames { get; set; }
 
     /// <summary>Tray: icons not shown at all (ManagedShell identifiers of the icons).</summary>
     public List<string>? HiddenIcons { get; set; }
@@ -142,6 +147,7 @@ public class TaskbarModule
         ModuleType.SystemStats => "CPU and memory",
         ModuleType.Media => "Media controls",
         ModuleType.Tray => TrayOverflow == true ? "Tray icons (with ^ flyout)" : "Tray icons",
+        ModuleType.Desktops => "Virtual desktops",
         _ => Type.ToString(),
     };
 
