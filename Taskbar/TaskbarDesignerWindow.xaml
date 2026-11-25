@@ -1,114 +1,234 @@
-<Window x:Class="WindowsCustomizer.TaskbarDesignerWindow"
+<ui:FluentWindow x:Class="WindowsCustomizer.TaskbarDesignerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Taskbar designer" Width="1120" Height="760" MinWidth="900" MinHeight="600"
-        WindowStartupLocation="CenterScreen">
-    <Window.Resources>
-        <Style x:Key="ToolButton" TargetType="Button">
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="MinWidth" Value="32" />
-        </Style>
-    </Window.Resources>
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Taskbar designer" Width="1180" Height="800" MinWidth="940" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round">
+    <ui:FluentWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ToolButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                <Setter Property="Margin" Value="0,0,6,0" />
+                <Setter Property="MinWidth" Value="40" />
+            </Style>
 
-    <DockPanel Margin="12">
-        <!-- Preview: the design drawn exactly like the real bar, over a dark background. -->
-        <StackPanel DockPanel.Dock="Top">
-            <TextBlock Text="Preview" FontWeight="SemiBold" />
-            <Border x:Name="PreviewFrame" Height="80" Margin="0,4,0,12" CornerRadius="4" ClipToBounds="True">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#1E3A5F" Offset="0" />
-                        <GradientStop Color="#4A2C5E" Offset="0.6" />
-                        <GradientStop Color="#2A2A2A" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-                <ContentControl x:Name="PreviewHost" VerticalAlignment="Top" />
-            </Border>
-        </StackPanel>
+            <Style x:Key="Tile" TargetType="Border">
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Padding" Value="10,8" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                        <Setter Property="BorderThickness" Value="2" />
+                        <Setter Property="Padding" Value="9,7" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- A zone (Left / Center / Right): a framed column with a bold title; its modules as small tiles. -->
+            <Style x:Key="ZoneFrame" TargetType="Border">
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="Padding" Value="6" />
+            </Style>
+            <Style x:Key="ZoneHeader" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="Margin" Value="0,4,0,8" />
+            </Style>
+            <Style x:Key="ZoneList" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <!-- Long module names wrap instead of making the list scroll sideways. -->
+                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+                <Setter Property="ItemTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Tile}">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                            </Border>
+                        </DataTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- The list item itself draws nothing: the tile inside shows hover and selection (style "Tile"). -->
+            <Style x:Key="TileItem" TargetType="ListBoxItem">
+                <Setter Property="Margin" Value="0,2" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="Heading" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,0,0,8" />
+            </Style>
+            <Style x:Key="ZoneTitle" TargetType="TextBlock">
+                <Setter Property="Margin" Value="2,0,0,4" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Style>
+        </ResourceDictionary>
+    </ui:FluentWindow.Resources>
 
-        <!-- Bottom: status and close -->
-        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
-            <Button DockPanel.Dock="Right" Content="Close" Width="90" Padding="6,4" Click="Close_Click" />
-            <Button x:Name="ApplyButton" DockPanel.Dock="Right" Content="Apply to taskbar" Padding="10,4" Margin="0,0,8,0"
-                    IsEnabled="False" Click="Apply_Click" />
-            <CheckBox x:Name="LiveCheck" DockPanel.Dock="Right" Content="Update taskbar live" IsChecked="True"
-                      VerticalAlignment="Center" Margin="0,0,12,0" Click="LiveCheck_Click"
-                      ToolTip="Off: the preview still updates, but the real taskbar only changes when you press Apply" />
-            <TextBlock x:Name="StatusText" Foreground="Gray" VerticalAlignment="Center" TextWrapping="Wrap"
-                       Text="Changes are saved automatically and show on the taskbar if this design is in use." />
-        </DockPanel>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Taskbar designer" />
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="340" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Designs -->
-            <DockPanel Grid.Column="0">
-                <TextBlock DockPanel.Dock="Top" Text="Designs" FontWeight="SemiBold" Margin="0,0,0,4" />
-                <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,6,0,0">
-                    <Button Content="New" Margin="0,0,3,3" Padding="4" Click="NewDesign_Click" />
-                    <Button Content="Duplicate" Margin="3,0,0,3" Padding="4" Click="DuplicateDesign_Click" />
-                    <Button Content="Delete" Margin="0,3,3,0" Padding="4" Click="DeleteDesign_Click" />
-                    <Button x:Name="UseButton" Content="Use this" Margin="3,3,0,0" Padding="4" FontWeight="SemiBold"
-                            Click="UseDesign_Click" />
-                    <Button Content="Import..." Margin="0,6,3,0" Padding="4" Click="ImportDesign_Click"
-                            ToolTip="Add a design from a .json file (for example one someone shared)" />
-                    <Button Content="Export..." Margin="3,6,0,0" Padding="4" Click="ExportDesign_Click"
-                            ToolTip="Save this design as a .json file to share or keep" />
-                </UniformGrid>
-                <ListBox x:Name="DesignList" SelectionChanged="DesignList_SelectionChanged" />
-            </DockPanel>
-
-            <!-- Zones -->
-            <DockPanel Grid.Column="1" Margin="12,0">
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <TextBlock Text="Modules" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <Button DockPanel.Dock="Right" Content="Add" Padding="10,3" Click="AddModule_Click"
-                            ToolTip="Adds the module to the selected zone, after the selected module" />
-                    <ComboBox x:Name="AddModuleBox" Margin="0,0,6,0" />
-                </DockPanel>
-
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Style="{StaticResource ToolButton}" Content="◀" ToolTip="Move to the zone on the left" Click="MoveZoneLeft_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="▲" ToolTip="Move up (earlier in the zone)" Click="MoveUp_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="▼" ToolTip="Move down (later in the zone)" Click="MoveDown_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="▶" ToolTip="Move to the zone on the right" Click="MoveZoneRight_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="Remove" Click="RemoveModule_Click" />
+        <DockPanel Grid.Row="1" Margin="16,4,16,16">
+            <!-- Preview: the design drawn exactly like the real bar (shielded from this window's styles), over a dark background. -->
+            <ui:Card DockPanel.Dock="Top" Margin="0,0,0,12" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="Preview" Style="{StaticResource Heading}" />
+                    <Border x:Name="PreviewFrame" Height="80" CornerRadius="6" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#1E3A5F" Offset="0" />
+                                <GradientStop Color="#4A2C5E" Offset="0.6" />
+                                <GradientStop Color="#2A2A2A" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <ContentControl x:Name="PreviewHost" VerticalAlignment="Top" />
+                    </Border>
                 </StackPanel>
+            </ui:Card>
 
-                <UniformGrid Columns="3">
-                    <DockPanel Margin="0,0,4,0">
-                        <TextBlock DockPanel.Dock="Top" Text="Left" Foreground="Gray" Margin="0,0,0,2" />
-                        <ListBox x:Name="LeftList" SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
-                    </DockPanel>
-                    <DockPanel Margin="2,0">
-                        <TextBlock DockPanel.Dock="Top" Text="Center" Foreground="Gray" Margin="0,0,0,2" />
-                        <ListBox x:Name="CenterList" SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
-                    </DockPanel>
-                    <DockPanel Margin="4,0,0,0">
-                        <TextBlock DockPanel.Dock="Top" Text="Right" Foreground="Gray" Margin="0,0,0,2" />
-                        <ListBox x:Name="RightList" SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
-                    </DockPanel>
-                </UniformGrid>
+            <!-- Bottom: status, live updates, apply, close -->
+            <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                <ui:Button DockPanel.Dock="Right" Content="Close" MinWidth="90" Click="Close_Click" />
+                <ui:Button x:Name="ApplyButton" DockPanel.Dock="Right" Content="Apply to taskbar" Appearance="Primary"
+                           Icon="{ui:SymbolIcon Checkmark24}" Margin="0,0,8,0" IsEnabled="False" Click="Apply_Click" />
+                <CheckBox x:Name="LiveCheck" DockPanel.Dock="Right" Content="Update taskbar live" IsChecked="True"
+                          VerticalAlignment="Center" Margin="0,0,12,0" Click="LiveCheck_Click"
+                          ToolTip="Off: the preview still updates, but the real taskbar only changes when you press Apply" />
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="Changes are saved automatically and show on the taskbar if this design is in use." />
             </DockPanel>
 
-            <!-- Options -->
-            <TabControl x:Name="OptionTabs" Grid.Column="2">
-                <TabItem x:Name="ModuleTab" Header="Module">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="ModuleOptions" Margin="8" />
-                    </ScrollViewer>
-                </TabItem>
-                <TabItem x:Name="LookTab" Header="Look">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="LookOptions" Margin="8" />
-                    </ScrollViewer>
-                </TabItem>
-            </TabControl>
-        </Grid>
-    </DockPanel>
-</Window>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="360" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Designs -->
+                <ui:Card Grid.Column="0" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Designs" Style="{StaticResource Heading}" />
+                        <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,8,0,0">
+                            <ui:Button Content="New" Icon="{ui:SymbolIcon Add24}" Margin="0,0,3,4" HorizontalAlignment="Stretch" Click="NewDesign_Click" />
+                            <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="3,0,0,4" HorizontalAlignment="Stretch" Click="DuplicateDesign_Click" />
+                            <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="0,0,3,4" HorizontalAlignment="Stretch" Click="DeleteDesign_Click" />
+                            <ui:Button x:Name="UseButton" Content="Use this" Appearance="Primary" Margin="3,0,0,4" HorizontalAlignment="Stretch"
+                                       Click="UseDesign_Click" />
+                            <ui:Button Content="Import..." Icon="{ui:SymbolIcon ArrowDownload24}" Margin="0,4,3,0" HorizontalAlignment="Stretch"
+                                       Click="ImportDesign_Click" ToolTip="Add a design from a .json file (for example one someone shared)" />
+                            <ui:Button Content="Export..." Icon="{ui:SymbolIcon Share24}" Margin="3,4,0,0" HorizontalAlignment="Stretch"
+                                       Click="ExportDesign_Click" ToolTip="Save this design as a .json file to share or keep" />
+                        </UniformGrid>
+                        <ListBox x:Name="DesignList" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource TileItem}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DesignList_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Tile}">
+                                        <DockPanel>
+                                            <ui:SymbolIcon DockPanel.Dock="Left" Symbol="PanelBottom20" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                            <!-- A green dot for the design the taskbar uses now. -->
+                                            <Ellipse DockPanel.Dock="Right" Width="8" Height="8" Fill="#FF3FB950" VerticalAlignment="Center"
+                                                     Margin="8,0,0,0" Visibility="{Binding InUseMark}" ToolTip="In use" />
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </ui:Card>
+
+                <!-- Zones -->
+                <ui:Card Grid.Column="1" Margin="12,0" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock Text="Modules" Style="{StaticResource Heading}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                            <ui:Button DockPanel.Dock="Right" Content="Add" Icon="{ui:SymbolIcon Add24}" Click="AddModule_Click"
+                                       ToolTip="Adds the module to the selected zone, after the selected module" />
+                            <ComboBox x:Name="AddModuleBox" Margin="0,0,8,0" />
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                            <ui:Button Style="{StaticResource ToolButton}" Icon="{ui:SymbolIcon ArrowLeft24}" ToolTip="Move to the zone on the left" Click="MoveZoneLeft_Click" />
+                            <ui:Button Style="{StaticResource ToolButton}" Icon="{ui:SymbolIcon ArrowUp24}" ToolTip="Move up (earlier in the zone)" Click="MoveUp_Click" />
+                            <ui:Button Style="{StaticResource ToolButton}" Icon="{ui:SymbolIcon ArrowDown24}" ToolTip="Move down (later in the zone)" Click="MoveDown_Click" />
+                            <ui:Button Style="{StaticResource ToolButton}" Icon="{ui:SymbolIcon ArrowRight24}" ToolTip="Move to the zone on the right" Click="MoveZoneRight_Click" />
+                            <ui:Button Style="{StaticResource ToolButton}" Content="Remove" Icon="{ui:SymbolIcon Delete24}" Click="RemoveModule_Click" />
+                        </StackPanel>
+
+                        <UniformGrid Columns="3">
+                            <Border Style="{StaticResource ZoneFrame}" Margin="0,0,4,0">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="Left" Style="{StaticResource ZoneHeader}" />
+                                    <ListBox x:Name="LeftList" Style="{StaticResource ZoneList}" ItemContainerStyle="{StaticResource TileItem}"
+                                             SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource ZoneFrame}" Margin="4,0">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="Center" Style="{StaticResource ZoneHeader}" />
+                                    <ListBox x:Name="CenterList" Style="{StaticResource ZoneList}" ItemContainerStyle="{StaticResource TileItem}"
+                                             SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource ZoneFrame}" Margin="4,0,0,0">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="Right" Style="{StaticResource ZoneHeader}" />
+                                    <ListBox x:Name="RightList" Style="{StaticResource ZoneList}" ItemContainerStyle="{StaticResource TileItem}"
+                                             SelectionChanged="ZoneList_SelectionChanged" GotFocus="ZoneList_GotFocus" />
+                                </DockPanel>
+                            </Border>
+                        </UniformGrid>
+                    </DockPanel>
+                </ui:Card>
+
+                <!-- Options -->
+                <ui:Card Grid.Column="2" Padding="4" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <TabControl x:Name="OptionTabs">
+                        <TabItem x:Name="ModuleTab" Header="Module">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="ModuleOptions" Margin="8" />
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem x:Name="LookTab" Header="Look">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="LookOptions" Margin="8" />
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
+                </ui:Card>
+            </Grid>
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>

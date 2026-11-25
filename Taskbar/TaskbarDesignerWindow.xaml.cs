@@ -14,7 +14,7 @@ namespace WindowsCustomizer;
 /// Every change is saved to the design's file shortly after; the main window watches those files,
 /// so the real taskbar updates too when the edited design is in use.
 /// </summary>
-public partial class TaskbarDesignerWindow : Window
+public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly Func<string> _getActiveName;
     private readonly Action<string> _setActive;
@@ -35,6 +35,7 @@ public partial class TaskbarDesignerWindow : Window
         _getActiveName = getActiveName;
         _setActive = setActive;
         InitializeComponent();
+        FluentLook.Shield(PreviewFrame); // the preview looks exactly like the real bar, not like this window
         LiveCheck.IsChecked = _liveSetting;
 
         AddModuleBox.ItemsSource = Enum.GetValues<ModuleType>().Select(t => new ModuleChoice(t)).ToList();
@@ -53,6 +54,11 @@ public partial class TaskbarDesignerWindow : Window
 
     private sealed record DesignItem(TaskbarDesign Design, bool InUse, bool BuiltIn)
     {
+        /// <summary>For the design tiles: the name, and a small second line.</summary>
+        public string Name => Design.Name;
+        public string Notes => InUse && BuiltIn ? "In use · built-in" : InUse ? "In use" : BuiltIn ? "Built-in" : "Your design";
+        public Visibility InUseMark => InUse ? Visibility.Visible : Visibility.Collapsed;
+
         public override string ToString()
         {
             var notes = new List<string>();

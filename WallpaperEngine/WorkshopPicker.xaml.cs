@@ -6,7 +6,7 @@ using Microsoft.Win32;
 namespace WindowsCustomizer;
 
 /// <summary>Dialog listing installed Wallpaper Engine wallpapers. Sets <see cref="SelectedPath"/> on OK.</summary>
-public partial class WorkshopPicker : Window
+public partial class WorkshopPicker : Wpf.Ui.Controls.FluentWindow
 {
     private List<WallpaperItem> _all = new();
 

@@ -34,9 +34,34 @@
             <Style x:Key="Card" TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
                 <Setter Property="Margin" Value="0,0,0,4" />
             </Style>
-            <Style x:Key="NavItem" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                <Setter Property="Padding" Value="12,10" />
-                <Setter Property="Margin" Value="0,1" />
+            <!-- List entries as tiles (sidebar, profiles): hover = lighter, selected = accent border, like the designer. -->
+            <Style x:Key="TileItem" TargetType="ListBoxItem">
+                <Setter Property="Margin" Value="0,2" />
+                <Setter Property="Padding" Value="12,9" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd" CornerRadius="6" BorderThickness="1" Padding="{TemplateBinding Padding}"
+                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                    <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </ui:FluentWindow.Resources>
@@ -58,7 +83,7 @@
 
             <!-- ============ Sidebar ============ -->
             <ListBox x:Name="NavList" Grid.Column="0" Margin="8,4,4,8" Background="Transparent" BorderThickness="0"
-                     SelectionChanged="Nav_SelectionChanged" ItemContainerStyle="{StaticResource NavItem}">
+                     SelectionChanged="Nav_SelectionChanged" ItemContainerStyle="{StaticResource TileItem}">
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="PaintBrush24" Margin="0,0,12,0" />
@@ -120,8 +145,18 @@
                                         <ui:Button x:Name="DeleteButton" Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="4,0,0,0"
                                                    HorizontalAlignment="Stretch" Click="DeleteProfile_Click" />
                                     </UniformGrid>
-                                    <ListBox x:Name="ProfileList" DisplayMemberPath="Name" MinHeight="200" Background="Transparent"
-                                             BorderThickness="0" SelectionChanged="ProfileList_SelectionChanged" />
+                                    <ListBox x:Name="ProfileList" MinHeight="200" Background="Transparent" BorderThickness="0"
+                                             ItemContainerStyle="{StaticResource TileItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             SelectionChanged="ProfileList_SelectionChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <ui:SymbolIcon DockPanel.Dock="Left" Symbol="PaintBrush24" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </DockPanel>
                             </ui:Card>
 

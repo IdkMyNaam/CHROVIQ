@@ -220,29 +220,33 @@ public sealed partial class DesktopWindow : Window
 }
 
 /// <summary>A small "type a name" dialog (for renaming).</summary>
-internal sealed class InputDialog : Window
+internal sealed class InputDialog : Wpf.Ui.Controls.FluentWindow
 {
     private readonly TextBox _box;
 
     private InputDialog(string title, string prompt, string value)
     {
-        Title = title;
-        Width = 360;
+        Width = 400;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;
+        ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        _box = new TextBox { Text = value, Margin = new Thickness(0, 6, 0, 12) };
-        var ok = new Button { Content = "OK", Width = 80, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
+        _box = new TextBox { Text = value, Margin = new Thickness(0, 8, 0, 16) };
+        var ok = new Wpf.Ui.Controls.Button
+        {
+            Content = "OK", MinWidth = 80, IsDefault = true, Margin = new Thickness(0, 0, 8, 0),
+            Appearance = Wpf.Ui.Controls.ControlAppearance.Primary,
+        };
         ok.Click += (_, _) => DialogResult = true;
-        var cancel = new Button { Content = "Cancel", Width = 80, IsCancel = true };
+        var cancel = new Wpf.Ui.Controls.Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
-        var stack = new StackPanel { Margin = new Thickness(14) };
+        var stack = new StackPanel { Margin = new Thickness(16, 4, 16, 16) };
         stack.Children.Add(new TextBlock { Text = prompt });
         stack.Children.Add(_box);
         stack.Children.Add(buttons);
-        Content = stack;
+        FluentLook.Apply(this, title, stack);
         Loaded += (_, _) => { _box.Focus(); _box.SelectAll(); };
     }
 
