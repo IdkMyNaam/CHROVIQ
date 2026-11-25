@@ -603,6 +603,17 @@
                         </ui:CardControl>
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Options24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Quick Settings" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Our own panel: Wi-Fi, Bluetooth, night light, brightness and volume. Opened by a taskbar Quick Settings button set to use it (always as the shell) or the app menu." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Quick Settings settings..." Icon="{ui:SymbolIcon Settings24}" Click="QuickSettingsSettings_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Search24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>
@@ -664,6 +675,20 @@
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:Button Content="Desktop settings..." Icon="{ui:SymbolIcon Settings24}" Click="DesktopSettings_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Board24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Desktop widgets" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Clock, CPU/memory/GPU, weather, media and notes on the desktop. Drag them to move, the corner to resize; right-click one for its settings." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Add widget" Icon="{ui:SymbolIcon Add24}" Margin="0,0,12,0" Click="AddWidget_Click" />
+                                <ui:ToggleSwitch x:Name="ShowWidgetsCheck" Click="ShowWidgetsCheck_Click" ToolTip="Show the widgets" />
+                            </StackPanel>
                         </ui:CardControl>
 
                         <ui:CardControl Style="{StaticResource Card}">

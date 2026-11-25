@@ -139,7 +139,7 @@ public partial class TaskbarView
         ModuleType.PinnedApps => PinnedAppsModule(module),
         ModuleType.Clock => ClockModule(module),
         ModuleType.Battery => BatteryModule(),
-        ModuleType.QuickSettings => GlyphButton("", "Quick Settings (Win+A)", () => PressWinShortcut('A')),
+        ModuleType.QuickSettings => QuickSettingsButton(module),
         ModuleType.Spacer => new Border { Width = Math.Max(0, module.Width ?? 16) },
         ModuleType.Text => new TextBlock
         {

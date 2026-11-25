@@ -173,6 +173,24 @@ public partial class TaskbarView
 
     // ---------- Search box ----------
 
+    /// <summary>Opens Windows Customizer's Quick Settings next to an element; set by the main window.</summary>
+    public static Action<FrameworkElement, TaskbarEdge>? QuickSettingsOpener { get; set; }
+
+    /// <summary>
+    /// Quick Settings: Windows' own (Win+A), or ours when chosen, and always as the shell (Windows' needs Explorer).
+    /// </summary>
+    private FrameworkElement QuickSettingsButton(TaskbarModule module)
+    {
+        bool own = module.OwnQuickSettings == true || ShellMode.IsShell;
+        Button? button = null;
+        button = GlyphButton("", own ? "Quick Settings" : "Quick Settings (Win+A)", () =>
+        {
+            if (own && QuickSettingsOpener != null) QuickSettingsOpener(button!, Edge);
+            else PressWinShortcut('A');
+        });
+        return button;
+    }
+
     /// <summary>Opens Windows Customizer's start menu next to an element; set by the main window.</summary>
     public static Action<FrameworkElement, TaskbarEdge>? StartMenuOpener { get; set; }
 

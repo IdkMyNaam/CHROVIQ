@@ -69,6 +69,9 @@ public sealed partial class DesktopWindow : Window
         };
     }
 
+    /// <summary>The real desktops that are open (not previews): desktop widgets sit just above them.</summary>
+    public static readonly List<IntPtr> BackHandles = new();
+
     /// <summary>The window handle.</summary>
     public IntPtr Handle => new WindowInteropHelper(this).Handle;
 
@@ -81,6 +84,8 @@ public sealed partial class DesktopWindow : Window
             SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_TOOLWINDOW)); // not in Alt+Tab
             var b = _monitor.Bounds;
             SetWindowPos(hwnd, HWND_BOTTOM, b.Left, b.Top, b.Right - b.Left, b.Bottom - b.Top, SWP_NOACTIVATE);
+            BackHandles.Add(hwnd);
+            Closed += (_, _) => BackHandles.Remove(hwnd);
         }
         HwndSource.FromHwnd(hwnd).AddHook(WndProc);
         FitIconsToWorkArea();

@@ -115,6 +115,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
         _gameWatcher.Start();
 
+        // Desktop widgets.
+        ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
+        WidgetManager.Start(_settings, SaveSettings);
+
         // Automatic profile switching (time and app rules).
         _profileSwitcher = new ProfileSwitcher(_settings, async name =>
         {
@@ -168,6 +172,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             SaveGameList(); // in case the games box still has focus
             _gameWatcher.Stop();
             _profileSwitcher.Stop();
+            WidgetManager.CloseAll();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
@@ -212,6 +217,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             IsChecked: WindowsTaskbar.IsHiding, IsEnabled: TaskbarShown);
         yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
         yield return new AppMenuItem("Start menu", OpenStartMenu);
+        yield return new AppMenuItem("Quick Settings", OpenQuickSettings);
         if (!ShellMode.IsShell) yield return new AppMenuItem("Desktop preview", OpenDesktopPreview);
         DesktopPreviewButton.IsEnabled = !ShellMode.IsShell;
         yield return new AppMenuItem("Own Alt+Tab switcher", () => { _settings.OwnAltTab = !_settings.OwnAltTab; SaveSettings(); UpdateAltTab(); },
@@ -680,6 +686,34 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         NameBox.Focus();
         NameBox.SelectAll(); // ready to type a real name
+    }
+
+    private void ShowWidgetsCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ShowWidgets = ShowWidgetsCheck.IsChecked == true;
+        SaveSettings();
+        WidgetManager.Update();
+    }
+
+    /// <summary>A menu of widget types; the chosen one is added to the desktop and its settings open.</summary>
+    private void AddWidget_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        foreach (var (type, name) in new[]
+                 {
+                     (WidgetType.Clock, "Clock and date"), (WidgetType.Stats, "CPU, memory and GPU"), (WidgetType.Weather, "Weather"),
+                     (WidgetType.Media, "Media (what's playing)"), (WidgetType.Notes, "Notes"),
+                 })
+        {
+            var item = new MenuItem { Header = name };
+            item.Click += (_, _) =>
+            {
+                WidgetManager.Add(type);
+                ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
+            };
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
     }
 
     private void AutoSwitchCheck_Click(object sender, RoutedEventArgs e)
@@ -1485,6 +1519,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Search boxes and Start buttons on the bars open our windows with these settings.
         TaskbarView.SearchLookProvider = () => _settings.Search ??= new SearchLook();
         TaskbarView.StartMenuOpener = (anchor, edge) => StartMenuWindow.Toggle(StartMenuContext(), anchor, edge);
+        TaskbarView.QuickSettingsOpener = (anchor, edge) => QuickSettingsWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), anchor, edge, ShowFromTray);
 
         var action = _settings.EffectiveWinKey;
         _loading = true;
@@ -1552,6 +1587,18 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (_loading || WinKeyBox.SelectedIndex < 0) return;
         SetWinKey((WinKeyAction)WinKeyBox.SelectedIndex);
+    }
+
+    private void OpenQuickSettings() => QuickSettingsWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), openCustomizer: ShowFromTray);
+
+    private QuickSettingsSettingsWindow? _quickSettingsSettings;
+
+    private void QuickSettingsSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_quickSettingsSettings != null) { _quickSettingsSettings.Activate(); return; }
+        _quickSettingsSettings = new QuickSettingsSettingsWindow(_settings.QuickSettings ??= new QuickSettingsLook(), SaveSettings, OpenQuickSettings);
+        _quickSettingsSettings.Closed += (_, _) => _quickSettingsSettings = null;
+        _quickSettingsSettings.Show();
     }
 
     private StartMenuSettingsWindow? _startSettings;

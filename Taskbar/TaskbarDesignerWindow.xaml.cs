@@ -448,7 +448,11 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                 Hint(ModuleOptions, "Battery level; hidden on PCs without a battery. No options.");
                 break;
             case ModuleType.QuickSettings:
-                Hint(ModuleOptions, "Opens Windows Quick Settings (Win+A). No options.");
+                CheckField(ModuleOptions, "Open Windows Customizer's Quick Settings", m.OwnQuickSettings == true,
+                    v => m.OwnQuickSettings = v ? true : null,
+                    "Off: opens Windows Quick Settings (Win+A). On: our own panel with Wi-Fi, Bluetooth, night light, brightness and volume " +
+                    "(its look is set in the main window under Start menu > \"Quick Settings settings...\"). As the shell it's always our own, " +
+                    "since Windows' needs Explorer.");
                 break;
             case ModuleType.WindowList:
                 Hint(ModuleOptions, "One button per open window. Icon-only buttons and the button width are on the Look tab.");

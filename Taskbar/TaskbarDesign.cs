@@ -68,6 +68,9 @@ public class TaskbarModule
     /// <summary>Start: open Windows Customizer's start menu instead of the Windows one.</summary>
     public bool? CustomStart { get; set; }
 
+    /// <summary>QuickSettings: open Windows Customizer's Quick Settings instead of Windows' own (always as the shell).</summary>
+    public bool? OwnQuickSettings { get; set; }
+
     /// <summary>Tray: icon size in pixels, default 16.</summary>
     public double? IconSize { get; set; }
 

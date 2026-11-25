@@ -78,6 +78,15 @@ public class AppSettings
     /// <summary>Apps pinned to the start menu, in order.</summary>
     public List<StartPin> StartPinned { get; set; } = new();
 
+    /// <summary>Show the desktop widgets.</summary>
+    public bool ShowWidgets { get; set; } = true;
+
+    /// <summary>The desktop widgets (clock, stats, weather, media, notes), their places and looks.</summary>
+    public List<DesktopWidget> Widgets { get; set; } = new();
+
+    /// <summary>Look of Windows Customizer's Quick Settings panel.</summary>
+    public QuickSettingsLook QuickSettings { get; set; } = new();
+
     /// <summary>Look of the search window.</summary>
     public SearchLook Search { get; set; } = new();
 
