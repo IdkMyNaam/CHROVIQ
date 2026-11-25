@@ -20,6 +20,10 @@ public sealed partial class DesktopWindow
         public required Image Picture { get; init; }
         public required TextBlock Label { get; init; }
         public bool IsFolder { get; init; }
+
+        /// <summary>One of Windows' own icons (Recycle Bin, This PC, ...): no file, can't be renamed, deleted or copied.</summary>
+        public bool IsSpecial => SpecialIcons.IsSpecial(Path);
+        public bool IsRecycleBin => Path == SpecialIcons.RecycleBin;
     }
 
     private static readonly string UserDesktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
@@ -41,6 +45,7 @@ public sealed partial class DesktopWindow
     private void SetUpIcons()
     {
         SetUpSelection(); // clicks, selection box, moving icons: DesktopWindow.Selection.cs
+        SetUpDragDrop();  // onto folders / Recycle Bin / programs, in and out: DesktopWindow.DragDrop.cs
         _iconArea.SizeChanged += (_, _) => Arrange();
         _refreshTimer.Tick += (_, _) => { _refreshTimer.Stop(); Refresh(); };
     }
@@ -84,6 +89,7 @@ public sealed partial class DesktopWindow
 
         var found = new List<(string Path, string Name, bool IsFolder)>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, name) in SpecialIcons.Shown()) found.Add((id, name, false)); // Recycle Bin, This PC, ...
         foreach (var folder in new[] { UserDesktop, SharedDesktop }.Where(Directory.Exists))
         {
             List<string> entries;
@@ -121,10 +127,16 @@ public sealed partial class DesktopWindow
         foreach (var path in Layout.Positions.Keys.Where(p => !stillThere.Contains(p)).ToList())
             Layout.Positions.Remove(path);
 
+        // The Recycle Bin's picture shows whether it's empty: look again.
+        foreach (var bin in _items.Where(i => i.IsRecycleBin)) LoadPicture(bin);
+
         ShowOrHideIcons();
         Arrange();
         ShellMode.Log($"Desktop icons listed: {_items.Count}");
     }
+
+    private void LoadPicture(DesktopItem item) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () => item.Picture.Source = ShellIcons.Get(item.Path, Math.Max(Layout.IconPixels, 48), fresh: true));
 
     /// <summary>
     /// "Show desktop icons": hides the icons, not the area they're on, so a right-click on the desktop
@@ -272,11 +284,11 @@ public sealed partial class DesktopWindow
         static DateTime Modified(DesktopItem i) { try { return Info(i).LastWriteTime; } catch (Exception) { return DateTime.MinValue; } }
         static string Type(DesktopItem i) => i.IsFolder ? "" : Path.GetExtension(i.Path).ToLowerInvariant();
 
-        var folderFirst = items.OrderBy(i => i.IsFolder ? 0 : 1);
+        var folderFirst = items.OrderBy(i => i.IsSpecial ? 0 : i.IsFolder ? 1 : 2); // Windows' own icons first, like Explorer
         return sort switch
         {
             DesktopSort.Size => folderFirst.ThenBy(Size).ThenBy(i => i.Name, byName),
-            DesktopSort.ItemType => items.OrderBy(Type).ThenBy(i => i.Name, byName),
+            DesktopSort.ItemType => items.OrderBy(i => i.IsSpecial ? 0 : 1).ThenBy(Type).ThenBy(i => i.Name, byName),
             DesktopSort.DateModified => folderFirst.ThenByDescending(Modified).ThenBy(i => i.Name, byName),
             _ => folderFirst.ThenBy(i => i.Name, byName),
         };

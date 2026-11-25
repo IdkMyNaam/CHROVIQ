@@ -41,10 +41,11 @@ internal static class ShellIcons
     private const int SIIGBF_BIGGERSIZEOK = 0x1, SIIGBF_ICONONLY = 0x4;
 
     /// <summary>The icon of a shell item, <paramref name="size"/> pixels (or bigger); null if Windows has none.</summary>
-    public static ImageSource? Get(string shellName, int size = 48)
+    /// <param name="fresh">Ask Windows again instead of using the cached picture (the Recycle Bin: empty or full).</param>
+    public static ImageSource? Get(string shellName, int size = 48, bool fresh = false)
     {
         string key = shellName + "|" + size;
-        if (Cache.TryGetValue(key, out var cached)) return cached;
+        if (!fresh && Cache.TryGetValue(key, out var cached)) return cached;
 
         ImageSource? result = null;
         IntPtr bitmap = IntPtr.Zero;

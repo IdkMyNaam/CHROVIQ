@@ -63,10 +63,15 @@ public sealed partial class DesktopWindow
     }
 
     /// <summary>To the Recycle Bin (Shift+Delete: permanently), all at once with one Windows confirmation, like Explorer.</summary>
-    private void DeleteItems(IReadOnlyList<DesktopItem> items, bool permanently = false)
+    private void DeleteItems(IReadOnlyList<DesktopItem> items, bool permanently = false) =>
+        DeletePaths(items.Where(i => !i.IsSpecial).Select(i => i.Path).ToList(), permanently);
+
+    private void DeletePaths(IReadOnlyList<string> paths, bool permanently = false)
     {
-        if (items.Count == 0) return;
-        FileOperation(FO_DELETE, items.Select(i => i.Path), null, permanently ? (ushort)0 : (ushort)(FOF_ALLOWUNDO | FOF_WANTNUKEWARNING));
+        if (paths.Count == 0) return;
+        FileOperation(FO_DELETE, paths, null, permanently ? (ushort)0 : (ushort)(FOF_ALLOWUNDO | FOF_WANTNUKEWARNING));
+        var deleted = paths.Where(p => !File.Exists(p) && !Directory.Exists(p)).ToList(); // not the ones you said no to
+        if (!permanently && deleted.Count > 0) RememberDeleted(deleted);
         Refresh();
     }
 
@@ -76,6 +81,7 @@ public sealed partial class DesktopWindow
 
     private void CopyItems(IReadOnlyList<DesktopItem> items, bool cut)
     {
+        items = items.Where(i => !i.IsSpecial).ToList(); // Windows' own icons are no files
         if (items.Count == 0) return;
         var files = new System.Collections.Specialized.StringCollection();
         files.AddRange(items.Select(i => i.Path).ToArray());
@@ -112,18 +118,38 @@ public sealed partial class DesktopWindow
         var paths = files.Cast<string>().Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
         if (paths.Count == 0) return;
 
-        bool sameFolder = paths.All(p => string.Equals(Path.GetDirectoryName(p), UserDesktop, StringComparison.OrdinalIgnoreCase));
-        if (move && sameFolder) return; // cut and pasted in the same place: nothing to do
-        var before = SnapshotDesktop();
-        ushort flags = (ushort)(FOF_ALLOWUNDO | (sameFolder ? FOF_RENAMEONCOLLISION : 0)); // "X - Copy" when copying in place
-        if (!FileOperation(move ? FO_MOVE : FO_COPY, paths, UserDesktop, flags)) return;
+        if (move) { _cut.Clear(); try { Clipboard.Clear(); } catch (Exception) { } }
+        TransferInto(paths, UserDesktop, move ? FO_MOVE : FO_COPY, at, "Paste");
+    }
 
-        if (move)
+    /// <summary>
+    /// Copies or moves files into a folder (the desktop, or a folder on it) with Windows' own operation,
+    /// places new desktop icons at the spot, and remembers how to undo it.
+    /// </summary>
+    private void TransferInto(IReadOnlyList<string> paths, string folder, uint function, Point? at, string what)
+    {
+        bool sameFolder = paths.All(p => string.Equals(Path.GetDirectoryName(p), folder, StringComparison.OrdinalIgnoreCase));
+        if (function == FO_MOVE && sameFolder) return; // moved to where it already is: nothing to do
+        bool toDesktop = string.Equals(folder, UserDesktop, StringComparison.OrdinalIgnoreCase);
+        var before = toDesktop ? SnapshotDesktop() : null;
+        var beforeInFolder = Directory.Exists(folder)
+            ? Directory.EnumerateFileSystemEntries(folder).ToHashSet(StringComparer.OrdinalIgnoreCase) : new HashSet<string>();
+        ushort flags = (ushort)(FOF_ALLOWUNDO | (sameFolder ? FOF_RENAMEONCOLLISION : 0)); // "X - Copy" when copying in place
+        if (!FileOperation(function, paths, folder, flags)) { Refresh(); return; }
+
+        if (function == FO_MOVE)
         {
-            _cut.Clear();
-            try { Clipboard.Clear(); } catch (Exception) { }
+            var moves = MovedInto(paths, folder).Where(m => !File.Exists(m.From) && !Directory.Exists(m.From)).ToList();
+            if (moves.Count > 0) RememberMoved(what == "Paste" ? "Paste" : "Move", moves);
         }
-        PlaceNewItems(before, at);
+        else
+        {
+            var created = Directory.EnumerateFileSystemEntries(folder).Where(p => !beforeInFolder.Contains(p)).ToList();
+            if (created.Count > 0) RememberCreated(what == "Paste" ? "Paste" : "Copy", created);
+        }
+
+        if (before != null) PlaceNewItems(before, at);
+        else Refresh();
     }
 
     /// <summary>What's on the desktop now, to find what a paste or "New" added.</summary>
@@ -137,20 +163,7 @@ public sealed partial class DesktopWindow
     {
         var added = SnapshotDesktop().Where(p => !before.Contains(p)).ToList();
         if (at is { } spot && !Layout.AutoArrange && added.Count > 0)
-        {
-            // The cell under the spot, or the next free ones after it; icons already there stay put.
-            var (cellWidth, cellHeight) = Layout.Cell;
-            int rows = Math.Max(1, (int)(_iconArea.ActualHeight / cellHeight));
-            var taken = Layout.Positions.Where(p => !added.Contains(p.Key, StringComparer.OrdinalIgnoreCase))
-                              .Select(p => ((int)Math.Round(p.Value.X / cellWidth), (int)Math.Round(p.Value.Y / cellHeight))).ToHashSet();
-            int index = (int)(spot.X / cellWidth) * rows + Math.Min(rows - 1, (int)(spot.Y / cellHeight));
-            foreach (var path in added)
-            {
-                while (taken.Contains((index / rows, index % rows))) index++;
-                taken.Add((index / rows, index % rows));
-                Layout.Positions[path] = new IconPosition(index / rows * cellWidth, index % rows * cellHeight);
-            }
-        }
+            AssignCellsFrom(spot, added); // the cell under the spot, or the next free ones; icons already there stay put
         Refresh();
         SelectOnly(null);
         foreach (var item in _items.Where(i => added.Contains(i.Path, StringComparer.OrdinalIgnoreCase))) SetSelected(item, true);
@@ -158,7 +171,7 @@ public sealed partial class DesktopWindow
 
     private static void CopyAsPath(IReadOnlyList<DesktopItem> items)
     {
-        try { Clipboard.SetText(string.Join(Environment.NewLine, items.Select(i => $"\"{i.Path}\""))); }
+        try { Clipboard.SetText(string.Join(Environment.NewLine, items.Where(i => !i.IsSpecial).Select(i => $"\"{i.Path}\""))); }
         catch (Exception) { /* clipboard busy */ }
     }
 
@@ -166,6 +179,7 @@ public sealed partial class DesktopWindow
 
     private void Rename(string path)
     {
+        if (SpecialIcons.IsSpecial(path)) return; // Windows' own icons keep their names
         bool shortcut = IsShortcut(path);
         string extension = shortcut ? Path.GetExtension(path) : "";
         string current = shortcut ? Path.GetFileNameWithoutExtension(path) : Path.GetFileName(path);
@@ -182,6 +196,7 @@ public sealed partial class DesktopWindow
             else File.Move(path, target);
             // The renamed icon stays where it was.
             if (Layout.Positions.Remove(path, out var position)) Layout.Positions[target] = position;
+            RememberRename(path, target);
             Refresh();
         }
         catch (Exception ex) { MessageBox.Show(this, $"Could not rename it:\n{ex.Message}", "Rename", MessageBoxButton.OK, MessageBoxImage.Warning); }
@@ -195,6 +210,7 @@ public sealed partial class DesktopWindow
         try { path = create(); }
         catch (Exception ex) { MessageBox.Show(this, $"Could not create it:\n{ex.Message}", "Desktop"); return; }
         PlaceNewItems(before, at);
+        RememberCreated("New", new[] { path });
         Rename(path);
     }
 
@@ -222,6 +238,16 @@ public sealed partial class DesktopWindow
     }
 
     // ---------- Other ----------
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHEmptyRecycleBin(IntPtr hwnd, string? rootPath, uint flags);
+
+    /// <summary>Empties the Recycle Bin, with Windows' own confirmation.</summary>
+    private void EmptyRecycleBin()
+    {
+        SHEmptyRecycleBin(Handle, null, 0);
+        Refresh(); // its picture changes to empty
+    }
 
     /// <summary>Windows Terminal in the Desktop folder (PowerShell if Terminal isn't installed).</summary>
     private static void OpenTerminal()

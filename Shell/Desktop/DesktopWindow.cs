@@ -192,6 +192,7 @@ public sealed partial class DesktopWindow : Window
         var selected = SelectedItems();
 
         if (ctrl && key == Key.V) { Paste(); e.Handled = true; return; }
+        if (ctrl && key == Key.Z) { UndoLast(); e.Handled = true; return; }
         // The menu key, or Shift+F10: Windows' classic menu (like Explorer's Shift+F10).
         if (key == Key.Apps || (key == Key.F10 && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)))
         {

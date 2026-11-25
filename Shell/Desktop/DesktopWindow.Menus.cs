@@ -38,6 +38,7 @@ public sealed partial class DesktopWindow
         ModernMenu.Item(menu, ModernMenu.Refresh, "Refresh", Refresh);
         ModernMenu.Separator(menu);
         ModernMenu.Item(menu, ModernMenu.Paste, "Paste", () => Paste(at), "Ctrl+V", enabled: CanPaste());
+        if (UndoText is { } undo) ModernMenu.Item(menu, ModernMenu.Undo, undo, UndoLast, "Ctrl+Z");
         ModernMenu.Separator(menu);
 
         var create = ModernMenu.Submenu(menu, ModernMenu.New, "New");
@@ -67,20 +68,24 @@ public sealed partial class DesktopWindow
 
         bool one = items.Count == 1;
         var first = items[0];
+        bool files = items.Any(i => !i.IsSpecial); // Windows' own icons (Recycle Bin, This PC) are no files
         var menu = ModernMenu.Create();
         ModernMenu.Item(menu, ModernMenu.Open, one ? "Open" : $"Open ({items.Count})", () => OpenItems(items), "Enter");
         if (one && IsShortcut(first.Path))
             ModernMenu.Item(menu, ModernMenu.Location, "Open file location", () => ShellLaunch.ShowInFolder(first.Path));
-        ModernMenu.Item(menu, ModernMenu.Copy, "Copy as path", () => CopyAsPath(items));
+        if (one && first.IsRecycleBin)
+            ModernMenu.Item(menu, ModernMenu.Delete, "Empty Recycle Bin", EmptyRecycleBin);
+        if (files) ModernMenu.Item(menu, ModernMenu.Copy, "Copy as path", () => CopyAsPath(items));
         if (one) ModernMenu.Item(menu, ModernMenu.Properties, "Properties", () => Properties(first.Path), "Alt+Enter");
         ModernMenu.Separator(menu);
         ModernMenu.Item(menu, ModernMenu.More, "Show more options", () => ShowClassicItemMenu(items, extended: false), "Shift+F10");
 
-        ModernMenu.ButtonRow(menu,
-            (ModernMenu.Cut, "Cut (Ctrl+X)", () => CopyItems(items, cut: true), true),
-            (ModernMenu.Copy, "Copy (Ctrl+C)", () => CopyItems(items, cut: false), true),
-            (ModernMenu.Rename, "Rename (F2)", () => Rename(first.Path), one),
-            (ModernMenu.Delete, "Delete (Delete)", () => DeleteItems(items), true));
+        if (files)
+            ModernMenu.ButtonRow(menu,
+                (ModernMenu.Cut, "Cut (Ctrl+X)", () => CopyItems(items, cut: true), true),
+                (ModernMenu.Copy, "Copy (Ctrl+C)", () => CopyItems(items, cut: false), true),
+                (ModernMenu.Rename, "Rename (F2)", () => Rename(first.Path), one && !first.IsSpecial),
+                (ModernMenu.Delete, "Delete (Delete)", () => DeleteItems(items), true));
         menu.IsOpen = true;
     }
 

@@ -166,12 +166,15 @@ public sealed partial class DesktopWindow
 
         if (_moving)
         {
+            // Out of the desktop (over File Explorer, an app, the taskbar): Windows' own drag takes over.
+            if (MouseOverOtherWindow()) { StartDragOut(); return; }
             var delta = at - start;
             foreach (var (item, from) in _moveStart)
             {
                 Canvas.SetLeft(item.Visual, from.X + delta.X);
                 Canvas.SetTop(item.Visual, from.Y + delta.Y);
             }
+            SetDropTarget(DropTargetAt(at, _moveStart.Keys.Select(i => i.Path).ToHashSet(StringComparer.OrdinalIgnoreCase)));
         }
         else UpdateBand(start, at);
     }
@@ -198,6 +201,19 @@ public sealed partial class DesktopWindow
     private void EndGesture(Point at)
     {
         if (_pressAt is not { } start) return;
+        if (_moving && _dropTarget is { } target)
+        {
+            // Dropped onto a folder, the Recycle Bin or a program.
+            var files = _moveStart.Keys.Where(i => !i.IsSpecial).Select(i => i.Path).ToList();
+            var keys = DragDropKeyStates.None;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) keys |= DragDropKeyStates.ControlKey;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) keys |= DragDropKeyStates.ShiftKey;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) keys |= DragDropKeyStates.AltKey;
+            var effect = ChooseEffect(keys, DragDropEffects.All, files, target, ownIcons: true);
+            CancelGesture(); // icons back first; the drop then moves/deletes them
+            Dispatcher.BeginInvoke(() => PerformDrop(files, target, effect, null, ownIcons: true));
+            return;
+        }
         if (_moving) DropMoved(at - start);
         else if (!_banding && _selectOnlyOnUp && _pressItem != null) SelectOnly(_pressItem);
         FinishGesture();
@@ -211,6 +227,7 @@ public sealed partial class DesktopWindow
 
     private void FinishGesture()
     {
+        SetDropTarget(null);
         foreach (var item in _moveStart.Keys) { Panel.SetZIndex(item.Visual, 0); item.Visual.Opacity = 1; }
         _moveStart.Clear();
         _band.Visibility = Visibility.Collapsed;
@@ -235,6 +252,9 @@ public sealed partial class DesktopWindow
         var taken = new HashSet<(int, int)>();
         foreach (var other in _items.Where(i => !_moveStart.ContainsKey(i)))
             if (Layout.Positions.TryGetValue(other.Path, out var p)) taken.Add(CellOf(p.X, p.Y));
+
+        RememberPositions("Move", _moveStart.Keys.ToDictionary(i => i.Path,
+            i => Layout.Positions.TryGetValue(i.Path, out var p) ? p : null, StringComparer.OrdinalIgnoreCase));
 
         // In desktop order, so a group keeps its shape as far as the free cells allow.
         foreach (var (item, from) in _moveStart.OrderBy(m => m.Value.X).ThenBy(m => m.Value.Y))
