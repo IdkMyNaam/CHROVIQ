@@ -78,9 +78,17 @@ internal static class StartupApps
         {
             try
             {
+                log?.Invoke($"Starting {entry.Name} ({entry.Source}): {entry.Command}");
                 if (entry.IsFile)
                 {
-                    Process.Start(new ProcessStartInfo(entry.Command) { UseShellExecute = true })?.Dispose();
+                    // Opening a file or shortcut goes through the Windows shell, which needs an STA thread
+                    // (this loop runs on a thread-pool thread). Never wait more than 10 s for one entry.
+                    if (!OpenOnStaThread(entry.Command, TimeSpan.FromSeconds(10)))
+                    {
+                        log?.Invoke($"{entry.Name} is still opening after 10 s; going on with the rest");
+                        await Task.Delay(200);
+                        continue;
+                    }
                 }
                 else
                 {
@@ -106,5 +114,22 @@ internal static class StartupApps
             }
             await Task.Delay(200); // don't start everything in the same instant
         }
+        log?.Invoke("All startup programs handled");
     });
+
+    /// <summary>Opens a file the way a double-click would, on its own STA thread. False if it's still busy after the timeout.</summary>
+    private static bool OpenOnStaThread(string path, TimeSpan timeout)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })?.Dispose(); }
+            catch (Exception ex) { error = ex; }
+        }) { IsBackground = true, Name = "Startup program" };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        if (!thread.Join(timeout)) return false;
+        if (error != null) throw error;
+        return true;
+    }
 }

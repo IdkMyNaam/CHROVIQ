@@ -39,7 +39,68 @@ internal static class ShellMode
         {
             IsShell = RunStartupPrograms = false;
             RefusedBecauseExplorer = true;
+            Log("Started with --shell, but Explorer is the shell: running as a normal app");
         }
+        else if (IsShell) Log($"----- Started as the shell (startup programs: {(RunStartupPrograms ? "yes" : "no")})");
+    }
+
+    // ---------- Log (shell mode only): %AppData%\WindowsCustomizer\shell.log ----------
+
+    public static readonly string LogFile = Path.Combine(AppSettings.Folder, "shell.log");
+    private static readonly object LogLock = new();
+
+    /// <summary>Adds a timed line to shell.log, so a test sign-in can be traced afterwards. Never throws.</summary>
+    public static void Log(string text)
+    {
+        if (!IsShell && !RefusedBecauseExplorer) return;
+        try
+        {
+            lock (LogLock)
+            {
+                Directory.CreateDirectory(AppSettings.Folder);
+                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {text}{Environment.NewLine}");
+            }
+        }
+        catch (Exception) { /* logging is optional */ }
+    }
+
+    private static Timer? _explorerWatch;
+
+    /// <summary>For a while after sign-in: logs every Explorer that starts in this session, with who started it.</summary>
+    public static void WatchForExplorer(TimeSpan howLong)
+    {
+        int session = Process.GetCurrentProcess().SessionId;
+        var seen = new HashSet<int>();
+        var until = DateTime.Now + howLong;
+        _explorerWatch = new Timer(_ =>
+        {
+            foreach (var p in Process.GetProcessesByName("explorer"))
+                using (p)
+                    if (p.SessionId == session && seen.Add(p.Id))
+                        Log($"Explorer is running: pid {p.Id}, started by {ParentName(p)}");
+            if (DateTime.Now > until) { _explorerWatch?.Dispose(); Log("Stopped watching for Explorer"); }
+        }, null, 0, 1000);
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct ProcessBasicInfo { public IntPtr ExitStatus, PebBaseAddress, AffinityMask, BasePriority, UniqueProcessId, ParentProcessId; }
+
+    [System.Runtime.InteropServices.DllImport("ntdll.dll")]
+    private static extern int NtQueryInformationProcess(IntPtr process, int infoClass, ref ProcessBasicInfo info, int size, out int returned);
+
+    private static string ParentName(Process p)
+    {
+        try
+        {
+            var info = new ProcessBasicInfo();
+            if (NtQueryInformationProcess(p.Handle, 0, ref info, System.Runtime.InteropServices.Marshal.SizeOf<ProcessBasicInfo>(), out _) != 0) return "?";
+            int parent = info.ParentProcessId.ToInt32();
+            string name;
+            try { using var pp = Process.GetProcessById(parent); name = pp.Id == Environment.ProcessId ? "Windows Customizer (this app)" : pp.ProcessName; }
+            catch (ArgumentException) { name = "a process that has ended"; }
+            return $"{name} (pid {parent})";
+        }
+        catch (Exception) { return "?"; }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
@@ -64,7 +125,9 @@ internal static class ShellMode
 
     /// <summary>The command Windows runs at sign-in when we are the shell.</summary>
     private static string LauncherCommand =>
-        $"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{LauncherPath}\"";
+        // conhost --headless: no console window at all. (-WindowStyle Hidden alone isn't enough on Windows 11:
+        // Windows Terminal, the default console there, still shows a window.)
+        $"conhost.exe --headless powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{LauncherPath}\"";
 
     /// <summary>The user's own shell setting, or null when Windows uses its default (Explorer).</summary>
     public static string? CurrentUserShell()

@@ -1080,36 +1080,44 @@ public partial class MainWindow : Window
         Opacity = 0;
         Loaded += (_, _) => { Hide(); Opacity = 1; };
 
-        OpenDesktops();
+        ShellMode.WatchForExplorer(TimeSpan.FromMinutes(3));
+
+        // The shell window first (icons load afterwards): until it is registered, anything that starts
+        // explorer.exe makes Explorer take over as a second shell.
+        var registered = OpenDesktops();
 
         // As the shell, never leave the user without a taskbar, whatever the setting says.
         if (!TaskbarShown) SetTaskbarVisible(true);
+        ShellMode.Log("Taskbar shown");
 
-        if (ShellMode.RunStartupPrograms)
-        {
-            var log = Path.Combine(AppSettings.Folder, "startup-programs.log");
-            _ = StartupApps.RunAllAsync(line =>
-            {
-                try { File.AppendAllText(log, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {line}{Environment.NewLine}"); }
-                catch (IOException) { /* logging is optional */ }
-            });
-        }
-        Closed += (_, _) => { foreach (var d in _desktops) d.Close(); };
+        if (ShellMode.RunStartupPrograms) _ = StartStartupProgramsAsync(registered);
+        Closed += (_, _) => { foreach (var d in _desktops) d.Close(); ShellMode.Log("Windows Customizer closed"); };
+    }
+
+    /// <summary>The startup programs, only once our shell window is registered (or after 35 s at most).</summary>
+    private static async Task StartStartupProgramsAsync(Task<bool> registered)
+    {
+        bool ok = await Task.WhenAny(registered, Task.Delay(TimeSpan.FromSeconds(35))) == registered && registered.Result;
+        ShellMode.Log(ok ? "Starting the startup programs" : "Starting the startup programs WITHOUT a registered shell window");
+        await StartupApps.RunAllAsync(ShellMode.Log);
     }
 
     /// <summary>One desktop per monitor (icons on the main one); the main one is registered as the shell window.</summary>
-    private void OpenDesktops()
+    private Task<bool> OpenDesktops()
     {
         foreach (var d in _desktops) d.Close();
         _desktops.Clear();
+        Task<bool> registered = Task.FromResult(false);
         foreach (var monitor in Monitors.All())
         {
             var desktop = new DesktopWindow(monitor, showIcons: monitor.IsPrimary) { OpenCustomizer = ShowFromTray };
             desktop.Show();
             _desktops.Add(desktop);
             // The shell window: with one registered, explorer.exe only opens file windows instead of taking over.
-            if (monitor.IsPrimary) RegisterShellWindow(desktop.Handle);
+            if (monitor.IsPrimary) registered = RegisterShellWindow(desktop.Handle);
         }
+        ShellMode.Log($"Desktops opened on {_desktops.Count} monitor(s)");
+        return registered;
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -1125,9 +1133,10 @@ public partial class MainWindow : Window
     /// Windows refuses this for a moment, so it is retried every half second for up to 30 seconds.
     /// Never pushes aside a different shell window that is still alive.
     /// </summary>
-    private void RegisterShellWindow(IntPtr desktop)
+    private Task<bool> RegisterShellWindow(IntPtr desktop)
     {
         _shellWindowTimer?.Stop();
+        var done = new TaskCompletionSource<bool>();
         int attempts = 0;
         bool TryOnce()
         {
@@ -1139,7 +1148,13 @@ public partial class MainWindow : Window
             return GetShellWindow() == desktop;
         }
 
-        if (TryOnce()) return;
+        if (TryOnce())
+        {
+            ShellMode.Log("Registered as the shell window (first attempt)");
+            done.SetResult(true);
+            return done.Task;
+        }
+        ShellMode.Log($"Shell window not registered yet (current shell window: {GetShellWindow()}); retrying");
         _shellWindowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _shellWindowTimer.Tick += (_, _) =>
         {
@@ -1147,14 +1162,19 @@ public partial class MainWindow : Window
             {
                 _shellWindowTimer!.Stop();
                 StatusText.Text = $"Registered as the shell window (attempt {attempts}).";
+                ShellMode.Log(StatusText.Text);
+                done.TrySetResult(true);
             }
             else if (attempts >= 60)
             {
                 _shellWindowTimer!.Stop();
                 StatusText.Text = "Could not register as the shell window: opening a folder may start Explorer as the shell.";
+                ShellMode.Log($"{StatusText.Text} (current shell window: {GetShellWindow()})");
+                done.TrySetResult(false);
             }
         };
         _shellWindowTimer.Start();
+        return done.Task;
     }
 
     private void UpdateShellStatus()

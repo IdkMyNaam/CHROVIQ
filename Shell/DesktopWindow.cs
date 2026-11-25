@@ -78,7 +78,8 @@ public sealed class DesktopWindow : Window
         FitIconsToWorkArea();
 
         if (!_showIcons) return;
-        Refresh();
+        // After the window is up and registered as the shell window, not before (that has to happen first).
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, Refresh);
         foreach (var folder in new[] { UserDesktop, SharedDesktop }.Where(Directory.Exists))
         {
             var watcher = new FileSystemWatcher(folder) { EnableRaisingEvents = true, IncludeSubdirectories = false };
@@ -167,14 +168,17 @@ public sealed class DesktopWindow : Window
             }
         }
 
+        ShellMode.Log($"Desktop icons listed: {_icons.Children.Count}");
         if (selectedPath != null)
             Select(_icons.Children.OfType<Border>().FirstOrDefault(b => string.Equals(b.Tag as string, selectedPath, StringComparison.OrdinalIgnoreCase)));
     }
 
     private Border IconItem(string path, string name)
     {
-        var image = new Image { Width = 48, Height = 48, Source = ShellIcons.Get(path, 48), Margin = new Thickness(0, 4, 0, 4) };
+        var image = new Image { Width = 48, Height = 48, Margin = new Thickness(0, 4, 0, 4) };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+        // Icons one by one in the background: the names show at once and the desktop stays responsive.
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () => image.Source = ShellIcons.Get(path, 48));
         var label = new TextBlock
         {
             Text = name,
