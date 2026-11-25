@@ -35,7 +35,10 @@
         </Style>
     </Window.Resources>
 
-    <Border x:Name="Frame" Background="{DynamicResource SearchBackground}" CornerRadius="10" Padding="12">
+    <!-- The background (and its material, if any) on its own layer behind the content, in the same shape. -->
+    <Grid x:Name="Layers">
+    <Border x:Name="MaterialLayer" Background="{DynamicResource SearchBackground}" CornerRadius="10" />
+    <Border x:Name="Frame" CornerRadius="10" Padding="12">
         <StackPanel>
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left" Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -54,4 +57,5 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
         </StackPanel>
     </Border>
+    </Grid>
 </Window>

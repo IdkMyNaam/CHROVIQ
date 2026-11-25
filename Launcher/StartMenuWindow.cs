@@ -213,14 +213,18 @@ public sealed class StartMenuWindow : Window
         root.Children.Add(footer);
         root.Children.Add(middle);
 
-        var frame = new Border
-        {
-            Child = root,
-            Padding = new Thickness(18),
-            CornerRadius = new CornerRadius(Math.Clamp(_context.Look.CornerRadius, 0, 40)),
-        };
-        frame.SetResourceReference(Border.BackgroundProperty, "MenuBackground");
-        return frame;
+        // The background (and its material, if any) on its own layer behind the content, in the same shape.
+        var corner = new CornerRadius(Math.Clamp(_context.Look.CornerRadius, 0, 40));
+        var frame = new Border { Child = root, Padding = new Thickness(18), CornerRadius = corner };
+        var materialLayer = new Border { CornerRadius = corner };
+        materialLayer.SetResourceReference(Border.BackgroundProperty, "MenuBackground");
+        var layers = new Grid();
+        layers.Children.Add(materialLayer);
+        layers.Children.Add(frame);
+        if (MaterialHost.Attach(materialLayer, layers, _context.Look.Material, _context.Look.MaterialValues,
+                TaskbarView.ParseColor(_context.Look.Highlight, SystemParameters.WindowGlassColor)) is { } error)
+            AppTrace.Log($"Start menu material: {error}");
+        return layers;
     }
 
     // TextBoxBase.CaretBrushProperty, named here because the static is on the base class.

@@ -93,6 +93,10 @@ public partial class SearchWindow : Window
 
         Width = Math.Clamp(_look.Width, 240, 1600);
         Frame.CornerRadius = new CornerRadius(Math.Clamp(_look.CornerRadius, 0, 40));
+        MaterialLayer.CornerRadius = Frame.CornerRadius;
+        if (MaterialHost.Attach(MaterialLayer, Layers, _look.Material, _look.MaterialValues,
+                TaskbarView.ParseColor(_look.Highlight, SystemParameters.WindowGlassColor)) is { } materialError)
+            AppTrace.Log($"Search material: {materialError}");
         FontSize = Math.Clamp(_look.FontSize, 8, 40);
         try { FontFamily = new FontFamily(string.IsNullOrWhiteSpace(_look.FontFamily) ? "Segoe UI" : _look.FontFamily); }
         catch (ArgumentException) { /* bad font name: keep Segoe UI */ }

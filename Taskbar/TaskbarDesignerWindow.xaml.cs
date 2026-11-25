@@ -605,7 +605,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
 
     private void BuildLookOptions()
     {
-        LookOptions.Children.Clear();
+         LookOptions.Children.Clear();
         if (_design == null) return;
         var design = _design;
         var look = design.Look ??= new TaskbarLook();

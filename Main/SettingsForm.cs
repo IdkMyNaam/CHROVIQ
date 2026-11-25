@@ -26,6 +26,55 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         return section;
     }
 
+    /// <summary>
+    /// "Material (shader)": a dropdown of the materials and, below it, the chosen one's description, compile
+    /// error and settings (refilled when the choice changes; the dropdown itself stays, see the designer's crash).
+    /// </summary>
+    protected void MaterialFields(string? current, Action<string?> setName, Func<Dictionary<string, string>> values, string hint)
+    {
+        Header("Material (shader)");
+        var materials = Materials.LoadAll();
+        var names = new[] { "(none: plain background)" }.Concat(materials.Select(m => m.Name)).ToArray();
+        int index = materials.FindIndex(m => m.Name.Equals(current, StringComparison.CurrentCultureIgnoreCase));
+        StackPanel? details = null; // made right after the dropdown
+        Combo("Material", names, index + 1, chosen =>
+        {
+            setName(chosen <= 0 ? null : materials[chosen - 1].Name);
+            if (details != null) Dispatcher.BeginInvoke(() => FillMaterial(details, chosen <= 0 ? null : materials[chosen - 1], values));
+        });
+        details = Section();
+        FillMaterial(details, index < 0 ? null : materials[index], values);
+        Hint(hint + " Your own materials go in %AppData%\\WindowsCustomizer\\Materials.");
+    }
+
+    private void FillMaterial(StackPanel panel, Material? material, Func<Dictionary<string, string>> values)
+    {
+        panel.Children.Clear();
+        if (material == null) return;
+        var previous = Target;
+        Target = panel;
+        try
+        {
+            Hint((material.Description ?? "") + (material.Animated ? " Animated." : ""));
+            Materials.Compile(material, out var error);
+            if (error != null) Hint("This material doesn't compile, so the plain background shows:\n" + error);
+            var settings = values();
+            foreach (var parameter in material.Parameters)
+            {
+                string value = settings.TryGetValue(parameter.Name, out var v) ? v : parameter.Default;
+                if (parameter.Type == MaterialParameterType.Color)
+                    ColorField(parameter.Name, value, text => settings[parameter.Name] = text, parameter.Hint);
+                else
+                {
+                    double number = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : parameter.Min;
+                    Slider(parameter.Name, number, parameter.Min, parameter.Max,
+                        n => settings[parameter.Name] = n.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+            }
+        }
+        finally { Target = previous; }
+    }
+
     /// <summary>A slider with its value next to it.</summary>
     protected void Slider(string label, double value, double min, double max, Action<double> set)
     {

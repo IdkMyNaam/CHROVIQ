@@ -26,6 +26,12 @@ public class StartMenuLook
     public string? Highlight { get; set; }
 
     public double CornerRadius { get; set; } = 10;
+
+    /// <summary>A material (shader) drawn as the background, behind the content; null for none.</summary>
+    public string? Material { get; set; }
+
+    /// <summary>The material's settings by name; missing ones use its defaults.</summary>
+    public Dictionary<string, string>? MaterialValues { get; set; }
     public string FontFamily { get; set; } = "Segoe UI";
     public double FontSize { get; set; } = 13;
 

@@ -20,6 +20,9 @@ public sealed class SearchSettingsWindow : SettingsForm
         Text("Web search address", look.SearchUrl ?? "", v => look.SearchUrl = string.IsNullOrWhiteSpace(v) ? null : v.Trim(),
             "{0} is replaced by what you typed. Empty = Google. Example: https://duckduckgo.com/?q={0}");
         Text("Placeholder text", look.Placeholder, v => look.Placeholder = v);
+
+        MaterialFields(look.Material, name => look.Material = name, () => look.MaterialValues ??= new Dictionary<string, string>(),
+            "Drawn behind the search box and results. The same materials as for the taskbar.");
     }
 }
 
@@ -46,5 +49,8 @@ public sealed class StartMenuSettingsWindow : SettingsForm
         Check("Show pinned apps", look.ShowPinned, v => look.ShowPinned = v);
         Check("Show all apps", look.ShowAllApps, v => look.ShowAllApps = v);
         Hint("Pin apps by right-clicking them in the start menu. Web search and the number of search results come from Search settings.");
+
+        MaterialFields(look.Material, name => look.Material = name, () => look.MaterialValues ??= new Dictionary<string, string>(),
+            "Drawn behind the start menu's apps and buttons. The same materials as for the taskbar.");
     }
 }
