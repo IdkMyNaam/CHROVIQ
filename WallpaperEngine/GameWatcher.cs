@@ -1,17 +1,24 @@
 using System.Diagnostics;
 using System.Windows.Threading;
+using static WindowsCustomizer.NativeMethods;
 
 namespace WindowsCustomizer;
 
 /// <summary>
-/// Every 5 seconds, checks whether a game from the settings is running.
+/// Checks whether a game from the settings is running: when the active window changes (a game that
+/// starts or closes almost always changes it), plus every 30 seconds as a safety net.
 /// If so, pauses Wallpaper Engine; when no game runs any more, resumes it.
 /// Only resumes if this class paused it, so it never overrides a pause the user made.
+/// Does nothing at all while "pause for games" is off.
 /// </summary>
 public sealed class GameWatcher
 {
     private readonly AppSettings _settings;
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
+    // The active window often changes several times in a row (alt-tab, a game's launcher): check once after it settles.
+    private readonly DispatcherTimer _settle = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly WinEventProc _foregroundCallback; // kept in a field so the GC doesn't collect it
+    private IntPtr _foregroundHook;
     private bool _pausedByUs;
     private bool _busy;
 
@@ -22,14 +29,25 @@ public sealed class GameWatcher
     {
         _settings = settings;
         _timer.Tick += async (_, _) => await CheckAsync();
+        _settle.Tick += async (_, _) => { _settle.Stop(); await CheckAsync(); };
+        _foregroundCallback = (_, _, _, _, _, _, _) => { _settle.Stop(); _settle.Start(); };
     }
 
-    public void Start() => _timer.Start();
+    public void Start()
+    {
+        _timer.Start();
+        if (_foregroundHook == IntPtr.Zero)
+            _foregroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero,
+                                              _foregroundCallback, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+        _ = CheckAsync();
+    }
 
     /// <summary>Stops watching. Resumes Wallpaper Engine if the watcher had paused it.</summary>
     public void Stop()
     {
         _timer.Stop();
+        _settle.Stop();
+        if (_foregroundHook != IntPtr.Zero) { UnhookWinEvent(_foregroundHook); _foregroundHook = IntPtr.Zero; }
         if (_pausedByUs)
         {
             _pausedByUs = false;
@@ -40,6 +58,7 @@ public sealed class GameWatcher
     private async Task CheckAsync()
     {
         if (_busy) return; // previous check still sending a command
+        if (!_settings.PauseForGames && !_pausedByUs) return; // off: don't even look at the processes
         _busy = true;
         try
         {
@@ -68,19 +87,24 @@ public sealed class GameWatcher
         }
     }
 
+    /// <summary>One look at the running processes (not one per game in the list).</summary>
     private string? FindRunningGame()
     {
+        var wanted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in _settings.GameProcesses)
         {
             var name = entry.Trim();
-            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                name = name[..^4];
-            if (name.Length == 0) continue;
-
-            var processes = Process.GetProcessesByName(name);
-            foreach (var p in processes) p.Dispose();
-            if (processes.Length > 0) return name;
+            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
+            if (name.Length > 0) wanted.Add(name);
         }
-        return null;
+        if (wanted.Count == 0) return null;
+
+        string? found = null;
+        foreach (var p in Process.GetProcesses())
+        {
+            using (p)
+                if (found == null && wanted.Contains(p.ProcessName)) found = p.ProcessName;
+        }
+        return found;
     }
 }

@@ -104,7 +104,22 @@ public partial class TaskbarView : UserControl
 
         SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
         Root.Child = BuildLayout();
-        _secondTimer.Start();
+        if (EverySecond != null) _secondTimer.Start(); // only when a module needs it (volume, CPU/memory)
+    }
+
+    /// <summary>A timer for one module, stopped when the bar is rebuilt or closed.</summary>
+    private DispatcherTimer ModuleTimer(TimeSpan interval, Action tick)
+    {
+        var timer = new DispatcherTimer { Interval = interval };
+        timer.Tick += (_, _) => tick();
+        _disposables.Add(new StopOnDispose(timer));
+        timer.Start();
+        return timer;
+    }
+
+    private sealed class StopOnDispose(DispatcherTimer timer) : IDisposable
+    {
+        public void Dispose() => timer.Stop();
     }
 
     private void TearDown()

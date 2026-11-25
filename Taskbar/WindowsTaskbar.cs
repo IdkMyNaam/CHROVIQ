@@ -56,19 +56,52 @@ public static class WindowsTaskbar
         IsHiding = true;
         EnforceHidden();
 
+        // Hide it again whenever Explorer shows it: right away through a window event, plus a check every
+        // 3 seconds as a safety net (also catches an Explorer restart, which needs the event hooked again).
         if (_watchdog == null)
         {
-            _watchdog = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            _watchdog.Tick += (_, _) => EnforceHidden();
+            _watchdog = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            _watchdog.Tick += (_, _) => { HookExplorerShow(); EnforceHidden(); };
         }
+        HookExplorerShow();
         _watchdog.Start();
         Watchdog.Update(); // restores the taskbar even if this app gets killed
+    }
+
+    private static WinEventProc? _showCallback; // kept in a field so the GC doesn't collect it
+    private static IntPtr _showHook;
+    private static uint _hookedExplorerPid;
+
+    /// <summary>Listens for Explorer showing a window; (re)hooks when Explorer's process changed.</summary>
+    private static void HookExplorerShow()
+    {
+        var taskbar = PrimaryTaskbar();
+        if (taskbar == IntPtr.Zero) return;
+        GetWindowThreadProcessId(taskbar, out uint pid);
+        if (pid == _hookedExplorerPid && _showHook != IntPtr.Zero) return;
+
+        UnhookExplorerShow();
+        _showCallback ??= (_, _, hwnd, idObject, _, _, _) =>
+        {
+            if (idObject != OBJID_WINDOW || !IsHiding) return;
+            if (AllTaskbars().Contains(hwnd)) EnforceHidden();
+        };
+        _showHook = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, IntPtr.Zero, _showCallback, pid, 0, WINEVENT_OUTOFCONTEXT);
+        _hookedExplorerPid = pid;
+    }
+
+    private static void UnhookExplorerShow()
+    {
+        if (_showHook != IntPtr.Zero) UnhookWinEvent(_showHook);
+        _showHook = IntPtr.Zero;
+        _hookedExplorerPid = 0;
     }
 
     /// <summary>Shows the taskbar again with the user's original auto-hide setting. Safe to call anytime.</summary>
     public static void Restore()
     {
         _watchdog?.Stop();
+        UnhookExplorerShow();
         RestoreNative();
         Watchdog.Update(); // stops the helper when nothing else is taken over
     }

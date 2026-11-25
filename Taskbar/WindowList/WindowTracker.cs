@@ -105,10 +105,17 @@ public sealed class WindowTracker : IDisposable
     private readonly IntPtr _hwnd;
     private readonly HwndSource _source;
     private readonly uint _shellHookMessage;
-    private readonly DispatcherTimer _fallbackTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    // Only a safety net now: changes come in through the shell hook and the window events below.
+    // A bit sooner for a per-monitor list: moving a window with Win+Shift+Arrow sends no event we listen to.
+    private readonly DispatcherTimer _fallbackTimer = new();
     private readonly Func<IntPtr, bool>? _filter;
     private readonly WinEventProc _moveSizeEndCallback; // kept in a field so the GC doesn't collect it
     private readonly IntPtr _moveSizeEndHook;
+    private readonly WinEventProc _windowEventCallback;
+    private readonly List<IntPtr> _windowEventHooks = new();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+    private const uint GA_ROOT = 2;
     private bool _refreshQueued;
 
     public ObservableCollection<TaskWindow> Windows { get; } = new();
@@ -131,9 +138,40 @@ public sealed class WindowTracker : IDisposable
         _moveSizeEndHook = SetWinEventHook(EVENT_SYSTEM_MOVESIZEEND, EVENT_SYSTEM_MOVESIZEEND, IntPtr.Zero,
             _moveSizeEndCallback, 0, 0, WINEVENT_OUTOFCONTEXT);
 
+        // Windows (un)cloaked (virtual desktops, Store apps): the shell hook doesn't report that. Opening and closing
+        // windows comes through the shell hook. (Not show/hide/destroy events: Windows sends those for every
+        // cursor, caret and menu in every program, which cost more CPU than the old 2-second check.)
+        _windowEventCallback = OnWindowEvent;
+        foreach (var (first, last) in new[] { (EVENT_OBJECT_CLOAKED, EVENT_OBJECT_UNCLOAKED) })
+        {
+            var hook = SetWinEventHook(first, last, IntPtr.Zero, _windowEventCallback, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+            if (hook != IntPtr.Zero) _windowEventHooks.Add(hook);
+        }
+
+        _fallbackTimer.Interval = TimeSpan.FromSeconds(_filter != null ? 5 : 15);
         _fallbackTimer.Tick += (_, _) => Refresh();
         _fallbackTimer.Start();
         Refresh();
+    }
+
+    /// <summary>
+    /// Window events arrive for every little object (menus, tooltips, carets); only top-level windows count:
+    /// a window we list that went away, or a new top-level window without an owner.
+    /// </summary>
+    private void OnWindowEvent(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+    {
+        if (idObject != OBJID_WINDOW || idChild != 0 || hwnd == IntPtr.Zero) return;
+        bool listed = Windows.Any(w => w.Handle == hwnd);
+        if (eventType is EVENT_OBJECT_DESTROY or EVENT_OBJECT_HIDE or EVENT_OBJECT_CLOAKED)
+        {
+            if (listed) QueueRefresh();
+            return;
+        }
+        if (listed) { QueueRefresh(); return; }
+        if (GetAncestor(hwnd, GA_ROOT) != hwnd || GetWindow(hwnd, GW_OWNER) != IntPtr.Zero) return;
+        long exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+        if ((exStyle & WS_EX_APPWINDOW) == 0 && (exStyle & (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)) != 0) return; // menus, tooltips
+        QueueRefresh();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -254,6 +292,8 @@ public sealed class WindowTracker : IDisposable
     {
         _fallbackTimer.Stop();
         if (_moveSizeEndHook != IntPtr.Zero) UnhookWinEvent(_moveSizeEndHook);
+        foreach (var hook in _windowEventHooks) UnhookWinEvent(hook);
+        _windowEventHooks.Clear();
         DeregisterShellHookWindow(_hwnd);
         _source.RemoveHook(WndProc);
     }

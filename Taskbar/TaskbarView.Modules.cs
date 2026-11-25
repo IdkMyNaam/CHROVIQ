@@ -322,11 +322,49 @@ public partial class TaskbarView
             date.Text = dateFormat.Length > 0 ? Format(now, dateFormat) : "";
         }
         Update();
-        EverySecond += Update;
+
+        // Without seconds on display, update right after each full minute instead of every second.
+        bool seconds = ShowsSeconds(timeFormat) || ShowsSeconds(dateFormat);
+        TimeSpan UntilNext() => seconds ? TimeSpan.FromSeconds(1)
+            : TimeSpan.FromMilliseconds(60_050 - DateTime.Now.Second * 1000 - DateTime.Now.Millisecond);
+        System.Windows.Threading.DispatcherTimer? timer = null;
+        timer = ModuleTimer(UntilNext(), () => { Update(); timer!.Interval = UntilNext(); });
+        // The clock was changed, or the PC woke up from sleep: show the right time at once.
+        EventHandler onTimeChanged = (_, _) => Dispatcher.InvokeAsync(() => { Update(); timer.Interval = UntilNext(); });
+        Microsoft.Win32.SystemEvents.TimeChanged += onTimeChanged;
+        Microsoft.Win32.PowerModeChangedEventHandler onPower = (_, e) => { if (e.Mode == Microsoft.Win32.PowerModes.Resume) onTimeChanged(null, EventArgs.Empty); };
+        Microsoft.Win32.SystemEvents.PowerModeChanged += onPower;
+        _disposables.Add(new Unsubscribe(() =>
+        {
+            Microsoft.Win32.SystemEvents.TimeChanged -= onTimeChanged;
+            Microsoft.Win32.SystemEvents.PowerModeChanged -= onPower;
+        }));
 
         var button = BarButton(lines, "Notifications and calendar (Win+N)");
         button.Click += (_, _) => PressWinShortcut('N');
         return button;
+    }
+
+    private sealed class Unsubscribe(Action action) : IDisposable
+    {
+        public void Dispose() => action();
+    }
+
+    /// <summary>Whether a date/time format shows seconds ("T" = long time, or "s" outside quotes in a custom format).</summary>
+    private static bool ShowsSeconds(string format)
+    {
+        if (format.Length == 1) return format is "T" or "G" or "F" or "U" or "R" or "r" or "s" or "u" or "O" or "o";
+        bool quoted = false;
+        char quote = '\0';
+        for (int i = 0; i < format.Length; i++)
+        {
+            char c = format[i];
+            if (c == '\\') { i++; continue; }
+            if (quoted) { if (c == quote) quoted = false; continue; }
+            if (c is '\'' or '"') { quoted = true; quote = c; continue; }
+            if (c == 's') return true;
+        }
+        return false;
     }
 
     /// <summary>Formats a date with a format from the design file; a broken format shows itself in brackets.</summary>
@@ -339,14 +377,8 @@ public partial class TaskbarView
     private FrameworkElement BatteryModule()
     {
         var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0) };
-        DateTime lastCheck = DateTime.MinValue;
-
         void Update()
         {
-            // Battery doesn't change quickly; checking every 30 seconds is plenty.
-            if (DateTime.Now - lastCheck < TimeSpan.FromSeconds(30)) return;
-            lastCheck = DateTime.Now;
-
             var power = Forms.SystemInformation.PowerStatus;
             bool hasBattery = !power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery)
                               && power.BatteryChargeStatus != Forms.BatteryChargeStatus.Unknown;
@@ -359,7 +391,7 @@ public partial class TaskbarView
             text.ToolTip = charging ? $"Battery {percent}%, plugged in" : $"Battery {percent}%";
         }
         Update();
-        EverySecond += Update;
+        ModuleTimer(TimeSpan.FromSeconds(30), Update); // battery doesn't change quickly
         return text;
     }
 
