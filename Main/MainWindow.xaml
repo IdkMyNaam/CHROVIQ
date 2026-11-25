@@ -583,6 +583,17 @@
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AltTabCheck" Click="AltTabCheck_Click" />
                         </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="PaintBrush24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Alt+Tab look" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Colors, corners and a material (shader) for the switcher" Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Alt+Tab settings..." Icon="{ui:SymbolIcon Settings24}" Click="AltTabSettings_Click" />
+                        </ui:CardControl>
                     </StackPanel>
                 </ScrollViewer>
 

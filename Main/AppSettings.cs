@@ -36,6 +36,9 @@ public class AppSettings
     /// <summary>Older setting: Windows key opens our search. Replaced by <see cref="WinKey"/>, still read for old files.</summary>
     public bool WinKeyOpensSearch { get; set; }
 
+    /// <summary>The Alt+Tab switcher's look (colors, corners, material).</summary>
+    public AltTabLook? AltTab { get; set; }
+
     /// <summary>Auto-hiding taskbars come in and stay while the Windows Customizer window is open (on screen).</summary>
     public bool ShowTaskbarWhileOpen { get; set; } = true;
 

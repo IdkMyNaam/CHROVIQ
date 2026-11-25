@@ -253,7 +253,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         bool wanted = _settings.OwnAltTab || ShellMode.IsShell;
         if (wanted && _altTab == null)
         {
-            try { _altTab = new AltTabSwitcher(); }
+            try { _altTab = new AltTabSwitcher(() => _settings.AltTab ??= new AltTabLook()); }
             catch (Exception ex) { StatusText.Text = $"Alt+Tab switcher: {ex.Message}"; }
         }
         else if (!wanted && _altTab != null)
@@ -1455,6 +1455,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _searchSettings = new SearchSettingsWindow(_settings.Search ??= new SearchLook(), SaveSettings);
         _searchSettings.Closed += (_, _) => _searchSettings = null;
         _searchSettings.Show();
+    }
+
+    private AltTabSettingsWindow? _altTabSettings;
+
+    private void AltTabSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_altTabSettings != null) { _altTabSettings.Activate(); return; }
+        _altTabSettings = new AltTabSettingsWindow(_settings.AltTab ??= new AltTabLook(), SaveSettings);
+        _altTabSettings.Closed += (_, _) => _altTabSettings = null;
+        _altTabSettings.Show();
     }
 
     private void PauseForGamesCheck_Click(object sender, RoutedEventArgs e)

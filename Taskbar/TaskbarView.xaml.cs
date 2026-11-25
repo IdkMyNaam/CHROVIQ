@@ -37,7 +37,6 @@ public partial class TaskbarView : UserControl
         _look = design.Look ?? new TaskbarLook();
         InitializeComponent();
         ApplyLook();
-        SetUpMaterialInput();
         UpdateAccentBrush();
 
         Loaded += (_, _) => Build();
@@ -77,39 +76,9 @@ public partial class TaskbarView : UserControl
     public string? MaterialError { get; private set; }
 
     /// <summary>The design's material on the background layer (or none); animated ones join the material clock.</summary>
-    private void ApplyMaterial()
-    {
-        MaterialLayer.Effect = null;
-        MaterialError = null;
-        if (Materials.Find(_look.Material) is not { } material) return;
-        var accent = ParseColor(_look.Accent, SystemParameters.WindowGlassColor);
-        var effect = Materials.CreateEffect(material, _look.MaterialValues, accent, out var error);
-        MaterialError = error;
-        if (effect == null) return;
-        MaterialLayer.Effect = effect;
-        UpdateMaterialSize();
-        MaterialClock.Add(effect, MaterialLayer);
-    }
-
-    private void UpdateMaterialSize()
-    {
-        if (MaterialLayer.Effect is not MaterialEffect effect) return;
-        var dpi = VisualTreeHelper.GetDpi(this);
-        effect.SetSize(MaterialLayer.ActualWidth * dpi.DpiScaleX, MaterialLayer.ActualHeight * dpi.DpiScaleY);
-    }
-
-    /// <summary>Materials can react to the mouse (MOUSE, HOVER in the shader).</summary>
-    private void SetUpMaterialInput()
-    {
-        MaterialLayer.SizeChanged += (_, _) => UpdateMaterialSize();
-        Surface.MouseMove += (_, e) =>
-        {
-            if (MaterialLayer.Effect is not MaterialEffect effect || MaterialLayer.ActualWidth <= 0) return;
-            var at = e.GetPosition(MaterialLayer);
-            effect.SetMouse(new Point(at.X / MaterialLayer.ActualWidth, at.Y / Math.Max(1, MaterialLayer.ActualHeight)));
-        };
-        Surface.MouseLeave += (_, _) => (MaterialLayer.Effect as MaterialEffect)?.SetMouse(null);
-    }
+    private void ApplyMaterial() =>
+        MaterialError = MaterialHost.Attach(MaterialLayer, Surface, _look.Material, _look.MaterialValues,
+                                            ParseColor(_look.Accent, SystemParameters.WindowGlassColor));
 
     /// <summary>The window list's buttons (windows or app groups), built from the tracked windows.</summary>
     private TaskItemList? _items;

@@ -19,12 +19,15 @@ internal sealed class AltTabSwitcher : IDisposable
 {
     private readonly AltTabHook _hook = new();
     private readonly SwitcherWindow _window = new();
+    private readonly Func<AltTabLook> _look;
     private readonly DispatcherTimer _showDelay = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private List<(IntPtr Handle, string Title)> _windows = new();
     private int _index;
 
-    public AltTabSwitcher()
+    /// <param name="look">The look to use; asked each time the panel opens, so changes apply at once.</param>
+    public AltTabSwitcher(Func<AltTabLook> look)
     {
+        _look = look;
         // The hook's events come from inside the keyboard hook: do the work on the UI thread, a moment later.
         var ui = Dispatcher.CurrentDispatcher;
         _hook.Opened += (backwards, sticky) => ui.BeginInvoke(() => Open(backwards, sticky));
@@ -34,6 +37,18 @@ internal sealed class AltTabSwitcher : IDisposable
         _hook.KeyPressed += key => ui.BeginInvoke(() => OnKey(key));
         _showDelay.Tick += (_, _) => { _showDelay.Stop(); ShowWindow(); };
         _window.Picked += index => { _index = index; _hook.Close(); Commit(); };
+    }
+
+    /// <summary>"Try it" in the settings: the panel with the current windows for a few seconds.</summary>
+    public static void Preview(AltTabLook look)
+    {
+        var windows = WindowTracker.FindTaskWindows();
+        if (windows.Count == 0) return;
+        var window = new SwitcherWindow();
+        window.ShowList(windows, Math.Min(1, windows.Count - 1), look);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        timer.Tick += (_, _) => { timer.Stop(); window.HideList(); window.Close(); };
+        timer.Start();
     }
 
     private void Open(bool backwards, bool sticky)
@@ -52,7 +67,7 @@ internal sealed class AltTabSwitcher : IDisposable
     {
         if (!_hook.IsOpen || _windows.Count == 0) return;
         AppTrace.Log("Alt+Tab: showing the panel");
-        _window.ShowList(_windows, _index);
+        _window.ShowList(_windows, _index, _look());
         AppTrace.Log("Alt+Tab: panel shown");
     }
 
@@ -78,7 +93,7 @@ internal sealed class AltTabSwitcher : IDisposable
                     _windows.RemoveAt(_index);
                     if (_windows.Count == 0) { _hook.Close(); Close(); return; }
                     _index = Math.Min(_index, _windows.Count - 1);
-                    if (_window.IsVisible) _window.ShowList(_windows, _index);
+                    if (_window.IsVisible) _window.ShowList(_windows, _index, _look());
                 }
                 break;
         }
@@ -143,8 +158,15 @@ internal sealed class AltTabSwitcher : IDisposable
         private readonly List<Border> _tileBorders = new();
         private IntPtr _hwnd;
 
-        private static readonly Brush SelectedBorder = Frozen(new SolidColorBrush(Color.FromRgb(0x60, 0xCD, 0xFF)));
-        private static readonly Brush TileHover = Frozen(new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)));
+        // From the look (ApplyLook).
+        private Brush _selectedBorder = Frozen(new SolidColorBrush(Color.FromRgb(0x60, 0xCD, 0xFF)));
+        private Brush _tileHover = Frozen(new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)));
+        private Brush _foreground = Brushes.White;
+
+        // The material layer (behind the tiles; the live previews are drawn by Windows on top) and the frame.
+        private readonly Border _materialLayer = new();
+        private readonly Border _frame = new() { BorderThickness = new Thickness(1), Padding = new Thickness(12) };
+        private string? _materialKey;
 
         public event Action<int>? Picked;
 
@@ -164,15 +186,12 @@ internal sealed class AltTabSwitcher : IDisposable
             Topmost = true;
             SizeToContent = SizeToContent.WidthAndHeight;
             UseLayoutRounding = true;
-            Content = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(0xEE, 0x20, 0x20, 0x20)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(12),
-                Child = _tiles,
-            };
+            _frame.Child = _tiles;
+            var layers = new Grid();
+            layers.Children.Add(_materialLayer);
+            layers.Children.Add(_frame);
+            Content = layers;
+            ApplyLook(new AltTabLook());
             SourceInitialized += (_, _) =>
             {
                 _hwnd = new WindowInteropHelper(this).Handle;
@@ -181,8 +200,30 @@ internal sealed class AltTabSwitcher : IDisposable
             };
         }
 
-        public void ShowList(List<(IntPtr Handle, string Title)> windows, int selected)
+        /// <summary>Colors, corners and the material from the look (the material only when it changed).</summary>
+        private void ApplyLook(AltTabLook look)
         {
+            var foreground = TaskbarView.ParseColor(look.Foreground, Colors.White);
+            _foreground = Frozen(new SolidColorBrush(foreground));
+            _tileHover = Frozen(new SolidColorBrush(Color.FromArgb(0x18, foreground.R, foreground.G, foreground.B)));
+            var accent = TaskbarView.ParseColor(look.Selection, SystemParameters.WindowGlassColor);
+            _selectedBorder = Frozen(new SolidColorBrush(accent));
+            var corner = new CornerRadius(Math.Clamp(look.CornerRadius, 0, 40));
+            _materialLayer.CornerRadius = corner;
+            _frame.CornerRadius = corner;
+            _materialLayer.Background = Frozen(new SolidColorBrush(TaskbarView.ParseColor(look.Background, Color.FromArgb(0xEE, 0x20, 0x20, 0x20))));
+            _frame.BorderBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x40, foreground.R, foreground.G, foreground.B)));
+
+            string key = look.Material + "|" + string.Join(";", (look.MaterialValues ?? new()).Select(kv => kv.Key + "=" + kv.Value)) + "|" + accent;
+            if (key == _materialKey) return;
+            _materialKey = key;
+            if (MaterialHost.Attach(_materialLayer, this, look.Material, look.MaterialValues, accent) is { } error)
+                AppTrace.Log($"Alt+Tab material: {error}");
+        }
+
+        public void ShowList(List<(IntPtr Handle, string Title)> windows, int selected, AltTabLook look)
+        {
+            ApplyLook(look);
             Unregister();
             _tiles.Children.Clear();
             _tileBorders.Clear();
@@ -217,7 +258,7 @@ internal sealed class AltTabSwitcher : IDisposable
         public void Select(int index)
         {
             for (int i = 0; i < _tileBorders.Count; i++)
-                _tileBorders[i].BorderBrush = i == index ? SelectedBorder : Brushes.Transparent;
+                _tileBorders[i].BorderBrush = i == index ? _selectedBorder : Brushes.Transparent;
         }
 
         private FrameworkElement Tile((IntPtr Handle, string Title) window, int index)
@@ -234,7 +275,7 @@ internal sealed class AltTabSwitcher : IDisposable
             {
                 preview.Child = new TextBlock
                 {
-                    Text = minimized ? "Minimized" : "No preview", Foreground = Brushes.White, Opacity = 0.6,
+                    Text = minimized ? "Minimized" : "No preview", Foreground = _foreground, Opacity = 0.6,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 };
             }
@@ -245,7 +286,7 @@ internal sealed class AltTabSwitcher : IDisposable
             title.Children.Add(icon);
             title.Children.Add(new TextBlock
             {
-                Text = window.Title, Foreground = Brushes.White, FontSize = 12, FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"),
+                Text = window.Title, Foreground = _foreground, FontSize = 12, FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"),
                 TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,
             });
 
@@ -257,7 +298,7 @@ internal sealed class AltTabSwitcher : IDisposable
                 Width = TileWidth, Margin = new Thickness(4), Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Brushes.Transparent, Child = stack,
             };
-            tile.MouseEnter += (_, _) => tile.Background = TileHover;
+            tile.MouseEnter += (_, _) => tile.Background = _tileHover;
             tile.MouseLeave += (_, _) => tile.Background = Brushes.Transparent;
             tile.MouseLeftButtonUp += (_, _) => Picked?.Invoke(index);
             _tileBorders.Add(tile);

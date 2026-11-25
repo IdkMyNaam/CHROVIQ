@@ -14,6 +14,37 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     private readonly StackPanel _fields = new() { Margin = new Thickness(16, 4, 16, 16) };
     private readonly Action _save;
 
+    /// <summary>Where new fields go: a section (see <see cref="Section"/>) or, normally, the window's list.</summary>
+    protected Panel? Target { get; set; }
+    private Panel Fields => Target ?? _fields;
+
+    /// <summary>A part of the form that can be emptied and filled again (fields for the chosen material, say).</summary>
+    protected StackPanel Section()
+    {
+        var section = new StackPanel();
+        Fields.Children.Add(section);
+        return section;
+    }
+
+    /// <summary>A slider with its value next to it.</summary>
+    protected void Slider(string label, double value, double min, double max, Action<double> set)
+    {
+        var shown = new TextBlock { Width = 44, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+        var slider = new Slider { Minimum = min, Maximum = Math.Max(max, min + 0.001), Value = value, VerticalAlignment = VerticalAlignment.Center };
+        shown.Text = value.ToString("0.##", CultureInfo.CurrentCulture);
+        slider.ValueChanged += (_, _) =>
+        {
+            shown.Text = slider.Value.ToString("0.##", CultureInfo.CurrentCulture);
+            set(slider.Value);
+            _save();
+        };
+        var row = new DockPanel();
+        DockPanel.SetDock(shown, Dock.Right);
+        row.Children.Add(shown);
+        row.Children.Add(slider);
+        Card(label, row);
+    }
+
     protected SettingsForm(string title, Action save, Action tryIt)
     {
         _save = save;
@@ -36,10 +67,10 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     }
 
     protected void Header(string text) =>
-        _fields.Children.Add(new TextBlock
+        Fields.Children.Add(new TextBlock
         {
             Text = text, FontSize = 14, FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, _fields.Children.Count == 0 ? 4 : 20, 0, 8),
+            Margin = new Thickness(0, Fields.Children.Count == 0 ? 4 : 20, 0, 8),
         });
 
     /// <summary>A card: the label (and a hint) above, the control below.</summary>
@@ -49,13 +80,13 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         stack.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 0, 0, 6) });
         stack.Children.Add(control);
         if (hint != null) stack.Children.Add(HintText(hint));
-        _fields.Children.Add(new Wpf.Ui.Controls.Card { Content = stack, Margin = new Thickness(0, 0, 0, 4), Padding = new Thickness(14, 10, 14, 12) });
+        Fields.Children.Add(new Wpf.Ui.Controls.Card { Content = stack, Margin = new Thickness(0, 0, 0, 4), Padding = new Thickness(14, 10, 14, 12) });
     }
 
     private static TextBlock HintText(string text) =>
         FluentLook.Secondary(new TextBlock { Text = text, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
 
-    protected void Hint(string text) => _fields.Children.Add(HintText(text));
+    protected void Hint(string text) => Fields.Children.Add(HintText(text));
 
     protected void Text(string label, string value, Action<string> set, string? hint = null)
     {
@@ -106,7 +137,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     {
         var toggle = new Wpf.Ui.Controls.ToggleSwitch { IsChecked = value };
         toggle.Click += (_, _) => { set(toggle.IsChecked == true); _save(); };
-        _fields.Children.Add(new Wpf.Ui.Controls.CardControl
+        Fields.Children.Add(new Wpf.Ui.Controls.CardControl
         {
             Header = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap },
             Content = toggle,
