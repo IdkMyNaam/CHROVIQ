@@ -24,8 +24,6 @@ internal sealed class SnapEngine : IDisposable
     private LayoutPicker? _picker;
     private RECT? _target; // where the dragged window goes when it's let go
 
-    /// <summary>A line for the status bar (a hotkey Windows already uses, say).</summary>
-    public event Action<string>? Status;
 
     public SnapEngine(SnapSettings settings, Window hotkeyWindow)
     {

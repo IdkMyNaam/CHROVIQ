@@ -15,6 +15,10 @@
          apps started by WinForms; this is a WPF app (WinForms is only used for the tray icon),
          so the manifest is the right place. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- The version people see (About page, installer, update check). Raise it for every release. -->
+    <Version>1.0.0</Version>
+    <Product>Windows Customizer</Product>
+    <Description>Customize the Windows taskbar, start menu, desktop and more.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +37,8 @@
          for them there: the watchdog runs Restore-Taskbar.ps1 if the app is killed while it hides the taskbar,
          and the shell mode uses ShellLauncher.ps1 (starts Explorer whenever the app ends) and Restore-Shell.ps1. -->
     <None Update="Scripts\*.ps1" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
+    <!-- Builds the setup; not part of the app. -->
+    <None Update="Scripts\Build-Installer.ps1" CopyToOutputDirectory="Never" />
     <!-- The built-in materials (shaders) go next to the .exe as Materials\<name>\material.hlsl + material.json. -->
     <!-- (Removed and included again so %(RecursiveDir) is the material's folder, not the whole path from the project.) -->
     <None Remove="Materials\BuiltIn\**" />

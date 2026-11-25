@@ -93,6 +93,12 @@ public class AppSettings
     /// <summary>Language of the app's windows (a code like "nl"); empty: English.</summary>
     public string? Language { get; set; }
 
+    /// <summary>Look for a new version once a day (GitHub Releases).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>When updates were last looked for.</summary>
+    public DateTime? LastUpdateCheck { get; set; }
+
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;
 

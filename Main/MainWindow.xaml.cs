@@ -140,11 +140,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         // Snap layouts.
         _snap = new SnapEngine(_settings.Snap ??= new SnapSettings(), this);
-        _snap.Status += text => StatusText.Text = text;
         SnapCheck.IsChecked = _settings.Snap.Enabled;
         Dispatcher.BeginInvoke(_snap.Update, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
         FillLanguages();
+
+        // Updates: the card, and a quiet check once a day.
+        AutoUpdateCheck.IsChecked = _settings.CheckForUpdates;
+        AutoUpdateCheck.IsEnabled = CheckUpdatesButton.IsEnabled = Updates.IsSetUp;
+        UpdateText.Text = Updates.IsSetUp
+            ? $"You have version {Updates.Current.ToString(3)}. It looks for a new version once a day; you choose when to install it."
+            : $"Version {Updates.Current.ToString(3)}. Updates aren't set up yet (no release page).";
+        if (Updates.IsSetUp && _settings.CheckForUpdates && (_settings.LastUpdateCheck is not { } last || DateTime.Now - last > TimeSpan.FromDays(1)))
+            Dispatcher.BeginInvoke(async () => await CheckForUpdatesAsync(quiet: true), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
         // Desktop widgets.
         ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
@@ -286,6 +294,40 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     private void ReportProblem_Click(object sender, RoutedEventArgs e) => LogWindow.Report(this);
+
+    // ---------- Updates ----------
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await CheckForUpdatesAsync(quiet: false);
+
+    private void AutoUpdateCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.CheckForUpdates = AutoUpdateCheck.IsChecked == true;
+        SaveSettings();
+    }
+
+    /// <param name="quiet">The daily check: only says something when there's a new version.</param>
+    private async Task CheckForUpdatesAsync(bool quiet)
+    {
+        CheckUpdatesButton.IsEnabled = false;
+        try
+        {
+            var (release, error) = await Updates.LatestAsync();
+            _settings.LastUpdateCheck = DateTime.Now;
+            SaveSettings();
+            if (release == null) { if (!quiet) StatusText.Text = error ?? "No releases yet."; return; }
+            if (!Updates.IsNewer(release)) { if (!quiet) StatusText.Text = $"You have the newest version ({Updates.Current.ToString(3)})."; return; }
+            UpdateText.Text = $"Version {release.Version} is out (you have {Updates.Current.ToString(3)}).";
+            if (quiet && !IsVisible)
+            {
+                _trayIcon.ShowMessage("Update available", $"Windows Customizer {release.Version} is out. Open the app (About page) to install it.");
+                return;
+            }
+            var status = await Updates.OfferAsync(this, release);
+            if (status.Length > 0) StatusText.Text = status;
+            if (status.StartsWith("Installing")) ExitApp(); // the setup replaces the files
+        }
+        finally { CheckUpdatesButton.IsEnabled = Updates.IsSetUp; }
+    }
 
     // ---------- Language ----------
 

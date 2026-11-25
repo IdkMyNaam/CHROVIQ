@@ -124,26 +124,29 @@ Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "mat
 - [x] Start menu speed: only the visible apps are laid out (virtualized list), content kept as a ready-drawn picture above animated materials, icons load after the opening animation
 
 ### 5e. Installer
-- [ ] Installer per user (no admin needed): Start menu shortcut, optional start with Windows, uninstaller
-- [ ] The uninstaller turns shell mode off and restores the Windows taskbar first, and keeps or removes the settings (asks)
-- [ ] Choose: MSIX (needed later for some Windows features, like reading notifications) or a classic installer (Inno Setup / WiX)
-- [ ] Code signing (otherwise Windows SmartScreen warns people), version numbers, release notes
-- [ ] Updates: check for a new version and update from the app
+- [x] Installer per user (no admin needed): Inno Setup (Installer\WindowsCustomizer.iss), into %LocalAppData%\Programs\Windows Customizer; Start menu shortcut, optional start with Windows and desktop shortcut; .NET included (about 59 MB); tested
+- [x] The uninstaller closes the app, turns shell mode off and restores the Windows taskbar first, then asks whether to keep the settings; tested
+- [x] Chosen: a classic installer (Inno Setup). MSIX only if the notification center is wanted later
+- [x] Version numbers (<Version> in the project file, shown on the About page and in the setup's name); Scripts\Build-Installer.ps1 builds bin\installer\WindowsCustomizer-Setup-<version>.exe
+- [ ] Code signing: not now (SmartScreen asks "Run anyway" the first time)
+- [ ] Updates: the check is built (About page, once a day, GitHub Releases); needs the GitHub repository and a first release, with release notes
 
 ## Optional extras
-- [ ] Auto-switch profiles by time of day or active app
-- [ ] Rainmeter-style desktop widgets (clock, CPU, weather)
-- [ ] Import/export themes as JSON to share
-- [ ] Profile examples: gaming, school, night
-- [ ] First-start wizard: pick a look, taskbar and Windows-key behavior in a few steps
-- [ ] Back up / restore all settings in one file (moving to a new PC)
-- [ ] Log viewer and "report a problem" (collects the logs) in the app
-- [ ] Own Quick Settings panel (Wi-Fi, Bluetooth, volume, brightness, night light), useful in shell mode where Win+A doesn't work
+- [x] Auto-switch profiles: time rules (Night from 21:00) and app rules (Gaming while a game runs), Profiles page
+- [x] Desktop widgets: clock, CPU/memory/GPU with graphs, weather (Open-Meteo), media, notes; drag, resize, own look and material
+- [x] Import/export: app themes and taskbar designs as JSON (5c), everything at once with backup/restore
+- [x] Profile examples: Gaming, School, Night ("Add an example...")
+- [x] First-start wizard: app look, taskbar, Windows key, Alt+Tab (About page can run it again)
+- [x] Back up / restore all settings in one .zip (About page); a restore backs up first and is applied at the next start
+- [x] Log viewer and "Report a problem" (logs, settings and PC details in a .zip on the desktop; nothing is sent)
+- [x] Own Quick Settings panel: Wi-Fi, Bluetooth, night light, mute, volume, brightness per monitor (DDC/CI, with "Put back"), battery; [ ] later laptop screen brightness (WMI)
 - [ ] Own notification center (needs MSIX, see 5e)
-- [ ] Hotkey editor for all shortcuts
-- [ ] Window tiling/snap layouts and virtual desktop switching on the taskbar
-- [ ] Spotlight-style daily wallpaper in shell mode
-- [ ] Languages (translations) and accessibility (keyboard use, screen readers, high contrast)
+- [x] Keyboard shortcut editor for all of the app's shortcuts (About page and app menu)
+- [x] Snap layouts: drag to the top for the picker, Shift-drag for zones, Win+Alt hotkeys, own layouts, a layout per monitor; virtual desktops module on the taskbar
+- [x] Daily wallpaper: Bing picture of the day, Windows Spotlight, or your own folder
+- [x] Accessibility: Tab/Enter/Space on custom tiles and buttons, screen reader names, follows Windows contrast themes
+- [x] Languages groundwork: windows translate as they open, language picker, "Make a translation file"; [ ] translations themselves, status messages
+- [ ] Last of all (after 5e): "Report a problem" sends the report by email, and a support button
 
 ## Open questions
 - Which Windows version is the target (10 or 11)?
