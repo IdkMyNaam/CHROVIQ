@@ -86,19 +86,24 @@ public partial class TaskbarView
         if (wrap) panel.SetValue(MaxWidthProperty, columns * (iconSize + 2 * spacing + 2));
         else panel.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
 
+        var hidden = new HashSet<string>(module.HiddenIcons ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+        Color? tint = string.IsNullOrWhiteSpace(module.IconTint) ? null : ParseColor(module.IconTint, Colors.White);
         return new ItemsControl
         {
             ItemsSource = icons,
             ItemsPanel = new ItemsPanelTemplate(panel),
-            ItemTemplate = TrayIconTemplate(iconSize, spacing),
+            ItemTemplate = TrayIconTemplate(iconSize, spacing, hidden, tint),
             Focusable = false,
         };
     }
 
     /// <summary>One icon: a bar button with the program's icon, passing every mouse event to that program.</summary>
-    private DataTemplate TrayIconTemplate(double iconSize, double spacing)
+    private DataTemplate TrayIconTemplate(double iconSize, double spacing, HashSet<string> hidden, Color? tint)
     {
         var button = new FrameworkElementFactory(typeof(Button));
+        // Icons chosen to be hidden (module.HiddenIcons) aren't shown at all.
+        if (hidden.Count > 0)
+            button.SetBinding(VisibilityProperty, new Binding(nameof(ShellTrayIcon.Identifier)) { Converter = new HiddenConverter(hidden) });
         button.SetResourceReference(StyleProperty, "BarButton");
         button.SetValue(PaddingProperty, new Thickness(spacing, 0, spacing, 0));
         button.SetValue(MinHeightProperty, Math.Max(28.0, iconSize + 8));
@@ -111,7 +116,8 @@ public partial class TaskbarView
         button.AddHandler(PreviewMouseUpEvent, new MouseButtonEventHandler(TrayIcon_MouseUp));
 
         var image = new FrameworkElementFactory(typeof(Image));
-        image.SetBinding(Image.SourceProperty, new Binding(nameof(ShellTrayIcon.Icon)));
+        // One color for all icons (module.IconTint), keeping their shapes and details.
+        image.SetBinding(Image.SourceProperty, new Binding(nameof(ShellTrayIcon.Icon)) { Converter = tint is { } c ? new TintConverter(c) : null });
         image.SetValue(WidthProperty, iconSize);
         image.SetValue(HeightProperty, iconSize);
         image.SetValue(RenderOptions.BitmapScalingModeProperty, BitmapScalingMode.HighQuality);
@@ -159,6 +165,22 @@ public partial class TaskbarView
             return;
         }
         IconOf(sender)?.IconMouseUp(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);
+    }
+
+    /// <summary>Collapsed for the identifiers in the set.</summary>
+    private sealed class HiddenConverter(HashSet<string> hidden) : IValueConverter
+    {
+        public object Convert(object value, Type t, object p, System.Globalization.CultureInfo c) =>
+            value is string id && hidden.Contains(id) ? Visibility.Collapsed : Visibility.Visible;
+        public object ConvertBack(object value, Type t, object p, System.Globalization.CultureInfo c) => throw new NotSupportedException();
+    }
+
+    /// <summary>A one-color copy of the icon (see IconColors.Tinted).</summary>
+    private sealed class TintConverter(Color tint) : IValueConverter
+    {
+        public object? Convert(object value, Type t, object p, System.Globalization.CultureInfo c) =>
+            value is ImageSource icon ? IconColors.Tinted(icon, tint) ?? icon : value;
+        public object ConvertBack(object value, Type t, object p, System.Globalization.CultureInfo c) => throw new NotSupportedException();
     }
 
     /// <summary>Runs an action when disposed (for cleanups in <see cref="_disposables"/>).</summary>

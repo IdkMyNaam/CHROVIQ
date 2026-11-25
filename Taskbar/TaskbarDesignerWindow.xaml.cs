@@ -8,7 +8,7 @@ using Microsoft.Win32;
 
 namespace WindowsCustomizer;
 
-/// <summary>
+    /// <summary>
 /// Edit taskbar designs without touching JSON: designs on the left, the three zones in the middle,
 /// options for the selected module and the look on the right, and a live preview on top.
 /// Every change is saved to the design's file shortly after; the main window watches those files,
@@ -460,6 +460,8 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                 TextField(ModuleOptions, "Date format", m.DateFormat ?? "d",
                     v => m.DateFormat = v.Trim().Length == 0 ? "" : v,
                     "Empty = no date. Examples: d, ddd d MMM, dddd d MMMM", ClockExample);
+                FontField(ModuleOptions, "Clock font", m.FontFamily ?? "", v => m.FontFamily = Empty(v), "Empty = the bar's font.");
+                NumberField(ModuleOptions, "Clock font size (0 = the bar's)", m.FontSize ?? 0, v => m.FontSize = v > 0 ? v : null, 0, 48);
                 break;
 
             case ModuleType.Spacer:
@@ -517,6 +519,9 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                 NumberField(ModuleOptions, "Icons per row in the ^ flyout", m.FlyoutColumns ?? 5, v => m.FlyoutColumns = (int)v, 1, 20);
                 ColorField(ModuleOptions, "Flyout background", m.FlyoutBackground ?? "", v => m.FlyoutBackground = Empty(v),
                     "Empty = dark gray. #AARRGGBB for see-through.");
+                ColorField(ModuleOptions, "Icon color", m.IconTint ?? "", v => m.IconTint = Empty(v),
+                    "Draws every tray icon in this one color. Empty = the icons' own colors.");
+                TrayHiddenIcons(m);
                 Hint(ModuleOptions,
                     "The notification-area icons of all programs; clicks and right-click menus go to the programs as usual. " +
                     "While a bar with this module is showing, programs send their icons here instead of to the Windows taskbar, " +
@@ -645,10 +650,20 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         Header(LookOptions, "Shape");
         NumberField(LookOptions, "Bar corner radius", look.CornerRadius, v => look.CornerRadius = v, 0, 100);
         NumberField(LookOptions, "Button corner radius", look.ButtonCornerRadius, v => look.ButtonCornerRadius = v, 0, 50);
+        ColorField(LookOptions, "Border color", look.BorderColor ?? "", v => look.BorderColor = Empty(v), "Empty = no border.");
+        NumberField(LookOptions, "Border thickness", look.BorderThickness, v => look.BorderThickness = v, 0, 10);
+        CheckField(LookOptions, "Shadow", look.Shadow, v => look.Shadow = v,
+            "A soft shadow on the screen side of the bar. Looks best with a solid background.");
+        CheckField(LookOptions, "Lines between the zones", look.ZoneDividers, v => look.ZoneDividers = v,
+            "A thin line where the left, center and right zones meet.");
+        ColorField(LookOptions, "Line color", look.DividerColor ?? "", v => look.DividerColor = Empty(v), "Empty = the text color, faintly.");
 
         Header(LookOptions, "Window buttons");
         CheckField(LookOptions, "Icons only (title on hover)", look.WindowIconsOnly, v => look.WindowIconsOnly = v);
         NumberField(LookOptions, "Maximum button width", look.WindowButtonWidth, v => look.WindowButtonWidth = v, 40, 600);
+        NumberField(LookOptions, "Icon size (0 = automatic)", look.WindowIconSize ?? 0, v => look.WindowIconSize = v > 0 ? v : null, 0, 64);
+        ComboField(LookOptions, "Active window marker", new[] { "Line", "Dot", "Pill", "Glow", "None" }, (int)look.ActiveMarker,
+            i => look.ActiveMarker = (ActiveMarker)i);
         CheckField(LookOptions, "Group windows by app", look.GroupWindows, v => look.GroupWindows = v,
             "One button per app with a window count; clicking it lets you pick the window.");
         CheckField(LookOptions, "Preview windows on hover", look.Thumbnails, v => look.Thumbnails = v,
@@ -993,6 +1008,42 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         };
     }
 
+    /// <summary>Tray: a checkbox per tray icon (the ones running now, and ones hidden before) to hide it from the bar.</summary>
+    private void TrayHiddenIcons(TaskbarModule m)
+    {
+        Header(ModuleOptions, "Hide icons");
+        var hidden = m.HiddenIcons ?? new List<string>();
+        var icons = TrayHost.CurrentIcons();
+        foreach (var id in hidden.Where(id => !icons.Any(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase))).ToList())
+            icons.Add((id, id + " (not running)"));
+        if (icons.Count == 0)
+        {
+            Hint(ModuleOptions, "The icons show here while a bar with tray icons is running. Turn on \"Update taskbar live\" " +
+                                "or click \"Apply to taskbar\", then pick this module again.");
+            return;
+        }
+        foreach (var (id, title) in icons.OrderBy(i => i.Title, StringComparer.CurrentCultureIgnoreCase))
+        {
+            bool isHidden = hidden.Contains(id, StringComparer.OrdinalIgnoreCase);
+            CheckField(ModuleOptions, "Hide " + title, isHidden, on =>
+            {
+                var list = m.HiddenIcons ??= new List<string>();
+                list.RemoveAll(x => x.Equals(id, StringComparison.OrdinalIgnoreCase));
+                if (on) list.Add(id);
+                if (list.Count == 0) m.HiddenIcons = null;
+            });
+        }
+    }
+
+    /// <summary>A dropdown of fixed choices.</summary>
+    private void ComboField(Panel panel, string label, string[] options, int selected, Action<int> set)
+    {
+        Label(panel, label);
+        var box = new ComboBox { ItemsSource = options, SelectedIndex = Math.Clamp(selected, 0, options.Length - 1) };
+        box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) { set(box.SelectedIndex); Changed(); } };
+        panel.Children.Add(box);
+    }
+
     private void CheckField(Panel panel, string label, bool value, Action<bool> set, string? hint = null)
     {
         var check = new CheckBox { Content = label, IsChecked = value, Margin = new Thickness(0, 8, 0, 0) };
@@ -1037,16 +1088,21 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         };
     }
 
-    private void FontField(Panel panel, TaskbarLook look)
+    private void FontField(Panel panel, TaskbarLook look) =>
+        FontField(panel, "Font", look.FontFamily, v => look.FontFamily = string.IsNullOrWhiteSpace(v) ? "Segoe UI" : v.Trim());
+
+    /// <summary>A dropdown of the installed fonts (a name can also be typed).</summary>
+    private void FontField(Panel panel, string label, string value, Action<string> set, string? hint = null)
     {
-        Label(panel, "Font");
+        Label(panel, label);
         var fonts = Fonts.SystemFontFamilies.Select(f => f.Source).OrderBy(n => n).ToList();
-        var box = new ComboBox { IsEditable = true, ItemsSource = fonts, Text = look.FontFamily };
+        var box = new ComboBox { IsEditable = true, ItemsSource = fonts, Text = value };
         panel.Children.Add(box);
+        if (hint != null) Hint(panel, hint);
 
         void Set()
         {
-            look.FontFamily = string.IsNullOrWhiteSpace(box.Text) ? "Segoe UI" : box.Text.Trim();
+            set(box.Text.Trim());
             Changed();
         }
         box.SelectionChanged += (_, _) => { if (box.SelectedItem is string s) { box.Text = s; Set(); } };

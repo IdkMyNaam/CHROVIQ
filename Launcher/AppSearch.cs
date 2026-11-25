@@ -10,6 +10,9 @@ public sealed record AppEntry(string Name, string LaunchPath, bool IsShellApp)
     /// <summary>The app's icon: from its shortcut, or for Store apps the one Windows shows (via the shell).</summary>
     public ImageSource? Icon => IsShellApp ? ShellIcons.Get(ShellName, 32) : FileIcons.Get(LaunchPath);
 
+    /// <summary>Where the app is: the program a shortcut opens (or the file itself). Null for Store apps.</summary>
+    public string? Location => IsShellApp ? null : PinnedTargets.ProgramOf(LaunchPath) ?? LaunchPath;
+
     /// <summary>How the shell names this app: the shortcut file, or "shell:AppsFolder\&lt;id&gt;" for apps without one.</summary>
     public string ShellName => IsShellApp ? $"shell:AppsFolder\\{LaunchPath}" : LaunchPath;
 

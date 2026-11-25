@@ -51,29 +51,33 @@ internal static class WallpaperBehind
     public static void Track(FrameworkElement surface, MaterialEffect effect)
     {
         effect.Wallpaper = NoWallpaper;
-        if (Live)
+
+        // Live or picture is decided once the surface is in its window: the bars follow the main "Live glass"
+        // setting, popups (start menu, search, Alt+Tab) their own.
+        void Decide()
         {
-            // Live: once the surface is in its window (the window is left out of capture then).
-            if (surface.IsLoaded && ScreenBehind.Track(surface, effect)) return;
-            if (!surface.IsLoaded)
-            {
-                surface.Loaded += (_, _) => { if (!ScreenBehind.Track(surface, effect)) TrackPicture(surface, effect); };
-                return;
-            }
+            var window = Window.GetWindow(surface);
+            bool live = (Live && window is AppBarWindow) || window is ILiveGlassWindow { WantsLiveGlass: true };
+            if (live && ScreenBehind.Track(surface, effect)) return;
+            TrackPicture(surface, effect);
         }
-        TrackPicture(surface, effect);
+        if (surface.IsLoaded) { Decide(); return; }
+        RoutedEventHandler? once = null;
+        once = (_, _) => { surface.Loaded -= once; Decide(); };
+        surface.Loaded += once;
     }
 
     private static void TrackPicture(FrameworkElement surface, MaterialEffect effect)
     {
         void Update() { if (ReferenceEquals(surface.Effect, effect)) effect.Wallpaper = BrushBehind(surface) ?? NoWallpaper; }
         surface.SizeChanged += (_, _) => Update();
-        surface.Loaded += (_, _) =>
+        void Hook()
         {
             Update();
             if (Window.GetWindow(surface) is { } window) window.LocationChanged += (_, _) => Update(); // the bar slides, a window moves
-        };
-        if (surface.IsLoaded) Update();
+        }
+        if (surface.IsLoaded) Hook();
+        else surface.Loaded += (_, _) => Hook();
     }
 
     /// <summary>The wallpaper part behind the surface, mapped onto it (null when there's no picture or no place yet).</summary>

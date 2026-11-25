@@ -29,7 +29,24 @@ public partial class TaskbarView : UserControl
     public Func<IntPtr, bool>? WindowFilter { get; set; }
 
     /// <summary>The screen edge the bar is on; menus open toward the middle of the screen.</summary>
-    public TaskbarEdge Edge { get; set; } = TaskbarEdge.Top;
+    public TaskbarEdge Edge
+    {
+        get => _edge;
+        set { _edge = value; PlaceShadow(); }
+    }
+    private TaskbarEdge _edge = TaskbarEdge.Top;
+
+    /// <summary>Extra room the window needs on the screen side of the bar for its shadow (Look.Shadow), in WPF units.</summary>
+    public double ShadowSpace => _look.Shadow ? 10 : 0;
+
+    /// <summary>The bar leaves room for its shadow on the side facing the middle of the screen.</summary>
+    private void PlaceShadow()
+    {
+        double space = ShadowSpace;
+        Surface.Margin = _edge == TaskbarEdge.Top ? new Thickness(0, 0, 0, space) : new Thickness(0, space, 0, 0);
+        if (ShadowLayer.Effect is System.Windows.Media.Effects.DropShadowEffect shadow)
+            shadow.Direction = _edge == TaskbarEdge.Top ? 270 : 90;
+    }
 
     public TaskbarView(TaskbarDesign design)
     {
@@ -175,6 +192,35 @@ public partial class TaskbarView : UserControl
 
         Surface.CornerRadius = new CornerRadius(Math.Max(0, _look.CornerRadius));
         MaterialLayer.CornerRadius = Surface.CornerRadius;
+        ShadowLayer.CornerRadius = Surface.CornerRadius;
+
+        // Border around the bar.
+        if (!string.IsNullOrWhiteSpace(_look.BorderColor) && _look.BorderThickness > 0)
+        {
+            Surface.BorderBrush = new SolidColorBrush(ParseColor(_look.BorderColor, Colors.Gray));
+            Surface.BorderThickness = new Thickness(Math.Clamp(_look.BorderThickness, 0, 10));
+        }
+
+        // Shadow on the screen side of the bar (the host makes the window a bit bigger for it, see ShadowSpace).
+        if (_look.Shadow)
+        {
+            ShadowLayer.Visibility = Visibility.Visible;
+            ShadowLayer.Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 12, ShadowDepth = 2, Opacity = 0.45, Color = Colors.Black,
+                RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance,
+            };
+        }
+        PlaceShadow();
+
+        // Window icon size: one size for all window and pinned-app icons, or the defaults.
+        if (_look.WindowIconSize is double iconSize and > 0)
+        {
+            Resources["TaskIconSize"] = Math.Clamp(iconSize, 8, 64);
+            Resources["TaskIconOnlySize"] = Math.Clamp(iconSize, 8, 64);
+        }
+
+        ApplyMarker();
         ApplyMaterial();
         // Floating dock: only as wide as its contents, centered in the (transparent) window.
         Surface.HorizontalAlignment = IsFloating ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
@@ -182,6 +228,39 @@ public partial class TaskbarView : UserControl
         try { FontFamily = new FontFamily(string.IsNullOrWhiteSpace(_look.FontFamily) ? "Segoe UI" : _look.FontFamily); }
         catch (ArgumentException) { /* bad font name: keep Segoe UI */ }
         FontSize = Math.Clamp(_look.FontSize, 6, 48);
+    }
+
+    /// <summary>How the active button is marked: the bottom line, or a dot, pill or glow in the same color.</summary>
+    private void ApplyMarker()
+    {
+        var marker = _look.ActiveMarker;
+        Resources["MarkerLineThickness"] = marker == ActiveMarker.Line ? new Thickness(0, 0, 0, 2) : new Thickness(0);
+        Resources["MarkerVisibility"] = marker is ActiveMarker.Dot or ActiveMarker.Pill or ActiveMarker.Glow
+            ? Visibility.Visible : Visibility.Collapsed;
+        switch (marker)
+        {
+            case ActiveMarker.Dot:
+                Resources["MarkerWidth"] = 5.0;
+                Resources["MarkerHeight"] = 5.0;
+                break;
+            case ActiveMarker.Pill:
+                Resources["MarkerWidth"] = 16.0;
+                Resources["MarkerHeight"] = 3.0;
+                break;
+            case ActiveMarker.Glow:
+                Resources["MarkerWidth"] = double.NaN;
+                Resources["MarkerHeight"] = double.NaN;
+                Resources["MarkerVerticalAlignment"] = VerticalAlignment.Stretch;
+                Resources["MarkerMargin"] = new Thickness(0);
+                var mask = new RadialGradientBrush
+                {
+                    Center = new Point(0.5, 1), GradientOrigin = new Point(0.5, 1), RadiusX = 0.7, RadiusY = 0.9,
+                    GradientStops = { new GradientStop(Color.FromArgb(0x99, 0, 0, 0), 0), new GradientStop(Colors.Transparent, 1) },
+                };
+                mask.Freeze();
+                Resources["MarkerMask"] = mask;
+                break;
+        }
     }
 
     /// <summary>"#RRGGBB" or "#AARRGGBB" (also color names like "Black"); a bad value uses <paramref name="fallback"/>.</summary>

@@ -38,7 +38,11 @@ internal sealed class AltTabSettingsWindow : SettingsForm
         Slider("Show the panel after (ms)", look.ShowDelayMs, 0, 500, v => look.ShowDelayMs = Math.Round(v / 10) * 10);
         Hint("A quick Alt+Tab (let go before this) switches to the previous window without showing the panel. 0 = always show it.");
 
+        Header("Opening");
+        AnimationFields(look.Opening ??= new PopupAnimation());
+
         MaterialFields(look.Material, name => look.Material = name, () => look.MaterialValues ??= new Dictionary<string, string>(),
-            "Drawn behind the window previews. The same materials as for the taskbar.");
+            "Drawn behind the window previews. The same materials as for the taskbar.",
+            (look.LiveGlass, v => look.LiveGlass = v));
     }
 }

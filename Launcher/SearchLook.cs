@@ -50,4 +50,22 @@ public class SearchLook
     public string? SearchUrl { get; set; }
 
     public string Placeholder { get; set; } = "Search apps and the web";
+
+    /// <summary>Size of the result icons in pixels.</summary>
+    public double ResultIconSize { get; set; } = 24;
+
+    /// <summary>Show where each app is (its program file) under its name.</summary>
+    public bool ShowPaths { get; set; }
+
+    /// <summary>Highest the result list gets before it scrolls, in pixels.</summary>
+    public double MaxResultsHeight { get; set; } = 440;
+
+    /// <summary>The scroll bar of the results.</summary>
+    public ScrollbarStyle Scrollbar { get; set; } = ScrollbarStyle.Thin;
+
+    /// <summary>How the search window appears.</summary>
+    public PopupAnimation Opening { get; set; } = PopupAnimation.Default(AnimationStyle.Fade, 150);
+
+    /// <summary>Live glass: a glass material shows what's really on screen behind it (this window then doesn't show in screen capture).</summary>
+    public bool LiveGlass { get; set; }
 }

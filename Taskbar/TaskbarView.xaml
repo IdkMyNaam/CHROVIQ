@@ -16,6 +16,17 @@
         <SolidColorBrush x:Key="BarActive" Color="#33FFFFFF" />
         <SolidColorBrush x:Key="IconTint" Color="White" />
         <CornerRadius x:Key="ButtonCornerRadius">4</CornerRadius>
+        <!-- Active marker (Look.ActiveMarker); the defaults are the line. -->
+        <Thickness x:Key="MarkerLineThickness">0,0,0,2</Thickness>
+        <Visibility x:Key="MarkerVisibility">Collapsed</Visibility>
+        <sys:Double x:Key="MarkerWidth">5</sys:Double>
+        <sys:Double x:Key="MarkerHeight">5</sys:Double>
+        <VerticalAlignment x:Key="MarkerVerticalAlignment">Bottom</VerticalAlignment>
+        <Thickness x:Key="MarkerMargin">0,0,0,2</Thickness>
+        <x:Null x:Key="MarkerMask" />
+        <!-- Window icon sizes (Look.WindowIconSize). -->
+        <sys:Double x:Key="TaskIconSize">16</sys:Double>
+        <sys:Double x:Key="TaskIconOnlySize">24</sys:Double>
         <!-- Tinted icons (Look.TintIcons): the one-color copy is shown, the full-color icon only on hover. -->
         <Visibility x:Key="TintIconVisibility">Collapsed</Visibility>
         <sys:Double x:Key="ColorIconOpacity">1</sys:Double>
@@ -26,11 +37,17 @@
         <ControlTemplate x:Key="BarButtonInstantTemplate" TargetType="Button">
             <Border x:Name="Bd" Background="{TemplateBinding Background}"
                     CornerRadius="{DynamicResource ButtonCornerRadius}"
-                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{DynamicResource MarkerLineThickness}"
                     RenderTransformOrigin="0.5,0.5">
                 <Grid>
                     <Border x:Name="HoverLayer" Opacity="0" CornerRadius="{DynamicResource ButtonCornerRadius}"
                             Background="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+                    <!-- Active marker other than the line (Look.ActiveMarker): dot, pill or glow, in the line's color. -->
+                    <Border Background="{TemplateBinding BorderBrush}" Visibility="{DynamicResource MarkerVisibility}"
+                            Width="{DynamicResource MarkerWidth}" Height="{DynamicResource MarkerHeight}"
+                            VerticalAlignment="{DynamicResource MarkerVerticalAlignment}" HorizontalAlignment="Stretch"
+                            CornerRadius="2" Margin="{DynamicResource MarkerMargin}" OpacityMask="{DynamicResource MarkerMask}"
+                            IsHitTestVisible="False" />
                     <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
                 </Grid>
@@ -53,11 +70,17 @@
         <ControlTemplate x:Key="BarButtonFadeTemplate" TargetType="Button">
             <Border x:Name="Bd" Background="{TemplateBinding Background}"
                     CornerRadius="{DynamicResource ButtonCornerRadius}"
-                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,2"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{DynamicResource MarkerLineThickness}"
                     RenderTransformOrigin="0.5,0.5">
                 <Grid>
                     <Border x:Name="HoverLayer" Opacity="0" CornerRadius="{DynamicResource ButtonCornerRadius}"
                             Background="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+                    <!-- Active marker other than the line (Look.ActiveMarker): dot, pill or glow, in the line's color. -->
+                    <Border Background="{TemplateBinding BorderBrush}" Visibility="{DynamicResource MarkerVisibility}"
+                            Width="{DynamicResource MarkerWidth}" Height="{DynamicResource MarkerHeight}"
+                            VerticalAlignment="{DynamicResource MarkerVerticalAlignment}" HorizontalAlignment="Stretch"
+                            CornerRadius="2" Margin="{DynamicResource MarkerMargin}" OpacityMask="{DynamicResource MarkerMask}"
+                            IsHitTestVisible="False" />
                     <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
                 </Grid>
@@ -136,7 +159,7 @@
                     </ContextMenu>
                 </Button.ContextMenu>
                 <DockPanel>
-                    <Grid DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,8,0">
+                    <Grid DockPanel.Dock="Left" Width="{DynamicResource TaskIconSize}" Height="{DynamicResource TaskIconSize}" Margin="0,0,8,0">
                         <Image x:Name="ColorIcon" Source="{Binding Icon}" Opacity="{DynamicResource ColorIconOpacity}"
                                RenderOptions.BitmapScalingMode="HighQuality" />
                         <Image x:Name="TintIcon" Source="{Binding TintedIcon}" Visibility="{DynamicResource TintIconVisibility}"
@@ -174,7 +197,7 @@
                     </ContextMenu>
                 </Button.ContextMenu>
                 <Grid>
-                    <Grid Width="24" Height="24">
+                    <Grid Width="{DynamicResource TaskIconOnlySize}" Height="{DynamicResource TaskIconOnlySize}">
                         <Image x:Name="ColorIcon" Source="{Binding Icon}" Opacity="{DynamicResource ColorIconOpacity}"
                                RenderOptions.BitmapScalingMode="HighQuality" />
                         <Image x:Name="TintIcon" Source="{Binding TintedIcon}" Visibility="{DynamicResource TintIconVisibility}"
@@ -204,6 +227,8 @@
     <!-- MaterialLayer draws the background (and a material's shader, if any) behind the icons, in the bar's shape. -->
     <Border x:Name="Surface">
         <Grid>
+            <!-- Look.Shadow: a copy of the background with a drop shadow, under the real background. -->
+            <Border x:Name="ShadowLayer" Background="{DynamicResource BarBackground}" Visibility="Collapsed" />
             <Border x:Name="MaterialLayer" Background="{DynamicResource BarBackground}" />
             <Border x:Name="Root" Margin="4,3" />
         </Grid>

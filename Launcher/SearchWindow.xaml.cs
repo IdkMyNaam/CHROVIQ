@@ -14,8 +14,10 @@ namespace WindowsCustomizer;
 /// (when that setting is on) or by a search box on the custom taskbar. Only one is open at a time;
 /// opening it again closes it, like the Start menu.
 /// </summary>
-public partial class SearchWindow : Window
+public partial class SearchWindow : Window, ILiveGlassWindow
 {
+    public bool WantsLiveGlass => _look.LiveGlass;
+
     private static SearchWindow? _open;
 
     private readonly SearchLook _look;
@@ -101,12 +103,16 @@ public partial class SearchWindow : Window
         try { FontFamily = new FontFamily(string.IsNullOrWhiteSpace(_look.FontFamily) ? "Segoe UI" : _look.FontFamily); }
         catch (ArgumentException) { /* bad font name: keep Segoe UI */ }
         Placeholder.Text = string.IsNullOrWhiteSpace(_look.Placeholder) ? "Search apps and the web" : _look.Placeholder;
+        Results.MaxHeight = Math.Clamp(_look.MaxResultsHeight, 100, 1400);
+        ScrollbarLook.Apply(Results, _look.Scrollbar, foreground);
     }
 
     // ---------- Showing ----------
 
     private void ShowAt(FrameworkElement? anchor, TaskbarEdge edge)
     {
+        // The start state goes on before the window shows, so it never flashes up fully drawn first.
+        (_look.Opening ?? new PopupAnimation()).Play(Layers, fromBelow: anchor != null && edge != TaskbarEdge.Top);
         Show();
         UpdateLayout();
         PlaceWindow(anchor, edge);
@@ -289,8 +295,9 @@ public partial class SearchWindow : Window
         var row = new FrameworkElementFactory(typeof(DockPanel));
 
         var icon = new FrameworkElementFactory(typeof(Grid));
-        icon.SetValue(WidthProperty, 24.0);
-        icon.SetValue(HeightProperty, 24.0);
+        double iconSize = Math.Clamp(_look.ResultIconSize, 12, 64);
+        icon.SetValue(WidthProperty, iconSize);
+        icon.SetValue(HeightProperty, iconSize);
         icon.SetValue(MarginProperty, new Thickness(0, 0, 12, 0));
         icon.SetValue(DockPanel.DockProperty, Dock.Left);
 
@@ -309,11 +316,23 @@ public partial class SearchWindow : Window
         icon.AppendChild(glyph);
         row.AppendChild(icon);
 
+        // Name, and (SearchLook.ShowPaths) where the app is, smaller, under it.
+        var lines = new FrameworkElementFactory(typeof(StackPanel));
+        lines.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
         var name = new FrameworkElementFactory(typeof(TextBlock));
         name.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding());
-        name.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
         name.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-        row.AppendChild(name);
+        lines.AppendChild(name);
+        if (_look.ShowPaths)
+        {
+            var path = new FrameworkElementFactory(typeof(TextBlock));
+            path.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(AppEntry.Location)) { FallbackValue = null });
+            path.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+            path.SetValue(TextBlock.FontSizeProperty, Math.Max(8, FontSize - 4));
+            path.SetValue(OpacityProperty, 0.6);
+            lines.AppendChild(path);
+        }
+        row.AppendChild(lines);
 
         return new DataTemplate { VisualTree = row };
     }

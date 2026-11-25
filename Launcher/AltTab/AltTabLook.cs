@@ -41,4 +41,10 @@ public sealed class AltTabLook
     public bool IncludeMinimized { get; set; } = true;
     /// <summary>How long Alt+Tab is held before the panel shows (a quick Alt+Tab switches without it).</summary>
     public double ShowDelayMs { get; set; } = 120;
+
+    /// <summary>How the panel appears.</summary>
+    public PopupAnimation Opening { get; set; } = PopupAnimation.Default(AnimationStyle.Fade, 120);
+
+    /// <summary>Live glass: a glass material shows what's really on screen behind it (this window then doesn't show in screen capture).</summary>
+    public bool LiveGlass { get; set; }
 }

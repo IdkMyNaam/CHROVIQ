@@ -27,11 +27,17 @@ public partial class TaskbarView
         if (_look.Floating != null)
         {
             var row = new DockPanel { LastChildFill = false };
-            foreach (var module in _design.Left.Concat(_design.Center).Concat(_design.Right))
+            bool first = true;
+            foreach (var zone in new[] { _design.Left, _design.Center, _design.Right }.Where(z => z.Count > 0))
             {
-                var element = BuildModuleSafely(module);
-                DockPanel.SetDock(element, Dock.Left);
-                row.Children.Add(element);
+                if (!first && _look.ZoneDividers) AddDivider(row);
+                first = false;
+                foreach (var module in zone)
+                {
+                    var element = BuildModuleSafely(module);
+                    DockPanel.SetDock(element, Dock.Left);
+                    row.Children.Add(element);
+                }
             }
             return row;
         }
@@ -49,6 +55,18 @@ public partial class TaskbarView
         var left = BuildZone(_design.Left, HorizontalAlignment.Left);
         var center = BuildZone(_design.Center, HorizontalAlignment.Center);
         var right = BuildZone(_design.Right, HorizontalAlignment.Right);
+
+        // Zone dividers: a line wherever two zones with modules meet.
+        if (_look.ZoneDividers)
+        {
+            bool hasLeft = _design.Left.Count > 0, hasRight = _design.Right.Count > 0;
+            if (hasCenter)
+            {
+                if (hasLeft) AddDivider(center, atStart: true);
+                if (hasRight) AddDivider(center);
+            }
+            else if (hasLeft && hasRight) AddDivider(right, atStart: true);
+        }
         Grid.SetColumn(left, 0);
         Grid.SetColumn(center, 1);
         Grid.SetColumn(right, 2);
@@ -75,6 +93,22 @@ public partial class TaskbarView
             zone.Children.Add(element);
         }
         return zone;
+    }
+
+    /// <summary>A thin vertical line between zones (Look.ZoneDividers), at the start or the end of a zone.</summary>
+    private void AddDivider(DockPanel zone, bool atStart = false)
+    {
+        var foreground = ParseColor(_look.Foreground, Colors.White);
+        var line = new System.Windows.Shapes.Rectangle
+        {
+            Width = 1,
+            Margin = new Thickness(6, Math.Max(4, BarHeight * 0.22), 6, Math.Max(4, BarHeight * 0.22)),
+            Fill = new SolidColorBrush(ParseColor(_look.DividerColor, Color.FromArgb(0x50, foreground.R, foreground.G, foreground.B))),
+            IsHitTestVisible = false,
+        };
+        DockPanel.SetDock(line, Dock.Left);
+        if (atStart) zone.Children.Insert(0, line);
+        else zone.Children.Add(line);
     }
 
     /// <summary>A broken module (bad options in a hand-edited file) shows a warning sign instead of breaking the bar.</summary>
@@ -196,7 +230,7 @@ public partial class TaskbarView
 
             var icon = FileIcons.Get(path);
             FrameworkElement picture = icon != null
-                ? TintableIcon(icon, 20)
+                ? TintableIcon(icon, Math.Clamp(_look.WindowIconSize ?? 20, 8, 64))
                 : new TextBlock { Text = name.Length > 0 ? name[..1].ToUpperInvariant() : "?", FontWeight = FontWeights.SemiBold };
 
             // Running indicator on the screen-edge side of the icon, inside the button so it isn't clipped.
@@ -311,6 +345,17 @@ public partial class TaskbarView
 
         var time = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right };
         var date = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right, FontSize = 11, Opacity = 0.8 };
+        // The clock's own font and size, if set.
+        if (!string.IsNullOrWhiteSpace(module.FontFamily))
+        {
+            try { time.FontFamily = date.FontFamily = new FontFamily(module.FontFamily.Trim()); }
+            catch (ArgumentException) { /* bad font name: keep the bar's font */ }
+        }
+        if (module.FontSize is double size and > 0)
+        {
+            time.FontSize = Math.Clamp(size, 6, 48);
+            date.FontSize = Math.Max(6, time.FontSize - 1);
+        }
         var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         lines.Children.Add(time);
         if (dateFormat.Length > 0) lines.Children.Add(date);

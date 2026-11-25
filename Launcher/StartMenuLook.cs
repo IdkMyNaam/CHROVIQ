@@ -40,6 +40,30 @@ public class StartMenuLook
 
     public bool ShowPinned { get; set; } = true;
     public bool ShowAllApps { get; set; } = true;
+
+    /// <summary>Size of the pinned app icons in pixels.</summary>
+    public double PinnedIconSize { get; set; } = 32;
+
+    /// <summary>The search box at the bottom (above the user and power buttons) instead of at the top.</summary>
+    public bool SearchAtBottom { get; set; }
+
+    /// <summary>Show the user's name and picture at the bottom left.</summary>
+    public bool ShowUser { get; set; } = true;
+
+    /// <summary>Name shown for the user. Empty: the Windows account's name.</summary>
+    public string? UserName { get; set; }
+
+    /// <summary>Picture shown for the user (an image file). Empty: the Windows account picture, if there is one.</summary>
+    public string? UserPicture { get; set; }
+
+    /// <summary>The scroll bar of the app list and search results.</summary>
+    public ScrollbarStyle Scrollbar { get; set; } = ScrollbarStyle.Thin;
+
+    /// <summary>How the menu appears.</summary>
+    public PopupAnimation Opening { get; set; } = PopupAnimation.Default(AnimationStyle.Slide, 220);
+
+    /// <summary>Live glass: a glass material shows what's really on screen behind it (this window then doesn't show in screen capture).</summary>
+    public bool LiveGlass { get; set; }
 }
 
 /// <summary>An app pinned to the start menu.</summary>

@@ -185,8 +185,10 @@ internal sealed class AltTabSwitcher : IDisposable
 
     // ---------- The window ----------
 
-    private sealed class SwitcherWindow : Window
+    private sealed class SwitcherWindow : Window, ILiveGlassWindow
     {
+        public bool WantsLiveGlass => _currentLook.LiveGlass;
+
         // From the look (Alt+Tab settings).
         private double TileWidth = 236, PreviewHeight = 140, SelectionThickness = 2, TitleSize = 12;
         private bool ShowTitles = true, ShowIcons = true;
@@ -262,7 +264,7 @@ internal sealed class AltTabSwitcher : IDisposable
             _materialLayer.Background = Frozen(new SolidColorBrush(TaskbarView.ParseColor(look.Background, Color.FromArgb(0xEE, 0x20, 0x20, 0x20))));
             _frame.BorderBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x40, foreground.R, foreground.G, foreground.B)));
 
-            string key = look.Material + "|" + string.Join(";", (look.MaterialValues ?? new()).Select(kv => kv.Key + "=" + kv.Value)) + "|" + accent;
+            string key = look.Material + "|" + string.Join(";", (look.MaterialValues ?? new()).Select(kv => kv.Key + "=" + kv.Value)) + "|" + accent + "|" + look.LiveGlass;
             if (key == _materialKey) return;
             _materialKey = key;
             if (MaterialHost.Attach(_materialLayer, this, look.Material, look.MaterialValues, accent) is { } error)
@@ -288,7 +290,14 @@ internal sealed class AltTabSwitcher : IDisposable
             for (int i = 0; i < windows.Count; i++) _tiles.Children.Add(Tile(windows[i], i));
             Select(selected);
 
-            if (!IsVisible) Show();
+            if (!IsVisible)
+            {
+                // Opening animation; Windows draws the live previews itself, so they're moved and faded along each frame.
+                _stopAnimation();
+                _stopAnimation = (look.Opening ?? new PopupAnimation()).Play((FrameworkElement)Content,
+                    fromBelow: look.Position != AltTabPosition.Top, onFrame: UpdateThumbnails);
+                Show();
+            }
             UpdateLayout();
             // Centered on that monitor (physical pixels).
             int width = (int)Math.Ceiling(ActualWidth * scale), height = (int)Math.Ceiling(ActualHeight * scale);
@@ -301,8 +310,11 @@ internal sealed class AltTabSwitcher : IDisposable
             UpdateThumbnails();
         }
 
+        private Action _stopAnimation = () => { };
+
         public void HideList()
         {
+            _stopAnimation();
             Unregister();
             Hide();
         }
@@ -366,10 +378,14 @@ internal sealed class AltTabSwitcher : IDisposable
         private void UpdateThumbnails()
         {
             double scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            byte opacity = (byte)Math.Round(255 * Math.Clamp(((UIElement)Content).Opacity, 0, 1));
             foreach (var (thumbnail, box, source) in _thumbnails)
             {
-                var origin = box.TranslatePoint(new Point(0, 0), this);
-                double boxW = box.ActualWidth * scale, boxH = box.ActualHeight * scale;
+                if (!box.IsVisible || PresentationSource.FromVisual(box) == null) continue;
+                // Where the box is now, including the opening animation's move and zoom.
+                var bounds = box.TransformToVisual(this).TransformBounds(new Rect(box.RenderSize));
+                var origin = bounds.TopLeft;
+                double boxW = bounds.Width * scale, boxH = bounds.Height * scale;
                 double fit = Math.Min(boxW / Math.Max(1, source.cx), boxH / Math.Max(1, source.cy));
                 double w = source.cx * fit, h = source.cy * fit;
                 double left = origin.X * scale + (boxW - w) / 2, top = origin.Y * scale + (boxH - h) / 2;
@@ -377,7 +393,7 @@ internal sealed class AltTabSwitcher : IDisposable
                 {
                     dwFlags = DWM_TNP_RECTDESTINATION | DWM_TNP_VISIBLE | DWM_TNP_OPACITY | DWM_TNP_SOURCECLIENTAREAONLY,
                     rcDestination = new RECT { Left = (int)left, Top = (int)top, Right = (int)(left + w), Bottom = (int)(top + h) },
-                    opacity = 255,
+                    opacity = opacity,
                     fVisible = true,
                     fSourceClientAreaOnly = false,
                 };

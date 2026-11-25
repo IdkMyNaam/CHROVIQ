@@ -80,6 +80,21 @@ internal static class TrayHost
 
     public static bool IsRunning => _area != null;
 
+    /// <summary>The tray icons right now (identifier and name), for the designer's "hide icons" list; empty when not running.</summary>
+    public static List<(string Id, string Title)> CurrentIcons()
+    {
+        var icons = new List<(string, string)>();
+        if (_area == null) return icons;
+        try
+        {
+            foreach (var icon in _area.TrayIcons.ToList())
+                if (!string.IsNullOrEmpty(icon.Identifier))
+                    icons.Add((icon.Identifier, string.IsNullOrWhiteSpace(icon.Title) ? System.IO.Path.GetFileName(icon.Path ?? icon.Identifier) : icon.Title));
+        }
+        catch (Exception) { /* the list changed while reading: show what we have */ }
+        return icons;
+    }
+
     /// <summary>Icons kept on the bar from an earlier session (ManagedShell identifiers); set by the main window.</summary>
     public static string[]? SavedPins { get; set; }
 

@@ -243,7 +243,9 @@ public partial class AppBarWindow : Window
     /// </summary>
     private void PlaceWindow(RECT strip, double scale)
     {
-        int height = (int)Math.Round(_view.BarHeight * scale);
+        // The shadow (Look.Shadow) sits outside the bar, so the window is that much taller toward the screen's middle;
+        // only the bar itself is reserved.
+        int height = (int)Math.Round((_view.BarHeight + _view.ShadowSpace) * scale);
         int margin = (int)Math.Round(_view.DockMargin * scale);
         int left = strip.Left + margin;
         int right = strip.Right - margin;

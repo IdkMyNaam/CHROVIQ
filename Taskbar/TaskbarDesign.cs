@@ -80,6 +80,12 @@ public class TaskbarModule
     /// <summary>Tray: background of the ^ flyout ("#AARRGGBB"). Empty: dark gray.</summary>
     public string? FlyoutBackground { get; set; }
 
+    /// <summary>Tray: icons not shown at all (ManagedShell identifiers of the icons).</summary>
+    public List<string>? HiddenIcons { get; set; }
+
+    /// <summary>Tray: draw every icon in this one color ("#RRGGBB"). Empty: the icons' own colors.</summary>
+    public string? IconTint { get; set; }
+
     /// <summary>Text: the label. Button: text shown next to (or instead of) the icon.</summary>
     public string? Text { get; set; }
 
@@ -106,6 +112,12 @@ public class TaskbarModule
     /// to it, and its windows don't get a second button in the window list. Empty counts as on.
     /// </summary>
     public bool? ShowRunning { get; set; }
+
+    /// <summary>Clock: font for the time and date. Empty: the bar's font.</summary>
+    public string? FontFamily { get; set; }
+
+    /// <summary>Clock: font size of the time (the date is a little smaller). Empty: the bar's font size.</summary>
+    public double? FontSize { get; set; }
 
     /// <summary>Short description for lists in the taskbar designer, like "Clock (HH:mm)".</summary>
     public override string ToString() => Type switch
@@ -210,8 +222,44 @@ public class TaskbarLook
     /// <summary>The material's settings by name (numbers or colors as text); missing ones use the material's defaults.</summary>
     public Dictionary<string, string>? MaterialValues { get; set; }
 
+    /// <summary>Size of window and pinned-app icons in pixels. Empty: 16 (24 for icons only, 20 for pinned apps).</summary>
+    public double? WindowIconSize { get; set; }
+
+    /// <summary>How the active window (and an app group in front) is marked.</summary>
+    public ActiveMarker ActiveMarker { get; set; } = ActiveMarker.Line;
+
+    /// <summary>Color of a line around the bar. Empty: no border.</summary>
+    public string? BorderColor { get; set; }
+
+    /// <summary>Thickness of that line in pixels.</summary>
+    public double BorderThickness { get; set; } = 1;
+
+    /// <summary>A soft shadow on the screen side of the bar (best with a solid background).</summary>
+    public bool Shadow { get; set; }
+
+    /// <summary>Thin lines between the left, center and right zones.</summary>
+    public bool ZoneDividers { get; set; }
+
+    /// <summary>Color of the zone dividers. Empty: the text color, faintly.</summary>
+    public string? DividerColor { get; set; }
+
     /// <summary>Set to float the bar as a dock instead of filling the screen edge. Empty: normal full-width bar.</summary>
     public FloatingDock? Floating { get; set; }
+}
+
+/// <summary>How the active window's button is marked.</summary>
+public enum ActiveMarker
+{
+    /// <summary>A line along the bottom of the button (the default).</summary>
+    Line,
+    /// <summary>A small dot under the icon.</summary>
+    Dot,
+    /// <summary>A short rounded bar under the icon.</summary>
+    Pill,
+    /// <summary>A soft glow rising from the bottom of the button.</summary>
+    Glow,
+    /// <summary>Only the lighter background.</summary>
+    None,
 }
 
 /// <summary>A bar that floats away from the screen edge and is only as wide as its contents.</summary>

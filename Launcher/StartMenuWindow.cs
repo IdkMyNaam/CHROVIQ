@@ -30,18 +30,23 @@ public sealed class StartMenuContext
 /// bottom. Opened by the Start module, the Windows key (when chosen) or the app menu. One at a time;
 /// opening it again closes it. Closes when you click elsewhere.
 /// </summary>
-public sealed class StartMenuWindow : Window
+public sealed class StartMenuWindow : Window, ILiveGlassWindow
 {
+    public bool WantsLiveGlass => _context.Look.LiveGlass;
+
     private static StartMenuWindow? _open;
     public static bool IsOpen => _open != null;
 
     private readonly StartMenuContext _context;
     private readonly TextBox _box = new() { BorderThickness = new Thickness(0), Background = Brushes.Transparent, VerticalContentAlignment = VerticalAlignment.Center };
     private readonly TextBlock _placeholder = new() { Text = "Type to search apps and the web", Opacity = 0.55, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Center };
-    private readonly ScrollViewer _home = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    /// <summary>Pinned apps and all apps. Virtualized: only the rows you can see are laid out and drawn.</summary>
+    private readonly ItemsControl _home = HomeList();
     private readonly ListBox _results = new() { Background = Brushes.Transparent, BorderThickness = new Thickness(0), Visibility = Visibility.Collapsed };
     private List<AppEntry> _apps = new();
     private bool _closing;
+    /// <summary>The home page is built; the opening animation is done (icons load after it, so it stays smooth).</summary>
+    private readonly TaskCompletionSource _filled = new(), _opened = new();
     private bool _dialogOpen; // a confirmation is showing: don't close on losing focus
     private Style _flatButton = null!;
 
@@ -96,9 +101,13 @@ public sealed class StartMenuWindow : Window
         Closed += (_, _) => { if (_open == this) _open = null; };
         Loaded += async (_, _) =>
         {
-            _apps = await AppSearch.Index();
-            FillHome();
-            UpdateSearch();
+            try
+            {
+                _apps = await AppSearch.Index();
+                FillHome();
+                UpdateSearch();
+            }
+            finally { _filled.TrySetResult(); } // the opening animation waits for this (briefly)
         };
     }
 
@@ -181,7 +190,12 @@ public sealed class StartMenuWindow : Window
         DockPanel.SetDock(glass, Dock.Left);
         search.Children.Add(glass);
         search.Children.Add(field);
-        var searchFrame = new Border { Child = search, Padding = new Thickness(12, 9, 12, 9), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 14) };
+        bool searchAtBottom = _context.Look.SearchAtBottom;
+        var searchFrame = new Border
+        {
+            Child = search, Padding = new Thickness(12, 9, 12, 9), CornerRadius = new CornerRadius(8),
+            Margin = searchAtBottom ? new Thickness(0, 14, 0, 0) : new Thickness(0, 0, 0, 14),
+        };
         searchFrame.SetResourceReference(Border.BackgroundProperty, "MenuField");
 
         // Footer: user on the left; settings, Windows Customizer and power on the right.
@@ -197,25 +211,28 @@ public sealed class StartMenuWindow : Window
             DockPanel.SetDock(b, Dock.Right);
             footer.Children.Add(b);
         }
-        var user = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        user.Children.Add(Glyph("", 16));
-        user.Children.Add(new TextBlock { Text = Environment.UserName, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-        footer.Children.Add(user);
+        if (_context.Look.ShowUser) footer.Children.Add(UserButton());
 
         var middle = new Grid();
         middle.Children.Add(_home);
         middle.Children.Add(_results);
 
         var root = new DockPanel();
-        DockPanel.SetDock(searchFrame, Dock.Top);
+        // The search box at the top, or at the bottom just above the footer (docked after it).
+        DockPanel.SetDock(searchFrame, searchAtBottom ? Dock.Bottom : Dock.Top);
         DockPanel.SetDock(footer, Dock.Bottom);
-        root.Children.Add(searchFrame);
         root.Children.Add(footer);
+        root.Children.Add(searchFrame);
         root.Children.Add(middle);
 
         // The background (and its material, if any) on its own layer behind the content, in the same shape.
         var corner = new CornerRadius(Math.Clamp(_context.Look.CornerRadius, 0, 40));
-        var frame = new Border { Child = root, Padding = new Thickness(18), CornerRadius = corner };
+        // The content is kept as a ready-drawn picture (redrawn only when it changes), so an animated material
+        // or live glass underneath doesn't redraw every app name on every frame.
+        var frame = new Border { Child = root, Padding = new Thickness(18), CornerRadius = corner, CacheMode = new BitmapCache { SnapsToDevicePixels = true } };
+        var scrollColor = TaskbarView.ParseColor(_context.Look.Foreground, Colors.White);
+        ScrollbarLook.Apply(_home, _context.Look.Scrollbar, scrollColor);
+        ScrollbarLook.Apply(_results, _context.Look.Scrollbar, scrollColor);
         var materialLayer = new Border { CornerRadius = corner };
         materialLayer.SetResourceReference(Border.BackgroundProperty, "MenuBackground");
         var layers = new Grid();
@@ -225,6 +242,77 @@ public sealed class StartMenuWindow : Window
                 TaskbarView.ParseColor(_context.Look.Highlight, SystemParameters.WindowGlassColor)) is { } error)
             AppTrace.Log($"Start menu material: {error}");
         return layers;
+    }
+
+    /// <summary>The user's picture and name; click to open the account settings.</summary>
+    private Button UserButton()
+    {
+        var look = _context.Look;
+        var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        if (UserPicture(look.UserPicture) is { } picture)
+        {
+            var brush = new ImageBrush(picture) { Stretch = Stretch.UniformToFill };
+            row.Children.Add(new System.Windows.Shapes.Ellipse { Width = 32, Height = 32, Fill = brush });
+        }
+        else row.Children.Add(Glyph("\uE77B", 16)); // person symbol
+        row.Children.Add(new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(look.UserName) ? DisplayName() : look.UserName.Trim(),
+            Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+        });
+        var button = new Button { Style = _flatButton, Content = row, Padding = new Thickness(8, 6, 10, 6), ToolTip = "Account settings" };
+        button.Click += (_, _) => { Start("ms-settings:yourinfo"); CloseQuietly(); };
+        return button;
+    }
+
+    /// <summary>The chosen picture file, else the Windows account picture (where Windows keeps it), else null.</summary>
+    private static ImageSource? UserPicture(string? chosen)
+    {
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(chosen)) candidates.Add(Environment.ExpandEnvironmentVariables(chosen.Trim()));
+        try
+        {
+            string? sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value;
+            using var key = sid == null ? null : Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                $@"SOFTWARE\Microsoft\Windows\CurrentVersion\AccountPicture\Users\{sid}");
+            foreach (var name in new[] { "Image192", "Image96", "Image208", "Image240", "Image64" })
+                if (key?.GetValue(name) is string path) candidates.Add(path);
+        }
+        catch (Exception) { /* no access: no picture */ }
+
+        foreach (var path in candidates)
+        {
+            try
+            {
+                if (!System.IO.File.Exists(path)) continue;
+                var image = new System.Windows.Media.Imaging.BitmapImage();
+                image.BeginInit();
+                image.UriSource = new Uri(path);
+                image.DecodePixelWidth = 64;
+                image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // don't keep the file open
+                image.EndInit();
+                image.Freeze();
+                return image;
+            }
+            catch (Exception) { /* not a readable image: try the next */ }
+        }
+        return null;
+    }
+
+    [DllImport("secur32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool GetUserNameEx(int format, System.Text.StringBuilder name, ref uint size);
+
+    /// <summary>The account's display name ("Jane Doe"), or the sign-in name when Windows doesn't have one.</summary>
+    private static string DisplayName()
+    {
+        try
+        {
+            uint size = 256;
+            var name = new System.Text.StringBuilder((int)size);
+            if (GetUserNameEx(3 /* NameDisplay */, name, ref size) && name.Length > 0) return name.ToString();
+        }
+        catch (Exception) { /* not available */ }
+        return Environment.UserName;
     }
 
     // TextBoxBase.CaretBrushProperty, named here because the static is on the base class.
@@ -251,22 +339,23 @@ public sealed class StartMenuWindow : Window
     private void FillHome()
     {
         var look = _context.Look;
-        var page = new StackPanel();
+        var page = new List<UIElement>();
         var pendingIcons = new List<(Image image, AppEntry app)>();
 
         if (look.ShowPinned)
         {
-            page.Children.Add(SectionHeader("Pinned"));
+            page.Add(SectionHeader("Pinned"));
             var tiles = new WrapPanel();
             int columns = Math.Clamp(look.Columns, 2, 12);
             double tileWidth = Math.Floor((Width - 2 * 18 - 20) / columns);
             var pins = _context.Pins.ToList();
             if (pins.Count == 0)
-                page.Children.Add(new TextBlock { Text = "Right-click an app below and choose \"Pin to Start\".", Opacity = 0.6, Margin = new Thickness(4, 0, 0, 8) });
+                page.Add(new TextBlock { Text = "Right-click an app below and choose \"Pin to Start\".", Opacity = 0.6, Margin = new Thickness(4, 0, 0, 8) });
             for (int i = 0; i < pins.Count; i++)
             {
                 var app = pins[i].ToEntry();
-                var image = new Image { Width = 32, Height = 32, Margin = new Thickness(0, 0, 0, 6) };
+                double iconSize = Math.Clamp(look.PinnedIconSize, 16, 96);
+                var image = new Image { Width = iconSize, Height = iconSize, Margin = new Thickness(0, 0, 0, 6) };
                 RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
                 pendingIcons.Add((image, app));
                 var content = new StackPanel();
@@ -277,20 +366,27 @@ public sealed class StartMenuWindow : Window
                 tile.ContextMenu = AppMenu(app, pinIndex: i);
                 tiles.Children.Add(tile);
             }
-            page.Children.Add(tiles);
+            page.Add(tiles);
         }
 
         if (look.ShowAllApps)
         {
-            page.Children.Add(SectionHeader("All apps"));
+            page.Add(SectionHeader("All apps"));
             foreach (var group in _apps.GroupBy(a => char.IsLetter(a.Name.FirstOrDefault()) ? char.ToUpperInvariant(a.Name[0]) : '#'))
             {
-                page.Children.Add(new TextBlock { Text = group.Key.ToString(), FontWeight = FontWeights.SemiBold, Opacity = 0.7, Margin = new Thickness(8, 10, 0, 4) });
+                page.Add(new TextBlock { Text = group.Key.ToString(), FontWeight = FontWeights.SemiBold, Opacity = 0.7, Margin = new Thickness(8, 10, 0, 4) });
                 foreach (var app in group)
                 {
                     var image = new Image { Width = 24, Height = 24, Margin = new Thickness(0, 0, 12, 0) };
                     RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
-                    pendingIcons.Add((image, app));
+                    // Its icon once the row is scrolled into view (and the opening animation is done).
+                    var iconOf = app;
+                    image.Loaded += (_, _) =>
+                    {
+                        if (image.Source != null) return;
+                        _opened.Task.ContinueWith(_ => Dispatcher.InvokeAsync(() => image.Source ??= iconOf.Icon, DispatcherPriority.Background),
+                            System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+                    };
                     var row = new StackPanel { Orientation = Orientation.Horizontal };
                     row.Children.Add(image);
                     row.Children.Add(new TextBlock { Text = app.Name, VerticalAlignment = VerticalAlignment.Center });
@@ -298,13 +394,37 @@ public sealed class StartMenuWindow : Window
                     var entry = app;
                     button.Click += (_, _) => Run(entry);
                     button.ContextMenu = AppMenu(entry, pinIndex: null);
-                    page.Children.Add(button);
+                    page.Add(button);
                 }
             }
         }
 
-        _home.Content = page;
+        _home.ItemsSource = page;
         LoadIconsGradually(pendingIcons);
+    }
+
+    /// <summary>A list with its own scroll viewer and a virtualizing panel, scrolling smoothly by pixels.</summary>
+    private static ItemsControl HomeList()
+    {
+        var list = new ItemsControl
+        {
+            Focusable = false,
+            ItemsPanel = (ItemsPanelTemplate)XamlReader.Parse("""
+                <ItemsPanelTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><VirtualizingStackPanel /></ItemsPanelTemplate>
+                """),
+            Template = (ControlTemplate)XamlReader.Parse("""
+                <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="ItemsControl">
+                  <ScrollViewer CanContentScroll="True" Focusable="False" HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                    <ItemsPresenter />
+                  </ScrollViewer>
+                </ControlTemplate>
+                """),
+        };
+        VirtualizingPanel.SetIsVirtualizing(list, true);
+        VirtualizingPanel.SetScrollUnit(list, ScrollUnit.Pixel);
+        ScrollViewer.SetVerticalScrollBarVisibility(list, ScrollBarVisibility.Auto);
+        return list;
     }
 
     private TextBlock SectionHeader(string text) =>
@@ -321,7 +441,9 @@ public sealed class StartMenuWindow : Window
                 pending[next].image.Source = pending[next].app.Icon;
             if (next < pending.Count) Dispatcher.InvokeAsync(Batch, DispatcherPriority.Background);
         }
-        Dispatcher.InvokeAsync(Batch, DispatcherPriority.Background);
+        // After the opening animation: loading icons during it would make it stutter.
+        _opened.Task.ContinueWith(_ => Dispatcher.InvokeAsync(Batch, DispatcherPriority.Background),
+            System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     // ---------- Right-click menu ----------
@@ -501,6 +623,11 @@ public sealed class StartMenuWindow : Window
 
     private void ShowAt(FrameworkElement? anchor, TaskbarEdge edge)
     {
+        // The start state goes on before the window shows, so it never flashes up fully drawn first.
+        var animation = _context.Look.Opening ?? new PopupAnimation();
+        if (Content is FrameworkElement content)
+            animation.Play(content, fromBelow: edge != TaskbarEdge.Top, done: () => _opened.TrySetResult(), startAfter: _filled.Task);
+        else _opened.TrySetResult();
         Show();
         UpdateLayout();
         Place(anchor, edge);
