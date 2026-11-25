@@ -7,11 +7,21 @@ public sealed class MenuLook
     public string? Material { get; set; }
     public Dictionary<string, string>? MaterialValues { get; set; }
 
+    // Colors, corners and font; null / empty = the light or dark default (like Windows' app mode).
+    public string? Background { get; set; }
+    public string? Foreground { get; set; }
+    public string? Hover { get; set; }
+    public string? Border { get; set; }
+    public double CornerRadius { get; set; } = 8;
+    public string? FontFamily { get; set; }
+    public double FontSize { get; set; } = 13;
+
     /// <summary>Hands the look to the menus (they read it each time they open).</summary>
     public void Apply()
     {
         ModernMenu.Material = Material;
         ModernMenu.MaterialValues = MaterialValues;
+        ModernMenu.Look = this;
     }
 }
 
@@ -24,9 +34,23 @@ internal sealed class MenuSettingsWindow : SettingsForm
         Header("Desktop right-click menus");
         Hint("The menus you get by right-clicking the desktop or an icon (as your shell, and in the Desktop preview). " +
              "\"Show more options\" opens Windows' own menu, which keeps Windows' look.");
+
+        Header("Colors");
+        Hint("Empty: the light or dark default, following Windows' app mode.");
+        ColorField("Background", look.Background ?? "", v => look.Background = Empty(v), "#AARRGGBB: lower AA makes it see-through.");
+        ColorField("Text and symbols", look.Foreground ?? "", v => look.Foreground = Empty(v));
+        ColorField("Highlight (entry under the mouse)", look.Hover ?? "", v => look.Hover = Empty(v), "Tip: a faint color, like #20FFFFFF.");
+        ColorField("Border", look.Border ?? "", v => look.Border = Empty(v));
+
+        Header("Shape and text");
+        Slider("Corner radius", look.CornerRadius, 0, 20, v => look.CornerRadius = Math.Round(v));
+        Font("Font", look.FontFamily ?? "Segoe UI Variable Text", v => look.FontFamily = v == "Segoe UI Variable Text" ? null : v);
+        Slider("Font size", look.FontSize, 9, 20, v => look.FontSize = Math.Round(v));
         MaterialFields(look.Material, name => look.Material = name, () => look.MaterialValues ??= new Dictionary<string, string>(),
             "Drawn behind the menu entries; the light or dark menu colors stay.");
     }
+
+    private static string? Empty(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     /// <summary>A menu like the desktop's, at the mouse, to see the material.</summary>
     private static void ShowSample()

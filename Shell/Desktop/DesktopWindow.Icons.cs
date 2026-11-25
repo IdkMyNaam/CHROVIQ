@@ -68,7 +68,7 @@ public sealed partial class DesktopWindow
     {
         if (!_showIcons) return;
         ShowOrHideIcons();
-        if (_shownIconPixels != Layout.IconPixels)
+        if (_shownIconPixels != Layout.IconPixels || _shownLabelKey != LabelKey)
         {
             foreach (var item in _items) SizeIcon(item);
             _shownIconPixels = Layout.IconPixels;
@@ -194,8 +194,17 @@ public sealed partial class DesktopWindow
         item.Visual.Width = cellWidth - 4;
         item.Visual.Height = cellHeight - 4;
         item.Picture.Width = item.Picture.Height = pixels;
-        item.Label.FontSize = Layout.IconSize == DesktopIconSize.Small ? 11 : 12;
-        item.Label.MaxHeight = item.Label.FontSize * 2.8; // two lines
+
+        // The name, as set in Desktop settings (font, size, color, shadow; or no names at all).
+        var label = item.Label;
+        label.Visibility = Layout.ShowLabels ? Visibility.Visible : Visibility.Collapsed;
+        label.FontSize = Math.Clamp(Layout.LabelSize, 8, 24);
+        label.MaxHeight = label.FontSize * 2.8; // two lines
+        try { label.FontFamily = new FontFamily(string.IsNullOrWhiteSpace(Layout.LabelFont) ? "Segoe UI" : Layout.LabelFont); }
+        catch (ArgumentException) { label.FontFamily = new FontFamily("Segoe UI"); }
+        label.Foreground = new SolidColorBrush(TaskbarView.ParseColor(Layout.LabelColor, Colors.White));
+        label.Effect = Layout.LabelShadow ? new DropShadowEffect { BlurRadius = 3, ShadowDepth = 1, Opacity = 0.9 } : null;
+        _shownLabelKey = LabelKey;
         Dispatcher.BeginInvoke(DispatcherPriority.Background, () => item.Picture.Source = ShellIcons.Get(item.Path, Math.Max(pixels, 48)));
     }
 
@@ -298,14 +307,14 @@ public sealed partial class DesktopWindow
 
     private void SetIconSize(DesktopIconSize size)
     {
-        var (oldWidth, oldHeight) = Layout.Cell;
-        Layout.IconSize = size;
-        var (newWidth, newHeight) = Layout.Cell;
-        // Keep icons in the same grid cell at the new size.
-        foreach (var (path, position) in Layout.Positions.ToList())
-            Layout.Positions[path] = new IconPosition(Math.Round(position.X / oldWidth) * newWidth, Math.Round(position.Y / oldHeight) * newHeight);
+        // Keep icons in the same grid cell at the new size; the View menu's sizes replace a custom size.
+        Layout.ChangeKeepingCells(() => { Layout.IconSize = size; Layout.CustomIconPixels = null; });
         DesktopLayout.NotifyChanged();
     }
+
+    /// <summary>Everything about the look of the names, to notice when Desktop settings changed it.</summary>
+    private static string LabelKey => $"{Layout.ShowLabels}|{Layout.LabelFont}|{Layout.LabelSize}|{Layout.LabelColor}|{Layout.LabelShadow}|{Layout.Cell}";
+    private string _shownLabelKey = "";
 
     /// <summary>"Sort by": arranges all icons in that order once (like Windows), and remembers the choice.</summary>
     private void SortIcons(DesktopSort sort)

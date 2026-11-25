@@ -42,7 +42,7 @@ internal sealed class AltTabSwitcher : IDisposable
     /// <summary>"Try it" in the settings: the panel with the current windows for a few seconds.</summary>
     public static void Preview(AltTabLook look)
     {
-        var windows = WindowTracker.FindTaskWindows();
+        var windows = Listed(look);
         if (windows.Count == 0) return;
         var window = new SwitcherWindow();
         window.ShowList(windows, Math.Min(1, windows.Count - 1), look);
@@ -54,13 +54,48 @@ internal sealed class AltTabSwitcher : IDisposable
     private void Open(bool backwards, bool sticky)
     {
         AppTrace.Log($"Alt+Tab: open (backwards {backwards}, sticky {sticky})");
-        _windows = WindowTracker.FindTaskWindows(); // front to back = most recently used first
+        var look = _look();
+        _windows = Listed(look); // front to back = most recently used first
         AppTrace.Log($"Alt+Tab: {_windows.Count} windows");
         if (_windows.Count == 0) { _hook.Close(); return; }
         // The window in front is the current one: start at the next (or, backwards, the last).
         _index = _windows.Count == 1 ? 0 : backwards ? _windows.Count - 1 : 1;
-        if (sticky) ShowWindow(); // Ctrl+Alt+Tab: at once
-        else _showDelay.Start();
+        if (sticky || look.ShowDelayMs <= 0) { ShowWindow(); return; } // Ctrl+Alt+Tab, or no delay: at once
+        _showDelay.Interval = TimeSpan.FromMilliseconds(Math.Clamp(look.ShowDelayMs, 1, 1000));
+        _showDelay.Start();
+    }
+
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+    private const uint MONITOR_NEAREST = 2, MONITOR_PRIMARY = 1;
+
+    /// <summary>The monitor the panel opens on (Alt+Tab settings: under the mouse, the active window's, or the main one).</summary>
+    internal static IntPtr PanelMonitor(AltTabLook look)
+    {
+        switch (look.Monitor)
+        {
+            case AltTabMonitor.ActiveWindow:
+                var active = GetForegroundWindow();
+                if (active != IntPtr.Zero) return MonitorFromWindow(active, MONITOR_NEAREST);
+                break;
+            case AltTabMonitor.Main:
+                return MonitorFromPoint(new POINT { X = 0, Y = 0 }, MONITOR_PRIMARY);
+        }
+        GetCursorPos(out var mouse);
+        return MonitorFromPoint(mouse, MONITOR_NEAREST);
+    }
+
+    /// <summary>The windows to list: all (most recently used first), without minimized ones or other monitors' if so set.</summary>
+    private static List<(IntPtr Handle, string Title)> Listed(AltTabLook look)
+    {
+        var windows = WindowTracker.FindTaskWindows();
+        if (!look.IncludeMinimized) windows = windows.Where(w => !IsIconic(w.hwnd)).ToList();
+        if (look.OnlyThisMonitor)
+        {
+            var monitor = PanelMonitor(look);
+            windows = windows.Where(w => MonitorFromWindow(w.hwnd, MONITOR_NEAREST) == monitor).ToList();
+        }
+        return windows;
     }
 
     private void ShowWindow()
@@ -152,7 +187,11 @@ internal sealed class AltTabSwitcher : IDisposable
 
     private sealed class SwitcherWindow : Window
     {
-        private const double TileWidth = 236, PreviewHeight = 140;
+        // From the look (Alt+Tab settings).
+        private double TileWidth = 236, PreviewHeight = 140, SelectionThickness = 2, TitleSize = 12;
+        private bool ShowTitles = true, ShowIcons = true;
+        private FontFamily TitleFont = new("Segoe UI Variable Text, Segoe UI");
+        private AltTabLook _currentLook = new();
         private readonly WrapPanel _tiles = new() { Orientation = Orientation.Horizontal };
         private readonly List<(IntPtr Thumbnail, Border Box, SIZE Source)> _thumbnails = new();
         private readonly List<Border> _tileBorders = new();
@@ -208,6 +247,15 @@ internal sealed class AltTabSwitcher : IDisposable
             _tileHover = Frozen(new SolidColorBrush(Color.FromArgb(0x18, foreground.R, foreground.G, foreground.B)));
             var accent = TaskbarView.ParseColor(look.Selection, SystemParameters.WindowGlassColor);
             _selectedBorder = Frozen(new SolidColorBrush(accent));
+            _currentLook = look;
+            TileWidth = Math.Clamp(look.TileWidth, 120, 480);
+            PreviewHeight = Math.Clamp(look.PreviewHeight, 60, 360);
+            SelectionThickness = Math.Clamp(look.SelectionThickness, 0, 8);
+            ShowTitles = look.ShowTitles;
+            ShowIcons = look.ShowIcons;
+            TitleSize = Math.Clamp(look.FontSize, 8, 24);
+            try { TitleFont = new FontFamily(string.IsNullOrWhiteSpace(look.FontFamily) ? "Segoe UI Variable Text, Segoe UI" : look.FontFamily); }
+            catch (ArgumentException) { TitleFont = new FontFamily("Segoe UI"); }
             var corner = new CornerRadius(Math.Clamp(look.CornerRadius, 0, 40));
             _materialLayer.CornerRadius = corner;
             _frame.CornerRadius = corner;
@@ -230,10 +278,11 @@ internal sealed class AltTabSwitcher : IDisposable
             if (_hwnd == IntPtr.Zero) new WindowInteropHelper(this).EnsureHandle();
 
             // On the monitor the mouse is on; at most 90 % of its width.
-            var monitor = MonitorUnderMouse();
+            var monitor = MonitorInfoOf(PanelMonitor(look));
             double scale = Math.Max(1, VisualTreeHelper.GetDpi(this).DpiScaleX);
             double maxWidth = (monitor.rcWork.Right - monitor.rcWork.Left) / scale * 0.9;
             Columns = Math.Max(1, Math.Min(windows.Count, (int)((maxWidth - 26) / (TileWidth + 8))));
+            if (look.MaxColumns > 0) Columns = Math.Min(Columns, look.MaxColumns);
             _tiles.MaxWidth = Columns * (TileWidth + 8);
 
             for (int i = 0; i < windows.Count; i++) _tiles.Children.Add(Tile(windows[i], i));
@@ -243,7 +292,10 @@ internal sealed class AltTabSwitcher : IDisposable
             UpdateLayout();
             // Centered on that monitor (physical pixels).
             int width = (int)Math.Ceiling(ActualWidth * scale), height = (int)Math.Ceiling(ActualHeight * scale);
-            int x = (monitor.rcWork.Left + monitor.rcWork.Right - width) / 2, y = (monitor.rcWork.Top + monitor.rcWork.Bottom - height) / 2;
+            int x = (monitor.rcWork.Left + monitor.rcWork.Right - width) / 2;
+            int y = look.Position == AltTabPosition.Top
+                ? monitor.rcWork.Top + (int)(60 * scale)
+                : (monitor.rcWork.Top + monitor.rcWork.Bottom - height) / 2;
             SetWindowPos(_hwnd, HWND_TOPMOST, x, y, width, height, SWP_NOACTIVATE);
             UpdateLayout();
             UpdateThumbnails();
@@ -263,7 +315,7 @@ internal sealed class AltTabSwitcher : IDisposable
 
         private FrameworkElement Tile((IntPtr Handle, string Title) window, int index)
         {
-            var preview = new Border { Width = TileWidth - 16, Height = PreviewHeight, Margin = new Thickness(0, 8, 0, 0) };
+            var preview = new Border { Width = TileWidth - 16, Height = PreviewHeight, Margin = new Thickness(0, ShowTitles || ShowIcons ? 8 : 0, 0, 0) };
             bool minimized = IsIconic(window.Handle);
             AppTrace.Log($"Alt+Tab: preview of \"{window.Title}\"");
             if (!minimized && DwmRegisterThumbnail(_hwnd, window.Handle, out var thumbnail) == 0)
@@ -281,22 +333,27 @@ internal sealed class AltTabSwitcher : IDisposable
             }
 
             var title = new DockPanel();
-            var icon = new Image { Source = WindowIcons.Get(window.Handle), Width = 16, Height = 16, Margin = new Thickness(0, 0, 8, 0) };
-            DockPanel.SetDock(icon, Dock.Left);
-            title.Children.Add(icon);
-            title.Children.Add(new TextBlock
+            if (ShowIcons)
             {
-                Text = window.Title, Foreground = _foreground, FontSize = 12, FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"),
-                TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,
-            });
+                var icon = new Image { Source = WindowIcons.Get(window.Handle), Width = 16, Height = 16, Margin = new Thickness(0, 0, 8, 0) };
+                DockPanel.SetDock(icon, Dock.Left);
+                title.Children.Add(icon);
+            }
+            if (ShowTitles)
+                title.Children.Add(new TextBlock
+                {
+                    Text = window.Title, Foreground = _foreground, FontSize = TitleSize, FontFamily = TitleFont,
+                    TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,
+                });
 
             var stack = new StackPanel();
-            stack.Children.Add(title);
+            if (ShowTitles || ShowIcons) stack.Children.Add(title);
             stack.Children.Add(preview);
             var tile = new Border
             {
                 Width = TileWidth, Margin = new Thickness(4), Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent, Background = Brushes.Transparent, Child = stack,
+                BorderThickness = new Thickness(SelectionThickness), BorderBrush = Brushes.Transparent, Background = Brushes.Transparent, Child = stack,
+                ToolTip = ShowTitles ? null : window.Title, // the title on hover when titles are off
             };
             tile.MouseEnter += (_, _) => tile.Background = _tileHover;
             tile.MouseLeave += (_, _) => tile.Background = Brushes.Transparent;
@@ -334,11 +391,10 @@ internal sealed class AltTabSwitcher : IDisposable
             _thumbnails.Clear();
         }
 
-        private static MONITORINFO MonitorUnderMouse()
+        private static MONITORINFO MonitorInfoOf(IntPtr monitor)
         {
             var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-            GetCursorPos(out var mouse);
-            GetMonitorInfo(MonitorFromPoint(mouse, MONITOR_DEFAULTTONEAREST), ref info);
+            GetMonitorInfo(monitor, ref info);
             return info;
         }
     }

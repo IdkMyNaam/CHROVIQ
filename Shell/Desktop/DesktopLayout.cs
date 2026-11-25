@@ -33,20 +33,55 @@ public sealed class DesktopLayout
     /// <summary>Icon positions by full path (case-insensitive).</summary>
     public Dictionary<string, IconPosition> Positions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // ---------- Look (Desktop settings) ----------
+
+    /// <summary>Your own icon size in pixels (24–128); null = the View menu's small / medium / large.</summary>
+    public int? CustomIconPixels { get; set; }
+
+    /// <summary>Extra space between icons (pixels), across and down.</summary>
+    public double SpacingX { get; set; }
+    public double SpacingY { get; set; }
+
+    public bool ShowLabels { get; set; } = true;
+    /// <summary>Null: Segoe UI.</summary>
+    public string? LabelFont { get; set; }
+    public double LabelSize { get; set; } = 12;
+    public string LabelColor { get; set; } = "#FFFFFF";
+    /// <summary>A soft shadow under the names, so they're readable on any wallpaper.</summary>
+    public bool LabelShadow { get; set; } = true;
+
+    /// <summary>The monitor that shows the icons (its device name); null = the main monitor.</summary>
+    public string? IconMonitor { get; set; }
+
     // ---------- Grid ----------
 
     /// <summary>Icon picture size in pixels.</summary>
     [JsonIgnore]
-    public int IconPixels => IconSize switch { DesktopIconSize.Small => 32, DesktopIconSize.Large => 96, _ => 48 };
+    public int IconPixels => CustomIconPixels is { } custom ? Math.Clamp(custom, 24, 128)
+        : IconSize switch { DesktopIconSize.Small => 32, DesktopIconSize.Large => 96, _ => 48 };
 
     /// <summary>One grid cell (icon + label + spacing).</summary>
     [JsonIgnore]
-    public (double Width, double Height) Cell => IconSize switch
+    public (double Width, double Height) Cell
     {
-        DesktopIconSize.Small => (76, 72),
-        DesktopIconSize.Large => (124, 146),
-        _ => (84, 96),
-    };
+        get
+        {
+            int icon = IconPixels;
+            double label = ShowLabels ? Math.Clamp(LabelSize, 8, 24) * 2.8 + 14 : 12; // two lines of the name
+            return (Math.Max(icon + 36, 76) + Math.Max(0, SpacingX), icon + label + Math.Max(0, SpacingY));
+        }
+    }
+
+    /// <summary>Changes something that changes the grid, keeping every icon in its grid cell (column and row).</summary>
+    public void ChangeKeepingCells(Action change)
+    {
+        var (oldWidth, oldHeight) = Cell;
+        change();
+        var (newWidth, newHeight) = Cell;
+        if (oldWidth == newWidth && oldHeight == newHeight) return;
+        foreach (var (path, position) in Positions.ToList())
+            Positions[path] = new IconPosition(Math.Round(position.X / oldWidth) * newWidth, Math.Round(position.Y / oldHeight) * newHeight);
+    }
 
     // ---------- Load / save ----------
 

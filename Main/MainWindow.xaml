@@ -639,6 +639,17 @@
                         </ui:CardControl>
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Grid24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Desktop icons" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Icon size, spacing, names (font, size, color, shadow) and which monitor has them" Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Desktop settings..." Icon="{ui:SymbolIcon Settings24}" Click="DesktopSettings_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="PaintBrush24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>

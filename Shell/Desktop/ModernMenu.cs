@@ -25,16 +25,28 @@ internal static class ModernMenu
     }
 
     private static ResourceDictionary? _styles;
-    private static bool _stylesDark;
+    private static string? _stylesKey;
 
-    /// <summary>The menu styles for the current light/dark mode (made once per mode).</summary>
+    /// <summary>The menus' colors, corners and font from Menu settings (null: the light/dark defaults).</summary>
+    public static MenuLook? Look { get; set; }
+
+    /// <summary>The menu styles for the current light/dark mode and Menu settings (made again only when those change).</summary>
     private static ResourceDictionary Styles()
     {
         bool dark = IsDark();
-        if (_styles != null && _stylesDark == dark) return _styles;
+        var look = Look;
+        string key = $"{dark}|{look?.Background}|{look?.Foreground}|{look?.Hover}|{look?.Border}|{look?.CornerRadius}|{look?.FontFamily}|{look?.FontSize}";
+        if (_styles != null && _stylesKey == key) return _styles;
         var (background, border, text, hover, separator) = dark
             ? ("#F22C2C2C", "#FF3F3F3F", "#FFFFFFFF", "#1AFFFFFF", "#FF3F3F3F")
             : ("#F7F9F9F9", "#FFE0E0E0", "#FF1A1A1A", "#0F000000", "#FFE5E5E5");
+        // Your colors where you set them (only valid ones; a broken color keeps the default).
+        static string Pick(string? mine, string fallback) => TaskbarView.IsValidColor(mine) && !string.IsNullOrWhiteSpace(mine) ? mine!.Trim() : fallback;
+        background = Pick(look?.Background, background);
+        text = Pick(look?.Foreground, text);
+        hover = Pick(look?.Hover, hover);
+        border = Pick(look?.Border, border);
+        separator = Pick(look?.Border, separator);
 
         string xaml = """
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -164,8 +176,14 @@ internal static class ModernMenu
 """;
         xaml = xaml.Replace("\"BG\"", $"\"{background}\"").Replace("\"BORDER\"", $"\"{border}\"").Replace("\"TEXT\"", $"\"{text}\"")
                    .Replace("\"HOVER\"", $"\"{hover}\"").Replace("\"SEPARATOR\"", $"\"{separator}\"");
+        // Corners of the menu panel (the entries keep their small rounding), and the font.
+        double corner = Math.Clamp(look?.CornerRadius ?? 8, 0, 20);
+        xaml = xaml.Replace("CornerRadius=\"8\"", $"CornerRadius=\"{corner.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"");
+        string font = string.IsNullOrWhiteSpace(look?.FontFamily) ? "Segoe UI Variable Text, Segoe UI" : System.Security.SecurityElement.Escape(look!.FontFamily)!;
+        string size = Math.Clamp(look?.FontSize ?? 13, 9, 20).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        xaml = xaml.Replace("\"Segoe UI Variable Text, Segoe UI\"", $"\"{font}\"").Replace("Value=\"13\"", $"Value=\"{size}\"").Replace("FontSize=\"13\"", $"FontSize=\"{size}\"");
         _styles = (ResourceDictionary)XamlReader.Parse(xaml);
-        _stylesDark = dark;
+        _stylesKey = key;
         return _styles;
     }
 

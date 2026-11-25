@@ -1223,9 +1223,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         foreach (var d in _desktops) d.Close();
         _desktops.Clear();
-        foreach (var monitor in Monitors.All())
+        // The icons go on the monitor chosen in Desktop settings (the main one if none, or if it's gone).
+        var monitors = Monitors.All();
+        string? iconMonitor = DesktopLayout.Current.IconMonitor;
+        if (iconMonitor == null || !monitors.Any(m => m.Device == iconMonitor))
+            iconMonitor = monitors.FirstOrDefault(m => m.IsPrimary)?.Device;
+        foreach (var monitor in monitors)
         {
-            var desktop = new DesktopWindow(monitor, showIcons: monitor.IsPrimary) { OpenCustomizer = ShowFromTray };
+            var desktop = new DesktopWindow(monitor, showIcons: monitor.Device == iconMonitor) { OpenCustomizer = ShowFromTray };
             desktop.Show();
             _desktops.Add(desktop);
         }
@@ -1470,6 +1475,18 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _searchSettings = new SearchSettingsWindow(_settings.Search ??= new SearchLook(), SaveSettings);
         _searchSettings.Closed += (_, _) => _searchSettings = null;
         _searchSettings.Show();
+    }
+
+    private DesktopSettingsWindow? _desktopSettings;
+
+    private void DesktopSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_desktopSettings != null) { _desktopSettings.Activate(); return; }
+        _desktopSettings = new DesktopSettingsWindow(
+            tryIt: () => { if (!ShellMode.IsShell) OpenDesktopPreview(); },
+            monitorChanged: () => { DesktopLayout.NotifyChanged(); if (ShellMode.IsShell) OpenDesktops(); });
+        _desktopSettings.Closed += (_, _) => _desktopSettings = null;
+        _desktopSettings.Show();
     }
 
     private MenuSettingsWindow? _menuSettings;
