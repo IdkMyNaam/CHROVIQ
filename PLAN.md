@@ -72,7 +72,7 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [ ] Note: Windows 11 makes this harder; expect issues
 
 ## Phase 5: A real product people can use
-Order: speed first (measure before changing), then the desktop, then the new UI, then the installer last (it packages the finished app).
+Order: speed first (measure before changing), then the desktop, then the new UI and shader materials, then the installer last (it packages the finished app). The optional extras below are wanted too, after Phase 5.
 
 ### 5a. Lighter and faster
 - [ ] Measure first: startup time, memory, idle CPU (also with Wallpaper Engine / games running)
@@ -92,6 +92,17 @@ Order: speed first (measure before changing), then the desktop, then the new UI,
 - [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
 - [ ] All settings windows in that same style (taskbar designer, start menu/search settings)
 - [ ] Short explanations next to settings; risky options clearly marked
+
+### 5c+. Shader materials (after the new UI, plugs into the redesigned designer)
+Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "material": a GPU shader instead of a plain color.
+- [ ] Built-in materials: frosted glass (Windows' acrylic blur), tinted glass (blur + color), clear glass (bends the wallpaper behind it; in shell mode we draw the wallpaper ourselves), iridescent/animated glow, painted styles (lines, scribbles, watercolor, from a texture)
+- [ ] Own shaders: an HLSL text file (compiled by the app with Windows' own shader compiler) + a small JSON with its settings (colors, sliders like tint, speed, roughness, and textures), shown in the designer automatically
+- [ ] Choose a material per surface, with live preview; share materials like taskbar designs (import/export)
+- [ ] Inputs for shaders: time (animation), mouse position, surface size, the wallpaper behind it, accent color
+- [ ] Safety and speed: a shader that doesn't compile is refused with the error shown; animated shaders pause during games/fullscreen and when nothing changes; a frame-rate limit setting
+- [ ] Note: Blender materials can't be imported directly (3D ray tracing vs. flat UI), but their looks can be rebuilt as shaders
+- [ ] Note: WPF runs only simple pixel shaders (ps_3_0, one pass); bending OTHER windows behind a bar needs live screen capture (costly)
+- [ ] Later: a Direct3D surface for heavier effects (multi-pass blur, real refraction, newer shader versions)
 
 ### 5d. More customization everywhere
 - [ ] Desktop: icon size, spacing, label font/color/shadow, hide labels, icons on every monitor
