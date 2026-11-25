@@ -107,7 +107,17 @@ public partial class TaskbarView
             e.Handled = true;
         };
         Update();
-        EverySecond += Update; // follow changes made elsewhere (keyboard keys, other apps)
+        // Follow changes made elsewhere (keyboard keys, the Windows slider, other apps, new speakers): Windows tells us.
+        // Several quick changes (dragging a slider) give one update.
+        bool queued = false;
+        Action onChanged = () =>
+        {
+            if (queued) return;
+            queued = true;
+            Dispatcher.InvokeAsync(() => { queued = false; Update(); }, System.Windows.Threading.DispatcherPriority.Background);
+        };
+        AudioVolume.Changed += onChanged;
+        _disposables.Add(new Unsubscribe(() => AudioVolume.Changed -= onChanged));
         return button;
     }
 
