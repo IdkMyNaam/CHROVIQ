@@ -61,7 +61,7 @@ internal static class MaterialClock
     }
 
     /// <summary>True when the window in front covers its whole monitor (and isn't the desktop).</summary>
-    private static bool ForegroundIsFullscreen()
+    public static bool ForegroundIsFullscreen()
     {
         var window = GetForegroundWindow();
         if (window == IntPtr.Zero || !GetWindowRect(window, out var rect)) return false;

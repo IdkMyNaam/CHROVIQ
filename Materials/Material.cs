@@ -30,7 +30,8 @@ public sealed class MaterialParameter
 /// alpha (not premultiplied); the shape (rounded corners) is kept automatically. Available:
 /// TIME (seconds), SIZE (pixels), MOUSE (0..1), HOVER (1 while the mouse is over it), Accent (color),
 /// P0..P7 (the settings: sliders in .x, colors as rgba), Texture (sampler, if the material has a texture),
-/// and helpers hash21, noise, fbm, hsv2rgb.
+/// WALLPAPER(uv) (the wallpaper right behind the surface, if "UsesWallpaper" is true), and helpers hash21,
+/// noise, fbm, hsv2rgb.
 /// </summary>
 public sealed class Material
 {
@@ -41,6 +42,9 @@ public sealed class Material
     public List<MaterialParameter> Parameters { get; set; } = new();
     /// <summary>A picture in the material's folder, available in the shader as Texture.</summary>
     public string? Texture { get; set; }
+
+    /// <summary>The shader uses WALLPAPER(uv): the part of the wallpaper right behind the surface.</summary>
+    public bool UsesWallpaper { get; set; }
 
     [JsonIgnore] public string Folder { get; set; } = "";
     [JsonIgnore] public bool BuiltIn { get; set; }
@@ -97,6 +101,8 @@ internal static class Materials
     private const string Header = """
         sampler2D SurfaceInput : register(s0);
         sampler2D Texture : register(s1);
+        sampler2D WallpaperInput : register(s2);
+        #define WALLPAPER(p) tex2D(WallpaperInput, p)
         float4 TimeInfo : register(c0);
         float4 SizeInfo : register(c1);
         float4 MouseInfo : register(c2);

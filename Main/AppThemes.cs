@@ -11,7 +11,7 @@ namespace WindowsCustomizer;
 
 public enum AppThemeMode { System, Light, Dark }
 
-public enum AppThemeBackground { Mica, Acrylic, Tabbed, Color, Image }
+public enum AppThemeBackground { Mica, Acrylic, Tabbed, Color, Image, Material }
 
 /// <summary>
 /// How Windows Customizer's own windows look (not the taskbar, desktop or start menu: those have their designs).
@@ -36,6 +36,10 @@ public sealed class AppTheme
     /// <summary>How solid the cards are (0.2–1); lower lets the background through.</summary>
     public double CardOpacity { get; set; } = 1;
 
+    /// <summary>For the "Material" background: a material (shader) behind the window's content, and its settings.</summary>
+    public string? Material { get; set; }
+    public Dictionary<string, string>? MaterialValues { get; set; }
+
     [JsonIgnore] public bool BuiltIn { get; init; }
 
     /// <summary>An editable copy (never built-in).</summary>
@@ -44,7 +48,8 @@ public sealed class AppTheme
         {
             Name = name, Mode = Mode, Accent = Accent, Background = Background, BackgroundColor = BackgroundColor,
             BackgroundImage = BackgroundImage, ImageOpacity = ImageOpacity, CornerRadius = CornerRadius,
-            FontFamily = FontFamily, CardOpacity = CardOpacity,
+            FontFamily = FontFamily, CardOpacity = CardOpacity, Material = Material,
+            MaterialValues = MaterialValues == null ? null : new Dictionary<string, string>(MaterialValues),
         };
 }
 
@@ -214,7 +219,7 @@ internal static class AppThemes
         window.WindowBackdropType = Backdrop(theme);
 
         // Background: Windows' material, or our color / picture.
-        if (theme.Background is AppThemeBackground.Color or AppThemeBackground.Image)
+        if (theme.Background is AppThemeBackground.Color or AppThemeBackground.Image or AppThemeBackground.Material)
             window.Background = BackgroundBrush(theme);
         else
             window.ClearValue(Window.BackgroundProperty);
@@ -238,6 +243,39 @@ internal static class AppThemes
 
         if (string.IsNullOrWhiteSpace(theme.FontFamily)) window.ClearValue(Window.FontFamilyProperty);
         else window.FontFamily = new FontFamily(theme.FontFamily);
+
+        // A material background: drawn on a layer behind the window's content.
+        var layer = MaterialLayerOf(window);
+        if (theme.Background == AppThemeBackground.Material && theme.Material != null)
+        {
+            layer.Background = BackgroundBrush(theme);
+            var accent = TryColor(theme.Accent) ?? SystemParameters.WindowGlassColor;
+            if (MaterialHost.Attach(layer, window, theme.Material, theme.MaterialValues, accent) is { } error)
+                AppTrace.Log($"App theme material: {error}");
+        }
+        else
+        {
+            layer.Effect = null;
+            layer.Background = null;
+        }
+    }
+
+    /// <summary>
+    /// The window's material layer: its content is put in a grid once, with an (empty, see-through) border behind
+    /// it. The content itself is unchanged (names, title bar and all).
+    /// </summary>
+    private static System.Windows.Controls.Border MaterialLayerOf(FluentWindow window)
+    {
+        if (window.Content is System.Windows.Controls.Grid { Name: "ThemeLayers" } grid && grid.Children[0] is System.Windows.Controls.Border existing)
+            return existing;
+        var content = window.Content as UIElement;
+        window.Content = null;
+        var layers = new System.Windows.Controls.Grid { Name = "ThemeLayers" };
+        var layer = new System.Windows.Controls.Border { IsHitTestVisible = false };
+        layers.Children.Add(layer);
+        if (content != null) layers.Children.Add(content);
+        window.Content = layers;
+        return layer;
     }
 
     private static Brush BackgroundBrush(AppTheme theme)

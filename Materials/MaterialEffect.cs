@@ -14,6 +14,7 @@ public sealed class MaterialEffect : ShaderEffect
 {
     public static readonly DependencyProperty InputProperty = RegisterPixelShaderSamplerProperty("Input", typeof(MaterialEffect), 0);
     public static readonly DependencyProperty TextureProperty = RegisterPixelShaderSamplerProperty("Texture", typeof(MaterialEffect), 1);
+    public static readonly DependencyProperty WallpaperProperty = RegisterPixelShaderSamplerProperty("Wallpaper", typeof(MaterialEffect), 2);
     public static readonly DependencyProperty TimeInfoProperty = Register("TimeInfo", 0);
     public static readonly DependencyProperty SizeInfoProperty = Register("SizeInfo", 1);
     public static readonly DependencyProperty MouseInfoProperty = Register("MouseInfo", 2);
@@ -34,6 +35,7 @@ public sealed class MaterialEffect : ShaderEffect
         PixelShader = shader;
         UpdateShaderValue(InputProperty);
         UpdateShaderValue(TextureProperty);
+        UpdateShaderValue(WallpaperProperty);
         UpdateShaderValue(TimeInfoProperty);
         UpdateShaderValue(SizeInfoProperty);
         UpdateShaderValue(MouseInfoProperty);
@@ -45,6 +47,8 @@ public sealed class MaterialEffect : ShaderEffect
 
     public Brush Input { get => (Brush)GetValue(InputProperty); set => SetValue(InputProperty, value); }
     public Brush Texture { get => (Brush)GetValue(TextureProperty); set => SetValue(TextureProperty, value); }
+    /// <summary>The part of the wallpaper right behind the surface (see <see cref="WallpaperBehind"/>).</summary>
+    public Brush Wallpaper { get => (Brush)GetValue(WallpaperProperty); set => SetValue(WallpaperProperty, value); }
     public Color Accent { get => (Color)GetValue(AccentProperty); set => SetValue(AccentProperty, value); }
 
     public double Seconds

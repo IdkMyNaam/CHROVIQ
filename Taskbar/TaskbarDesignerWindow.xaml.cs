@@ -714,6 +714,17 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             ShellLaunch.OpenFolder(Materials.UserFolder);
         }));
         folders.Children.Add(SmallButton("Built-in materials", () => ShellLaunch.OpenFolder(Materials.BuiltInFolder)));
+        folders.Children.Add(SmallButton("Import material...", () =>
+        {
+            if (MaterialFiles.Import(this) is not { } name) return;
+            look.Material = name; // use it right away
+            Changed();
+            Dispatcher.BeginInvoke(BuildLookOptions);
+        }));
+        folders.Children.Add(SmallButton("Export this material...", () =>
+        {
+            if (Materials.Find(look.Material) is { } chosen) MaterialFiles.Export(this, chosen);
+        }));
         LookOptions.Children.Add(folders);
         Hint(LookOptions, "Your own: copy a built-in material's folder into your materials folder, give it a new name in material.json, " +
                           "and edit material.hlsl. Reopen this tab to see changes.");

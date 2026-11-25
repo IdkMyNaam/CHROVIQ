@@ -44,7 +44,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         });
         details = Section();
         FillMaterial(details, index < 0 ? null : materials[index], values);
-        Hint(hint + " Your own materials go in %AppData%\\WindowsCustomizer\\Materials.");
+        Hint(hint + " Your own materials go in %AppData%\\WindowsCustomizer\\Materials; the taskbar designer can import and export them (.zip).");
     }
 
     private void FillMaterial(StackPanel panel, Material? material, Func<Dictionary<string, string>> values)

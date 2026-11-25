@@ -25,6 +25,7 @@ internal static class MaterialHost
         layer.Effect = effect;
         UpdateSize(layer);
         MaterialClock.Add(effect, layer);
+        if (material.UsesWallpaper) WallpaperBehind.Track(layer, effect);
 
         // Size and mouse handlers once per layer (they work with whatever effect it has now).
         if (!(bool)layer.GetValue(HookedProperty))

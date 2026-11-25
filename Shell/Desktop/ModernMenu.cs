@@ -44,12 +44,17 @@ internal static class ModernMenu
   <SolidColorBrush x:Key="MenuText" Color="TEXT"/>
   <SolidColorBrush x:Key="MenuHover" Color="HOVER"/>
 
+  <!-- Three layers: the shadow, the background (where a material goes, "MaterialLayer"), and the border with the items. -->
   <ControlTemplate x:Key="PanelTemplate" TargetType="ContentControl">
-    <Border Margin="8" Padding="0,4" CornerRadius="8" Background="{StaticResource MenuBackground}"
-            BorderBrush="{StaticResource MenuBorder}" BorderThickness="1">
-      <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.28"/></Border.Effect>
-      <ContentPresenter/>
-    </Border>
+    <Grid Margin="8">
+      <Border CornerRadius="8" Background="{StaticResource MenuBackground}">
+        <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.28"/></Border.Effect>
+      </Border>
+      <Border Name="MaterialLayer" CornerRadius="8" Background="{StaticResource MenuBackground}"/>
+      <Border Padding="0,4" CornerRadius="8" BorderBrush="{StaticResource MenuBorder}" BorderThickness="1">
+        <ContentPresenter/>
+      </Border>
+    </Grid>
   </ControlTemplate>
 
   <Style x:Key="Menu" TargetType="ContextMenu">
@@ -164,13 +169,40 @@ internal static class ModernMenu
         return _styles;
     }
 
+    /// <summary>The menus' material (shader) and its settings; null for a plain background. Set from the settings.</summary>
+    public static string? Material { get; set; }
+    public static Dictionary<string, string>? MaterialValues { get; set; }
+
     /// <summary>A new, empty menu in the Windows 11 look.</summary>
     public static ContextMenu Create()
     {
         var styles = Styles();
         var menu = new ContextMenu { Style = (Style)styles["Menu"] };
         menu.Resources.MergedDictionaries.Add(styles);
+        // The material on the menu's background layer, and on each submenu's when it opens.
+        menu.Opened += (_, _) => AttachMaterial(menu);
+        menu.AddHandler(MenuItem.SubmenuOpenedEvent, new RoutedEventHandler((_, e) =>
+        {
+            if (e.OriginalSource is MenuItem item && item.Template?.FindName("PART_Popup", item) is System.Windows.Controls.Primitives.Popup { Child: { } child })
+                AttachMaterial(child);
+        }));
         return menu;
+    }
+
+    private static void AttachMaterial(DependencyObject root)
+    {
+        if (Material == null || FindLayer(root) is not { } layer || layer.Effect != null) return;
+        if (MaterialHost.Attach(layer, layer, Material, MaterialValues, SystemParameters.WindowGlassColor) is { } error)
+            AppTrace.Log($"Menu material: {error}");
+    }
+
+    /// <summary>The first "MaterialLayer" border in the visual tree (the menu panel's background).</summary>
+    private static Border? FindLayer(DependencyObject root)
+    {
+        if (root is Border { Name: "MaterialLayer" } found) return found;
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            if (FindLayer(VisualTreeHelper.GetChild(root, i)) is { } inChild) return inChild;
+        return null;
     }
 
     public static MenuItem Item(ItemsControl parent, string glyph, string text, Action? action, string? shortcut = null, bool enabled = true)

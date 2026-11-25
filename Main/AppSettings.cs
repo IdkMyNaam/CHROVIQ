@@ -36,6 +36,15 @@ public class AppSettings
     /// <summary>Older setting: Windows key opens our search. Replaced by <see cref="WinKey"/>, still read for old files.</summary>
     public bool WinKeyOpensSearch { get; set; }
 
+    /// <summary>
+    /// Glass materials (Clear glass) show what's really on screen behind them instead of the wallpaper picture.
+    /// Leaves those windows out of screenshots, recordings and screen sharing.
+    /// </summary>
+    public bool LiveGlass { get; set; }
+
+    /// <summary>The desktop's right-click menus (material).</summary>
+    public MenuLook? Menus { get; set; }
+
     /// <summary>The Alt+Tab switcher's look (colors, corners, material).</summary>
     public AltTabLook? AltTab { get; set; }
 

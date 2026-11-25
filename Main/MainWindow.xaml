@@ -366,7 +366,19 @@
                                             <ComboBoxItem Content="Tabbed (Mica, stronger)" />
                                             <ComboBoxItem Content="A color" />
                                             <ComboBoxItem Content="A picture" />
+                                            <ComboBoxItem Content="A material (shader)" />
                                         </ComboBox>
+                                    </ui:CardControl>
+
+                                    <ui:CardControl x:Name="ThemeMaterialCard" Style="{StaticResource Card}">
+                                        <ui:CardControl.Icon><ui:SymbolIcon Symbol="DesignIdeas24" /></ui:CardControl.Icon>
+                                        <ui:CardControl.Header>
+                                            <StackPanel>
+                                                <TextBlock Text="Material" Style="{StaticResource CardTitle}" />
+                                                <TextBlock x:Name="ThemeMaterialText" Style="{StaticResource CardText}" />
+                                            </StackPanel>
+                                        </ui:CardControl.Header>
+                                        <ui:Button Content="Material settings..." Icon="{ui:SymbolIcon Settings24}" Click="ThemeMaterial_Click" />
                                     </ui:CardControl>
 
                                     <ui:CardControl x:Name="ThemeColorCard" Style="{StaticResource Card}">
@@ -459,6 +471,18 @@
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="ShowTaskbarWhileOpenCheck" Click="ShowTaskbarWhileOpenCheck_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Eye24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Live glass: show what's on screen behind it" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="For glass materials (Clear glass): the windows or the (Wallpaper Engine) wallpaper really behind the bar, instead of your wallpaper picture. Uses some CPU (paused for fullscreen apps and games). Side effect: those bars don't show in screenshots, recordings or screen sharing." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="LiveGlassCheck" Click="LiveGlassCheck_Click" />
                         </ui:CardControl>
 
                         <ui:CardControl Style="{StaticResource Card}">
@@ -612,6 +636,17 @@
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:Button x:Name="DesktopPreviewButton" Content="Open preview" Icon="{ui:SymbolIcon Open24}" Click="OpenDesktopPreview_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="PaintBrush24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Right-click menus" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="A material (shader) for the desktop's right-click menus" Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Menu settings..." Icon="{ui:SymbolIcon Settings24}" Click="MenuSettings_Click" />
                         </ui:CardControl>
 
                         <TextBlock Text="Shell (replace Explorer)" Style="{StaticResource Section}" />

@@ -75,7 +75,12 @@ public partial class MainWindow
     private void UpdateThemeFieldStates()
     {
         var background = (AppThemeBackground)Math.Max(0, ThemeBackgroundBox.SelectedIndex);
-        ThemeColorCard.Visibility = background is AppThemeBackground.Color or AppThemeBackground.Image ? Visibility.Visible : Visibility.Collapsed;
+        ThemeColorCard.Visibility = background is AppThemeBackground.Color or AppThemeBackground.Image or AppThemeBackground.Material
+            ? Visibility.Visible : Visibility.Collapsed;
+        ThemeMaterialCard.Visibility = background == AppThemeBackground.Material ? Visibility.Visible : Visibility.Collapsed;
+        ThemeMaterialText.Text = _editingTheme?.Material is { } material
+            ? $"{material}: drawn behind this window's content (the background color shows under it)"
+            : "No material chosen yet: press Material settings...";
         ThemePictureCard.Visibility = background == AppThemeBackground.Image ? Visibility.Visible : Visibility.Collapsed;
         ThemeAccentBox.IsEnabled = ThemeWindowsAccentCheck.IsChecked != true;
         var accent = AppThemes.TryColor(ThemeAccentBox.Text);
@@ -185,6 +190,23 @@ public partial class MainWindow
             StatusText.Text = $"Theme saved as {Path.GetFileName(dialog.FileName)}.";
         }
         catch (Exception ex) { StatusText.Text = $"Could not export the theme: {ex.Message}"; }
+    }
+
+    private ThemeMaterialWindow? _themeMaterialWindow;
+
+    /// <summary>The material for a "Material" background, with its settings (applied and saved as you change them).</summary>
+    private void ThemeMaterial_Click(object sender, RoutedEventArgs e)
+    {
+        if (_editingTheme is not { BuiltIn: false } theme) return;
+        _themeMaterialWindow?.Close();
+        _themeMaterialWindow = new ThemeMaterialWindow(theme, () =>
+        {
+            AppThemes.Apply(theme);
+            SaveTheme(theme);
+            UpdateThemeFieldStates();
+        });
+        _themeMaterialWindow.Closed += (_, _) => _themeMaterialWindow = null;
+        _themeMaterialWindow.Show();
     }
 
     private void ThemeBrowseImage_Click(object sender, RoutedEventArgs e)

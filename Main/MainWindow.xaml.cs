@@ -49,6 +49,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     public MainWindow()
     {
+        // Before any bar or window with a material is made: what glass materials show.
+        WallpaperBehind.Live = _settings.LiveGlass;
         // The app theme (how this app's own windows look); "Windows" follows Windows' light/dark.
         AppThemes.Apply(AppThemes.Find(_settings.AppTheme));
         InitializeComponent();
@@ -88,7 +90,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         PauseForGamesCheck.IsChecked = _settings.PauseForGames;
 
         MaterialClock.FramesPerSecond = _settings.MaterialFps;
+        _settings.Menus?.Apply(); // the desktop menus' material
         ShowTaskbarWhileOpenCheck.IsChecked = _settings.ShowTaskbarWhileOpen;
+        LiveGlassCheck.IsChecked = _settings.LiveGlass;
         _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
         MaterialFpsBox.SelectedIndex = Math.Max(0, Array.IndexOf(FpsChoices, _settings.MaterialFps) is var i && i >= 0 ? i : 1);
         ShowTaskbarCheck.IsChecked = _settings.ShowTaskbar;
@@ -220,6 +224,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _settings.ShowTaskbarWhileOpen = ShowTaskbarWhileOpenCheck.IsChecked == true;
         SaveSettings();
         UpdateKeepTaskbarShown();
+    }
+
+    private void LiveGlassCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.LiveGlass = LiveGlassCheck.IsChecked == true;
+        SaveSettings();
+        WallpaperBehind.Live = _settings.LiveGlass;
+        RebuildBars(); // the bars pick up the new glass source
+        StatusText.Text = _settings.LiveGlass
+            ? "Live glass on. Windows already left out of screenshots stay so until Windows Customizer restarts."
+            : "Live glass off (the wallpaper picture). Restart Windows Customizer to show the bars in screenshots again.";
     }
 
     private static readonly int[] FpsChoices = { 15, 30, 60 };
@@ -1455,6 +1470,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _searchSettings = new SearchSettingsWindow(_settings.Search ??= new SearchLook(), SaveSettings);
         _searchSettings.Closed += (_, _) => _searchSettings = null;
         _searchSettings.Show();
+    }
+
+    private MenuSettingsWindow? _menuSettings;
+
+    private void MenuSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_menuSettings != null) { _menuSettings.Activate(); return; }
+        _menuSettings = new MenuSettingsWindow(_settings.Menus ??= new MenuLook(), SaveSettings);
+        _menuSettings.Closed += (_, _) => _menuSettings = null;
+        _menuSettings.Show();
     }
 
     private AltTabSettingsWindow? _altTabSettings;

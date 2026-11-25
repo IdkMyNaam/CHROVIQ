@@ -1,0 +1,13 @@
+{
+  "Name": "Clear glass",
+  "Description": "The wallpaper behind it, bent like a thick glass pane and softly blurred, with light on the edges. Uses your wallpaper picture (a moving Wallpaper Engine wallpaper shows as its still picture).",
+  "Animated": false,
+  "UsesWallpaper": true,
+  "Parameters": [
+    { "Name": "Bend", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" },
+    { "Name": "Blur", "Type": "Slider", "Min": 0, "Max": 3, "Default": "1" },
+    { "Name": "Tint", "Type": "Color", "Default": "#FFFFFF" },
+    { "Name": "Tint strength", "Type": "Slider", "Min": 0, "Max": 0.8, "Default": "0.08" },
+    { "Name": "Edge light", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" }
+  ]
+}
