@@ -17,6 +17,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly GameWatcher _gameWatcher;
     private readonly ProfileSwitcher _profileSwitcher;
+    private readonly DailyWallpaper _dailyWallpaper;
 
     // Saves the profiles shortly after the last edit, so typing doesn't write the file on every key.
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
@@ -115,6 +116,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
         _gameWatcher.Start();
 
+        // Daily wallpaper.
+        _dailyWallpaper = new DailyWallpaper(_settings.DailyWallpaper ??= new DailyWallpaperSettings(), SaveSettings);
+        _dailyWallpaper.Status += text => { StatusText.Text = text; ShowDailyWallpaper(); };
+        _loading = true;
+        DailySourceBox.SelectedIndex = (int)_settings.DailyWallpaper.Source;
+        _loading = false;
+        DailyWallpaperCheck.IsChecked = _settings.DailyWallpaper.Enabled;
+        ShowDailyWallpaper();
+        Dispatcher.BeginInvoke(async () => await _dailyWallpaper.UpdateAsync(), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
         // Desktop widgets.
         ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
         WidgetManager.Start(_settings, SaveSettings);
@@ -173,6 +184,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             _gameWatcher.Stop();
             _profileSwitcher.Stop();
             WidgetManager.CloseAll();
+            _dailyWallpaper.Stop();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
@@ -687,6 +699,51 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         NameBox.Focus();
         NameBox.SelectAll(); // ready to type a real name
     }
+
+    // ---------- Daily wallpaper ----------
+
+    /// <summary>The card's text: what's showing today, or what it does.</summary>
+    private void ShowDailyWallpaper()
+    {
+        var daily = _settings.DailyWallpaper;
+        DailyFolderButton.Visibility = daily.Source == DailyWallpaperSource.Folder ? Visibility.Visible : Visibility.Collapsed;
+        DailyWallpaperText.Text = daily.Enabled && daily.CurrentTitle is { Length: > 0 } title && daily.LastChanged?.Date == DateTime.Today
+            ? $"Today: {title}"
+            : daily.Source == DailyWallpaperSource.Folder && string.IsNullOrWhiteSpace(daily.Folder)
+                ? "A new wallpaper every day from your own folder: choose it with \"Folder...\"."
+                : "A new wallpaper every day: Bing's picture of the day, a Windows Spotlight photo, or one from your own folder.";
+    }
+
+    private async void DailyWallpaperCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.DailyWallpaper.Enabled = DailyWallpaperCheck.IsChecked == true;
+        if (_settings.DailyWallpaper.Enabled) _settings.DailyWallpaper.LastChanged = null; // switched on: a picture now
+        SaveSettings();
+        ShowDailyWallpaper();
+        await _dailyWallpaper.UpdateAsync();
+    }
+
+    private async void DailySourceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || DailySourceBox.SelectedIndex < 0) return;
+        _settings.DailyWallpaper.Source = (DailyWallpaperSource)DailySourceBox.SelectedIndex;
+        SaveSettings();
+        ShowDailyWallpaper();
+        if (_settings.DailyWallpaper.Source == DailyWallpaperSource.Folder && string.IsNullOrWhiteSpace(_settings.DailyWallpaper.Folder)) return;
+        if (_settings.DailyWallpaper.Enabled) await _dailyWallpaper.NextAsync(); // the new source right away
+    }
+
+    private async void DailyFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Folder with wallpapers", InitialDirectory = _settings.DailyWallpaper.Folder ?? "" };
+        if (dialog.ShowDialog(this) != true) return;
+        _settings.DailyWallpaper.Folder = dialog.FolderName;
+        SaveSettings();
+        ShowDailyWallpaper();
+        if (_settings.DailyWallpaper.Enabled) await _dailyWallpaper.NextAsync();
+    }
+
+    private async void DailyNext_Click(object sender, RoutedEventArgs e) => await _dailyWallpaper.NextAsync();
 
     private void ShowWidgetsCheck_Click(object sender, RoutedEventArgs e)
     {

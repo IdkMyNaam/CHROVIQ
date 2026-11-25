@@ -730,6 +730,27 @@
                         <TextBlock Text="Wallpaper Engine &amp; games" Style="{StaticResource PageTitle}" />
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="CalendarToday24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Daily wallpaper" Style="{StaticResource CardTitle}" />
+                                    <TextBlock x:Name="DailyWallpaperText" Style="{StaticResource CardText}" TextWrapping="Wrap"
+                                               Text="A new wallpaper every day: Bing's picture of the day, a Windows Spotlight photo, or one from your own folder." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="DailySourceBox" Width="170" Margin="0,0,8,0" SelectionChanged="DailySourceBox_SelectionChanged">
+                                    <ComboBoxItem Content="Bing picture of the day" />
+                                    <ComboBoxItem Content="Windows Spotlight" />
+                                    <ComboBoxItem Content="My own folder" />
+                                </ComboBox>
+                                <ui:Button x:Name="DailyFolderButton" Content="Folder..." Margin="0,0,8,0" Click="DailyFolder_Click" />
+                                <ui:Button Content="Next" Icon="{ui:SymbolIcon ArrowRight24}" Margin="0,0,12,0" Click="DailyNext_Click" ToolTip="A new picture now" />
+                                <ui:ToggleSwitch x:Name="DailyWallpaperCheck" Click="DailyWallpaperCheck_Click" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="ImageMultiple24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>

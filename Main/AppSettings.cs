@@ -78,6 +78,9 @@ public class AppSettings
     /// <summary>Apps pinned to the start menu, in order.</summary>
     public List<StartPin> StartPinned { get; set; } = new();
 
+    /// <summary>A new wallpaper every day (Bing, Spotlight or a folder).</summary>
+    public DailyWallpaperSettings DailyWallpaper { get; set; } = new();
+
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;
 

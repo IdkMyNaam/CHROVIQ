@@ -36,7 +36,8 @@ internal static class SettingsBackup
     private static bool Skip(string relative)
     {
         string top = relative.Split(Path.DirectorySeparatorChar)[0];
-        if (top.Equals("Backups", StringComparison.OrdinalIgnoreCase) || top.Equals("PendingRestore", StringComparison.OrdinalIgnoreCase)) return true;
+        if (top.Equals("Backups", StringComparison.OrdinalIgnoreCase) || top.Equals("PendingRestore", StringComparison.OrdinalIgnoreCase)
+            || top.Equals("Wallpapers", StringComparison.OrdinalIgnoreCase)) return true; // daily wallpapers: downloaded again
         string ext = Path.GetExtension(relative).ToLowerInvariant();
         return ext is ".log" or ".bad" or ".tmp";
     }
