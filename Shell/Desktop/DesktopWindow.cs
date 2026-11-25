@@ -87,6 +87,7 @@ public sealed partial class DesktopWindow : Window
         ShowWallpaper();
 
         if (!_showIcons) return;
+        ShellNew.Preload(); // the "New" menu's file types, read in the background
         // After the window is up (and, as the shell, after the shell window is registered).
         Dispatcher.BeginInvoke(DispatcherPriority.Background, Refresh);
         WatchDesktopFolders();
@@ -111,6 +112,9 @@ public sealed partial class DesktopWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // While Windows' classic menu is open, its submenus (Send to, Open with, New) are filled through us.
+        if (ShellContextMenu.HandleMenuMessage(msg, wParam, lParam, out var menuResult)) { handled = true; return menuResult; }
+
         // The work area changed (a bar was added, moved or removed): move the icons with it.
         if (msg == WM_SETTINGCHANGE && wParam.ToInt32() == SPI_SETWORKAREA)
             Dispatcher.InvokeAsync(FitIconsToWorkArea);
@@ -183,8 +187,28 @@ public sealed partial class DesktopWindow : Window
     {
         if (e.Key == Key.F5) { Refresh(); e.Handled = true; return; }
         if (HandleSelectionKey(e)) { e.Handled = true; return; }
+        bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        var key = e.Key == Key.System ? e.SystemKey : e.Key; // Alt+... and F10 arrive as "system" keys
         var selected = SelectedItems();
+
+        if (ctrl && key == Key.V) { Paste(); e.Handled = true; return; }
+        // The menu key, or Shift+F10: Windows' classic menu (like Explorer's Shift+F10).
+        if (key == Key.Apps || (key == Key.F10 && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)))
+        {
+            if (selected.Count > 0) ShowClassicItemMenu(selected, extended: false);
+            else ShowClassicDesktopMenu(Mouse.GetPosition(_iconArea), extended: false);
+            e.Handled = true;
+            return;
+        }
         if (selected.Count == 0) return;
+        if (ctrl && key == Key.C) { CopyItems(selected, cut: false); e.Handled = true; return; }
+        if (ctrl && key == Key.X) { CopyItems(selected, cut: true); e.Handled = true; return; }
+        if (key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) && selected.Count == 1)
+        {
+            Properties(selected[0].Path);
+            e.Handled = true;
+            return;
+        }
         switch (e.Key)
         {
             case Key.Enter: OpenItems(selected); e.Handled = true; break;

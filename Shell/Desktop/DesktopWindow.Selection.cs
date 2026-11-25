@@ -51,7 +51,7 @@ public sealed partial class DesktopWindow
         {
             if (e.OriginalSource != _iconArea) return;
             SelectOnly(null);
-            DesktopMenu().IsOpen = true;
+            ShowDesktopMenu(e.GetPosition(_iconArea));
             e.Handled = true;
         };
         _iconArea.MouseMove += (_, e) => OnGestureMove(e.GetPosition(_iconArea));
@@ -128,7 +128,7 @@ public sealed partial class DesktopWindow
     private void OnItemRightClick(DesktopItem item, MouseButtonEventArgs e)
     {
         if (!_selection.Contains(item)) SelectOnly(item);
-        ItemMenu(SelectedItems()).IsOpen = true;
+        ShowItemMenu(SelectedItems());
         e.Handled = true;
     }
 
