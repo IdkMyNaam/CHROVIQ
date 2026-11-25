@@ -18,6 +18,12 @@ public class AppSettings
     /// <summary>Name of the last applied profile, so the hotkey continues cycling from there after a restart.</summary>
     public string? LastAppliedProfile { get; set; }
 
+    /// <summary>Switch profiles by themselves, following <see cref="AutoSwitchRules"/>.</summary>
+    public bool AutoSwitch { get; set; }
+
+    /// <summary>Time and app rules for switching profiles (see ProfileSwitcher).</summary>
+    public List<AutoSwitchRule> AutoSwitchRules { get; set; } = new();
+
     /// <summary>True once the "still running in the tray" message was shown.</summary>
     public bool TrayHintShown { get; set; }
 
@@ -108,10 +114,14 @@ public class AppSettings
     /// <summary>Set by <see cref="Load"/> when settings.json could not be read; shown in the status line.</summary>
     public static string? LoadWarning { get; private set; }
 
+    /// <summary>True when there was no settings.json yet: the first start (the setup wizard shows).</summary>
+    public static bool IsFirstRun { get; private set; }
+
     public static AppSettings Load()
     {
         LoadWarning = null;
-        if (!File.Exists(FilePath)) return new AppSettings();
+        IsFirstRun = !File.Exists(FilePath);
+        if (IsFirstRun) return new AppSettings();
 
         try
         {

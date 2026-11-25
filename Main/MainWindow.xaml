@@ -138,6 +138,20 @@
                         <TextBlock Text="Profiles" Style="{StaticResource PageTitle}" />
                         <TextBlock Style="{StaticResource CardText}" Margin="0,-8,0,16"
                                    Text="A profile is a look you can switch to in one go: light or dark, accent color, cursors, taskbar design and wallpaper. Switch with the tray menu or Ctrl+Alt+P." />
+                        <ui:CardControl Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="ArrowSync24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Switch profiles automatically" Style="{StaticResource CardTitle}" />
+                                    <TextBlock x:Name="AutoSwitchText" Style="{StaticResource CardText}"
+                                               Text="By time of day (Night at 21:00), or while an app runs (Gaming while a game is open)." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Rules..." Icon="{ui:SymbolIcon List24}" Margin="0,0,12,0" Click="AutoSwitchRules_Click" />
+                                <ui:ToggleSwitch x:Name="AutoSwitchCheck" Click="AutoSwitchCheck_Click" />
+                            </StackPanel>
+                        </ui:CardControl>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="210" />
@@ -146,6 +160,9 @@
 
                             <ui:Card Grid.Column="0" VerticalAlignment="Top" Margin="0,0,12,0" Padding="8">
                                 <DockPanel>
+                                    <ui:Button DockPanel.Dock="Bottom" Content="Add an example..." Icon="{ui:SymbolIcon Sparkle24}" Margin="0,8,0,0"
+                                               HorizontalAlignment="Stretch" Click="AddExampleProfile_Click"
+                                               ToolTip="Ready-made profiles to start from: gaming, school, night" />
                                     <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,8,0,0">
                                         <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" HorizontalAlignment="Stretch"
                                                    Click="AddProfile_Click" />
@@ -738,6 +755,31 @@
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:Button Content="Open folder" Icon="{ui:SymbolIcon FolderOpen24}" Click="OpenDataFolder_Click" />
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Sparkle24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Setup wizard" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="The few steps from the first start: the app's look, the taskbar, the Windows key and Alt+Tab." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Run it again" Icon="{ui:SymbolIcon Play24}" Click="RunSetupWizard_Click" />
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="ArchiveArrowBack24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Back up and restore" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="Everything in one .zip: settings, profiles, desktop layout, app themes, taskbar designs and your materials. For a new PC, or a copy before trying things. A restore backs up your current settings first." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Back up..." Icon="{ui:SymbolIcon Save24}" Margin="0,0,8,0" Click="BackUpSettings_Click" />
+                                <ui:Button Content="Restore..." Icon="{ui:SymbolIcon ArrowReset24}" Click="RestoreSettings_Click" />
+                            </StackPanel>
                         </ui:CardControl>
                         <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Wrench24" /></ui:CardControl.Icon>

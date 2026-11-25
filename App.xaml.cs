@@ -6,6 +6,9 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // A settings restore staged earlier goes into place first, before anything reads the settings.
+        SettingsBackup.ApplyPending(e.Args);
+
         // "--shell" when started by ShellLauncher.ps1 as the user's shell (Phase 4).
         ShellMode.ReadCommandLine(e.Args);
         if (ShellMode.RefusedBecauseExplorer)

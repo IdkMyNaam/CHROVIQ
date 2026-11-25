@@ -24,6 +24,25 @@ public static class ProfileStore
     };
 
     /// <summary>
+    /// Ready-made profiles to start from (Profiles page, "Add an example..."). They only use built-in things:
+    /// Windows' own wallpapers (when this Windows has them) and the built-in taskbar designs.
+    /// </summary>
+    public static List<Profile> Examples()
+    {
+        string web = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"Web\Wallpaper\Windows");
+        string? Picture(string file) => File.Exists(Path.Combine(web, file)) ? Path.Combine(web, file) : null;
+        return new()
+        {
+            // Dark with a red accent and a floating dock: the bar stays out of the way of the game.
+            new Profile { Name = "Gaming", DarkMode = true, AccentColor = "#E81123", TaskbarDesign = "Dock", WallpaperValue = Picture("img19.jpg") },
+            // Light and calm, the classic bar with everything in reach.
+            new Profile { Name = "School", DarkMode = false, AccentColor = "#0078D4", TaskbarDesign = "Classic", WallpaperValue = Picture("img0.jpg") },
+            // Dark with a warm accent and a minimal bar: less light and less to look at in the evening.
+            new Profile { Name = "Night", DarkMode = true, AccentColor = "#F7630C", TaskbarDesign = "Minimal", WallpaperValue = Picture("img19.jpg") },
+        };
+    }
+
+    /// <summary>
     /// Loads the saved profiles, or the defaults if there are none.
     /// If the file is broken it is renamed to profiles.json.bad (never overwritten) and
     /// <paramref name="warning"/> explains what happened.

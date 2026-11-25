@@ -16,6 +16,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly GameWatcher _gameWatcher;
+    private readonly ProfileSwitcher _profileSwitcher;
 
     // Saves the profiles shortly after the last edit, so typing doesn't write the file on every key.
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
@@ -114,6 +115,20 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
         _gameWatcher.Start();
 
+        // Automatic profile switching (time and app rules).
+        _profileSwitcher = new ProfileSwitcher(_settings, async name =>
+        {
+            if (_profiles.FirstOrDefault(p => p.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)) is { } profile)
+                await ApplyProfileAsync(profile, notify: true);
+        });
+        AutoSwitchCheck.IsChecked = _settings.AutoSwitch;
+        UpdateAutoSwitchText();
+        // Once everything is set up (designs loaded): a time rule may apply a profile right away.
+        Dispatcher.BeginInvoke(_profileSwitcher.Update, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        // The very first start: a few steps to set up the basics (not as the shell: that's set up already).
+        if (AppSettings.IsFirstRun && !ShellMode.IsShell)
+            Dispatcher.BeginInvoke(RunSetupWizard, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
         WatchDisplayChanges();
@@ -152,6 +167,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             SaveGameList(); // in case the games box still has focus
             _gameWatcher.Stop();
+            _profileSwitcher.Stop();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
             _hotKey.Dispose();
@@ -260,6 +276,68 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void OpenDataFolder_Click(object sender, RoutedEventArgs e) => ShellLaunch.OpenFolder(AppSettings.Folder);
 
     private void OpenAppFolder_Click(object sender, RoutedEventArgs e) => ShellLaunch.OpenFolder(AppContext.BaseDirectory);
+
+    private void RunSetupWizard_Click(object sender, RoutedEventArgs e) => RunSetupWizard();
+
+    /// <summary>Shows the setup wizard; Finish applies its choices with the same code as the settings pages.</summary>
+    private void RunSetupWizard()
+    {
+        var wizard = new SetupWizard(_settings.TaskbarEdge);
+        if (IsVisible) wizard.Owner = this;
+        bool finished = wizard.ShowDialog() == true;
+        if (!finished)
+        {
+            AppThemes.Apply(AppThemes.Find(_settings.AppTheme)); // the look tried in step 1 goes back
+            SaveSettings(); // so it doesn't show again next start
+            return;
+        }
+        var c = wizard.Choices;
+
+        // App look: through the theme list, which uses it and remembers it.
+        if (ThemeList.Items.OfType<ThemeItem>().FirstOrDefault(t => t.Theme.Name == c.AppTheme) is { } theme) ThemeList.SelectedItem = theme;
+        else { AppThemes.Apply(AppThemes.Find(c.AppTheme)); _settings.AppTheme = c.AppTheme; }
+
+        // Taskbar.
+        if (c.TaskbarDesign is { } design)
+        {
+            _settings.TaskbarEdge = c.Edge;
+            _loading = true;
+            TaskbarEdgeBox.SelectedIndex = (int)c.Edge;
+            _loading = false;
+            _settings.TaskbarDesign = design;
+            SaveSettings();
+            LoadDesigns();
+            if (TaskbarShown) RebuildBars(); else SetTaskbarVisible(true);
+            if (c.HideWindowsTaskbar != WindowsTaskbar.IsHiding) SetWindowsTaskbarHidden(c.HideWindowsTaskbar);
+        }
+        else if (TaskbarShown) SetTaskbarVisible(false);
+
+        // Windows key and Alt+Tab.
+        SetWinKey(c.WinKey);
+        AltTabCheck.IsChecked = c.OwnAltTab;
+        _settings.OwnAltTab = c.OwnAltTab;
+        SaveSettings();
+        UpdateAltTab();
+        StatusText.Text = "All set. Everything can be changed on these pages; the About page can run the wizard again.";
+    }
+
+    private void BackUpSettings_Click(object sender, RoutedEventArgs e)
+    {
+        SaveSettings();   // what's on screen is in the backup
+        SaveProfiles();
+        if (SettingsBackup.BackUp(this) is { } status) StatusText.Text = status;
+    }
+
+    private void RestoreSettings_Click(object sender, RoutedEventArgs e)
+    {
+        SaveSettings();   // so the automatic "before restore" backup has the latest
+        SaveProfiles();
+        if (SettingsBackup.Restore(this, out bool restart) is not { } status) return;
+        StatusText.Text = status;
+        if (!restart) return;
+        SettingsBackup.Restart(); // the new copy waits for this one to close, then restores
+        ExitApp();
+    }
 
     private AltTabSwitcher? _altTab;
 
@@ -602,6 +680,58 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         NameBox.Focus();
         NameBox.SelectAll(); // ready to type a real name
+    }
+
+    private void AutoSwitchCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.AutoSwitch = AutoSwitchCheck.IsChecked == true;
+        SaveSettings();
+        if (_settings.AutoSwitch && _settings.AutoSwitchRules.Count == 0) AutoSwitchRules_Click(sender, e); // nothing to follow yet
+        UpdateAutoSwitchText();
+        _profileSwitcher.Update();
+    }
+
+    private void AutoSwitchRules_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new AutoSwitchWindow(_settings.AutoSwitchRules, _profiles.Select(p => p.Name).ToList(), SaveSettings) { Owner = this };
+        window.ShowDialog();
+        UpdateAutoSwitchText();
+        _profileSwitcher.Update();
+    }
+
+    /// <summary>The card's text says how many rules there are once there are some.</summary>
+    private void UpdateAutoSwitchText()
+    {
+        int times = _settings.AutoSwitchRules.Count(r => r.When == AutoSwitchWhen.Time);
+        int apps = _settings.AutoSwitchRules.Count - times;
+        AutoSwitchText.Text = _settings.AutoSwitchRules.Count == 0
+            ? "By time of day (Night at 21:00), or while an app runs (Gaming while a game is open)."
+            : $"{times} time rule{(times == 1 ? "" : "s")}, {apps} app rule{(apps == 1 ? "" : "s")}." +
+              (_settings.AutoSwitch ? "" : " Off: turn it on to follow them.");
+    }
+
+    /// <summary>A menu of ready-made profiles; the chosen one is added (with a free name) and selected.</summary>
+    private void AddExampleProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        foreach (var example in ProfileStore.Examples())
+        {
+            var item = new MenuItem { Header = example.Name };
+            item.Click += (_, _) =>
+            {
+                string name = example.Name;
+                for (int n = 2; _profiles.Any(p => p.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)); n++)
+                    name = $"{example.Name} {n}";
+                example.Name = name;
+                _profiles.Add(example);
+                ProfileList.SelectedIndex = _profiles.Count - 1;
+                UpdateDeleteButton();
+                ScheduleSave();
+                StatusText.Text = $"Added \"{name}\". Change anything you like, then press Apply.";
+            };
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
     }
 
     private void DeleteProfile_Click(object sender, RoutedEventArgs e)
