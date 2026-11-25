@@ -75,19 +75,22 @@ Goal: design your own taskbar instead of using a fixed layout.
 Order: speed first (measure before changing), then the desktop, then the new UI and shader materials, then the installer last (it packages the finished app). The optional extras below are wanted too, after Phase 5.
 
 ### 5a. Lighter and faster
-- [ ] Measure first: startup time, memory, idle CPU (also with Wallpaper Engine / games running)
-- [ ] Fewer timers and polling (watchdogs, stats, window list); event-based where Windows allows it
-- [ ] Load only what's used (modules, search index, tray) and load it later where possible
-- [ ] Release build with ReadyToRun; check trimming and size
+- [x] Measure first: startup time, memory, idle CPU (about 1.3-2 s to the first window, about 0.5 % of one core idle, about 100 MB private; old vs new measured back to back, the PC's own activity is the biggest noise)
+- [x] Fewer timers and polling (watchdogs, stats, window list, game watcher, clock, volume); event-based where Windows allows it
+- [ ] Load only what's used (modules, search index, tray) and load it later where possible; find what the memory is (icons, search, tray)
+- [x] Release build with ReadyToRun (publish profile `Release`, bin\publish); [ ] check trimming and size
 
 ### 5b. Desktop like Windows' own
-- [ ] Right-click on the background like Windows 11: View (icon size, auto arrange, align to grid, show icons), Sort by (name, size, type, date modified), Refresh, New (folder, shortcut, the file types Windows offers), Display settings, Personalise, Open in Terminal
-- [ ] "Show more options": the full Windows menu, including other apps' entries (Open with Code, Zed, ...)
-- [ ] Right-click on icons: the full Windows file menu (Open with, Send to, Cut/Copy, other apps' entries)
-- [ ] Multi-select: drag a selection box, Ctrl+click, Shift+click, Ctrl+A; open/delete/copy several items at once
-- [ ] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin, drag files in and out of File Explorer
-- [ ] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows
-- [ ] Alt tabing like windows -manualy writen
+- [x] Desktop preview (app menu): the shell desktop in a normal window, to try everything without being the shell
+- [x] Right-click on the background like Windows 11: View (icon size, auto arrange, align to grid, show icons), Sort by (name, size, type, date modified), Refresh, New (folder, shortcut, the file types Windows offers), Display settings, Personalise, Open in Terminal
+- [x] "Show more options": the full Windows menu, including other apps' entries (Open with Code, Zed, ...)
+- [x] Right-click on icons: the full Windows file menu (Open with, Send to, Cut/Copy, other apps' entries)
+- [x] Multi-select: drag a selection box, Ctrl+click, Shift+click, Ctrl+A, arrow keys; open/delete/copy several items at once
+- [x] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin/programs, drag files in and out of File Explorer
+- [x] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows (undo also restores deleted items from the Recycle Bin)
+- [x] Windows' own desktop icons (Recycle Bin, This PC, ...) as set in Desktop icon settings
+- [x] Alt tabing like windows -manualy writen (own switcher with live previews; app menu "Own Alt+Tab switcher", always on as the shell)
+- [ ] Later: "Text Document" in New even when Notepad doesn't register it; Windows' classic menu for icons from both Desktop folders at once
 
 ### 5c. New, professional UI
 - [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
