@@ -10,7 +10,7 @@ using Microsoft.Win32;
 
 namespace WindowsCustomizer;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly ObservableCollection<Profile> _profiles;
 
@@ -49,7 +49,12 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // Light or dark like Windows' app mode, and follow it when it changes.
+        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
         InitializeComponent();
+        Loaded += (_, _) => Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
+        NavList.SelectedIndex = 0;
+        VersionText.Text = $"Version {typeof(App).Assembly.GetName().Version?.ToString(3)}";
         BuildAccentSwatches();
         LoadCursorChoices();
 
@@ -180,12 +185,37 @@ public partial class MainWindow : Window
         yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
         yield return new AppMenuItem("Start menu", OpenStartMenu);
         if (!ShellMode.IsShell) yield return new AppMenuItem("Desktop preview", OpenDesktopPreview);
+        DesktopPreviewButton.IsEnabled = !ShellMode.IsShell;
         yield return new AppMenuItem("Own Alt+Tab switcher", () => { _settings.OwnAltTab = !_settings.OwnAltTab; SaveSettings(); UpdateAltTab(); },
             IsChecked: _altTab != null, IsEnabled: !ShellMode.IsShell); // as the shell it's always on (Windows' own needs Explorer)
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
     }
+
+    // ---------- Sidebar and the small buttons of the new layout ----------
+
+    /// <summary>Shows the page picked in the sidebar.</summary>
+    private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (PageProfiles == null) return; // during InitializeComponent
+        var pages = new FrameworkElement[] { PageProfiles, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageAbout };
+        for (int i = 0; i < pages.Length; i++)
+            pages[i].Visibility = i == NavList.SelectedIndex ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void AltTabCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.OwnAltTab = AltTabCheck.IsChecked == true;
+        SaveSettings();
+        UpdateAltTab();
+    }
+
+    private void OpenDesktopPreview_Click(object sender, RoutedEventArgs e) => OpenDesktopPreview();
+
+    private void OpenDataFolder_Click(object sender, RoutedEventArgs e) => ShellLaunch.OpenFolder(AppSettings.Folder);
+
+    private void OpenAppFolder_Click(object sender, RoutedEventArgs e) => ShellLaunch.OpenFolder(AppContext.BaseDirectory);
 
     private AltTabSwitcher? _altTab;
 
@@ -203,6 +233,8 @@ public partial class MainWindow : Window
             _altTab.Dispose(); // Windows' own Alt+Tab again
             _altTab = null;
         }
+        AltTabCheck.IsChecked = _altTab != null;
+        AltTabCheck.IsEnabled = !ShellMode.IsShell; // as the shell it's always on (Windows' own needs Explorer)
     }
 
     private DesktopWindow? _desktopPreview;

@@ -89,13 +89,15 @@ Order: speed first (measure before changing), then the desktop, then the new UI 
 - [x] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin/programs, drag files in and out of File Explorer
 - [x] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows (undo also restores deleted items from the Recycle Bin)
 - [x] Windows' own desktop icons (Recycle Bin, This PC, ...) as set in Desktop icon settings
-- [x] Alt tabing like windows -manualy writen (own switcher with live previews; app menu "Own Alt+Tab switcher", always on as the shell)
+- [x] Alt tabing like windows (own switcher with live previews; app menu "Own Alt+Tab switcher", always on as the shell)
 - [ ] Later: "Text Document" in New even when Notepad doesn't register it; Windows' classic menu for icons from both Desktop folders at once
 
 ### 5c. New, professional UI
 - [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
 - [ ] All settings windows in that same style (taskbar designer, start menu/search settings)
 - [ ] Short explanations next to settings; risky options clearly marked
+- [ ] App themes (how Windows Customizer itself looks): "Windows" (the Windows 11 look, default, light/dark like Windows) and more built-in ones later (for example a dark glass, a high-contrast, a retro look)
+- [ ] Custom app themes: colors, accent, corner radius, fonts, backdrop (Mica / acrylic / solid / an image), card style; made in a theme editor with live preview, saved as JSON, import/export like taskbar designs; later also shader materials (5c+)
 
 ### 5c+. Shader materials (after the new UI, plugs into the redesigned designer)
 Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "material": a GPU shader instead of a plain color.

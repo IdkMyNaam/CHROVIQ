@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="ManagedShell" Version="0.0.374" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>

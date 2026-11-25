@@ -1,6 +1,18 @@
 <Application x:Class="WindowsCustomizer.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              StartupUri="Main/MainWindow.xaml" ShutdownMode="OnMainWindowClose">
-    <Application.Resources />
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Only WPF-UI's named colors and brushes (light/dark), no control styles: those are merged into the
+                     settings windows themselves, so the taskbar, start menu and desktop keep their own looks. -->
+                <ui:ThemesDictionary Theme="Dark" />
+            </ResourceDictionary.MergedDictionaries>
+            <!-- WPF-UI's icons read this when they are created, from the app-wide resources. -->
+            <sys:Double x:Key="DefaultIconFontSize">16</sys:Double>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>
