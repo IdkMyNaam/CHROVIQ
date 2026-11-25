@@ -68,14 +68,57 @@ Goal: design your own taskbar instead of using a fixed layout.
 - [ ] Tray icons, notifications (tray via ManagedShell in shell mode works; Windows notifications/Win+A/Win+N need Explorer)
 - [x] File browsing: a hidden "Progman" window is registered as the shell window, and explorer.exe is never started directly, so folders open as File Explorer windows without Explorer taking over; tested in ShellTest
 - [x] Diagnostics: `%AppData%\WindowsCustomizer\shell.log` (timed steps, startup programs, every Explorer that starts and who started it)
-- [ ] Later: use it on the main account; change the Spotlight picture daily (only Explorer does that)
+- [ ] Later: use it on the main account
 - [ ] Note: Windows 11 makes this harder; expect issues
+
+## Phase 5: A real product people can use
+Order: speed first (measure before changing), then the desktop, then the new UI, then the installer last (it packages the finished app).
+
+### 5a. Lighter and faster
+- [ ] Measure first: startup time, memory, idle CPU (also with Wallpaper Engine / games running)
+- [ ] Fewer timers and polling (watchdogs, stats, window list); event-based where Windows allows it
+- [ ] Load only what's used (modules, search index, tray) and load it later where possible
+- [ ] Release build with ReadyToRun; check trimming and size
+
+### 5b. Desktop like Windows' own
+- [ ] Right-click on the background like Windows 11: View (icon size, auto arrange, align to grid, show icons), Sort by (name, size, type, date modified), Refresh, New (folder, shortcut, the file types Windows offers), Display settings, Personalise, Open in Terminal
+- [ ] "Show more options": the full Windows menu, including other apps' entries (Open with Code, Zed, ...)
+- [ ] Right-click on icons: the full Windows file menu (Open with, Send to, Cut/Copy, other apps' entries)
+- [ ] Multi-select: drag a selection box, Ctrl+click, Shift+click, Ctrl+A; open/delete/copy several items at once
+- [ ] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin, drag files in and out of File Explorer
+- [ ] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows
+
+### 5c. New, professional UI
+- [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
+- [ ] All settings windows in that same style (taskbar designer, start menu/search settings)
+- [ ] Short explanations next to settings; risky options clearly marked
+
+### 5d. More customization everywhere
+- [ ] Desktop: icon size, spacing, label font/color/shadow, hide labels, icons on every monitor
+- [ ] Taskbar/start menu/search/tray: more look and behavior options (to be listed per area while redesigning)
+- [ ] Menus: their colors, corners and font follow the chosen look
+
+### 5e. Installer
+- [ ] Installer per user (no admin needed): Start menu shortcut, optional start with Windows, uninstaller
+- [ ] The uninstaller turns shell mode off and restores the Windows taskbar first, and keeps or removes the settings (asks)
+- [ ] Choose: MSIX (needed later for some Windows features, like reading notifications) or a classic installer (Inno Setup / WiX)
+- [ ] Code signing (otherwise Windows SmartScreen warns people), version numbers, release notes
+- [ ] Updates: check for a new version and update from the app
 
 ## Optional extras
 - [ ] Auto-switch profiles by time of day or active app
 - [ ] Rainmeter-style desktop widgets (clock, CPU, weather)
 - [ ] Import/export themes as JSON to share
 - [ ] Profile examples: gaming, school, night
+- [ ] First-start wizard: pick a look, taskbar and Windows-key behavior in a few steps
+- [ ] Back up / restore all settings in one file (moving to a new PC)
+- [ ] Log viewer and "report a problem" (collects the logs) in the app
+- [ ] Own Quick Settings panel (Wi-Fi, Bluetooth, volume, brightness, night light), useful in shell mode where Win+A doesn't work
+- [ ] Own notification center (needs MSIX, see 5e)
+- [ ] Hotkey editor for all shortcuts
+- [ ] Window tiling/snap layouts and virtual desktop switching on the taskbar
+- [ ] Spotlight-style daily wallpaper in shell mode
+- [ ] Languages (translations) and accessibility (keyboard use, screen readers, high contrast)
 
 ## Open questions
 - Which Windows version is the target (10 or 11)?
