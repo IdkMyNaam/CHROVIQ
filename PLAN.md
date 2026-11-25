@@ -60,13 +60,15 @@ Goal: design your own taskbar instead of using a fixed layout.
 
 ## Phase 4: True shell replacement
 - [x] Recovery first: `Restore-Shell.ps1` (with -DryRun), .reg backups, per-user change only (HKCU), `ShellLauncher.ps1` starts Explorer whenever the app ends
-- [ ] VM: not used; testing on the main PC with the safety net above + a second admin account (ask before every risky step)
-- [ ] Replace `explorer.exe` via the `Shell` value in the Winlogon registry key (built: "Use as shell" / "Back to Explorer"; real test pending)
-- [ ] Own desktop (icons, right-click menu) (built and rendered; real test as shell pending)
-- [ ] Startup programs (Run keys, RunOnce, Startup folders; respects Task Manager's on/off) (built, listed; real start pending)
-- [ ] Work area without Explorer (our bars set it directly) (built; real test pending)
-- [ ] Tray icons, notifications (tray via ManagedShell in shell mode; Windows notifications/Win+A/Win+N need Explorer)
-- [ ] File browsing (our desktop registers as the shell window, so explorer.exe only opens file windows) (real test pending)
+- [x] VM: not used; tested on the main PC in a separate standard account ("ShellTest"), with the safety net above + a second admin account (ask before every risky step)
+- [x] Replace `explorer.exe` via the `Shell` value in the Winlogon registry key ("Use as shell" / "Back to Explorer"; the launcher runs through `conhost --headless`, so no window); tested in ShellTest
+- [x] Own desktop (icons, right-click menu, draws the wallpaper itself; icons load in the background); tested in ShellTest
+- [x] Startup programs (Run keys, RunOnce, Startup folders; respects Task Manager's on/off; started once the shell window is registered); tested in ShellTest
+- [x] Work area without Explorer (our bars set it directly); tested in ShellTest
+- [ ] Tray icons, notifications (tray via ManagedShell in shell mode works; Windows notifications/Win+A/Win+N need Explorer)
+- [x] File browsing: a hidden "Progman" window is registered as the shell window, and explorer.exe is never started directly, so folders open as File Explorer windows without Explorer taking over; tested in ShellTest
+- [x] Diagnostics: `%AppData%\WindowsCustomizer\shell.log` (timed steps, startup programs, every Explorer that starts and who started it)
+- [ ] Later: use it on the main account; change the Spotlight picture daily (only Explorer does that)
 - [ ] Note: Windows 11 makes this harder; expect issues
 
 ## Optional extras
