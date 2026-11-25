@@ -101,10 +101,10 @@ Order: speed first (measure before changing), then the desktop, then the new UI 
 
 ### 5c+. Shader materials (after the new UI, plugs into the redesigned designer)
 Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "material": a GPU shader instead of a plain color.
-- [x] Built-in materials: Tinted glass (with a see-through background + blur: frosted glass), Iridescent and Aurora (animated), Painted lines, Scribbles, Watercolor (procedural), Mouse glow; [ ] clear glass that bends the wallpaper behind it
+- [x] Built-in materials: Tinted glass (with a see-through background + blur: frosted glass), Iridescent and Aurora (animated), Painted lines, Scribbles, Watercolor (procedural), Mouse glow, Clear glass (bends and blurs what's behind it)
 - [x] Own shaders: a folder with material.hlsl (compiled at runtime with Windows' d3dcompiler_47, ps_3_0) + material.json (up to 8 sliders/colors, optional texture), settings shown automatically; in %AppData%\WindowsCustomizer\Materials
-- [x] Choose a material per surface with live preview: taskbar (designer), Alt+Tab, start menu, search (their settings windows); [ ] menus, app themes; [ ] import/export (for now: copy the folder)
-- [x] Inputs for shaders: TIME, SIZE, MOUSE, HOVER, Accent, P0..P7, Texture, helpers (noise, fbm, hsv2rgb); [ ] the wallpaper behind it
+- [x] Choose a material per surface with live preview: taskbar (designer), Alt+Tab, start menu, search (their settings windows), desktop right-click menus (Menu settings), app themes ("A material" background); import/export as .zip (designer)
+- [x] Inputs for shaders: TIME, SIZE, MOUSE, HOVER, Accent, P0..P7, Texture, helpers (noise, fbm, hsv2rgb), WALLPAPER(uv): the wallpaper picture behind the surface, or with "Live glass" (Taskbar page) what's really on screen behind it (left out of screenshots then)
 - [x] Safety and speed: a shader that doesn't compile is refused with the error (line numbers of material.hlsl) shown; animated ones pause during fullscreen apps/games and while hidden; frame-rate limit 15/30/60
 - Note: Blender materials can't be imported directly (3D ray tracing vs. flat UI), but their looks can be rebuilt as shaders
 - Note: WPF runs only simple pixel shaders (ps_3_0, one pass); bending OTHER windows behind a bar needs live screen capture (costly)
