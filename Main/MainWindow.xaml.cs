@@ -293,7 +293,32 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _logWindow.Show();
     }
 
-    private void ReportProblem_Click(object sender, RoutedEventArgs e) => LogWindow.Report(this);
+    private void ReportProblem_Click(object sender, RoutedEventArgs e) => new ReportWindow(ReportSender.Kind.Problem) { Owner = this }.Show();
+
+    private void AskQuestion_Click(object sender, RoutedEventArgs e) => new ReportWindow(ReportSender.Kind.Question) { Owner = this }.Show();
+
+    // ---------- Donations ----------
+
+    /// <summary>The donation page (About page, "Support CHROVIQ").</summary>
+    private const string KofiUrl = "https://ko-fi.com/idkmynaam";
+
+    private void Kofi_Click(object sender, RoutedEventArgs e) => ShellLaunch.Start(KofiUrl, null);
+
+    // ---------- Help & support ----------
+
+    private const string Website = "https://github.com/IdkMyNaam/CHROVIQ";
+
+    private void HelpWebsite_Click(object sender, RoutedEventArgs e) => ShellLaunch.Start(Website, null);
+
+    private void HelpReleases_Click(object sender, RoutedEventArgs e) => ShellLaunch.Start(Website + "/releases", null);
+
+    /// <summary>"The Windows taskbar is gone": shows it again and stops hiding it.</summary>
+    private void HelpShowTaskbar_Click(object sender, RoutedEventArgs e)
+    {
+        if (WindowsTaskbar.IsHiding) SetWindowsTaskbarHidden(false);
+        WindowsTaskbar.RestoreNative();
+        StatusText.Text = "The Windows taskbar is shown again.";
+    }
 
     // ---------- Updates ----------
 
@@ -396,6 +421,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             IsChecked: _altTab != null, IsEnabled: !ShellMode.IsShell); // as the shell it's always on (Windows' own needs Explorer)
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: ShortcutOf(HotkeyAction.NextProfile));
         yield return new AppMenuItem("Keyboard shortcuts...", OpenHotkeys);
+        yield return new AppMenuItem("Help & support", () => { ShowFromTray(); NavList.SelectedIndex = 6; });
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
     }
@@ -406,7 +432,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PageProfiles == null) return; // during InitializeComponent
-        var pages = new FrameworkElement[] { PageProfiles, PageAppearance, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageAbout };
+        var pages = new FrameworkElement[] { PageProfiles, PageAppearance, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageHelp, PageAbout };
         for (int i = 0; i < pages.Length; i++)
             pages[i].Visibility = i == NavList.SelectedIndex ? Visibility.Visible : Visibility.Collapsed;
     }

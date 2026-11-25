@@ -3,3 +3,5 @@ obj/
 .vs/
 *.user
 *_wpftmp.csproj
+# The Discord webhook for problem reports: kept out of the public repository.
+Main/ReportSender.Secret.cs

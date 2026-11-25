@@ -123,6 +123,12 @@
                 </ListBoxItem>
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="ChatHelp24" Margin="0,0,12,0" />
+                        <TextBlock Text="Help &amp; support" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Info24" Margin="0,0,12,0" />
                         <TextBlock Text="About" VerticalAlignment="Center" />
                     </StackPanel>
@@ -575,6 +581,17 @@
                     <StackPanel MaxWidth="1000">
                         <TextBlock Text="Start, Search, Alt+Tab" Style="{StaticResource PageTitle}" />
 
+                        <ui:CardControl x:Name="SupportCard" Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Heart24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Support CHROVIQ" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}" TextWrapping="Wrap"
+                                               Text="CHROVIQ is free. If you enjoy it, a small donation helps keep it going. Thank you!" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Support on Ko-fi" Appearance="Primary" Icon="{ui:SymbolIcon DrinkCoffee24}" Click="Kofi_Click" />
+                        </ui:CardControl>
                         <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="ArrowSync24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
@@ -825,6 +842,92 @@
                 </ScrollViewer>
 
                 <!-- About -->
+                <!-- Help & support -->
+                <ScrollViewer x:Name="PageHelp" VerticalScrollBarVisibility="Auto" Padding="24,8,24,24" Visibility="Collapsed">
+                    <StackPanel MaxWidth="1000">
+                        <TextBlock Text="Help &amp; support" Style="{StaticResource PageTitle}" />
+                        <TextBlock Style="{StaticResource CardText}" Margin="0,-8,0,16" TextWrapping="Wrap"
+                                   Text="Something not working, or a question? Most problems have a quick fix below. Otherwise, send a message straight to the developer." />
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Bug24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Report a problem" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Describe what went wrong; the logs and PC details can go along, and you see everything before it's sent." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Report a problem..." Appearance="Primary" Icon="{ui:SymbolIcon Bug24}" Click="ReportProblem_Click" />
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="ChatHelp24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Ask a question" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="How to do something, an idea, or feedback. Add your email if you'd like an answer." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Ask a question..." Icon="{ui:SymbolIcon ChatHelp24}" Click="AskQuestion_Click" />
+                        </ui:CardControl>
+
+                        <TextBlock Text="Common fixes" Style="{StaticResource Section}" />
+                        <ui:CardExpander Margin="0,0,0,4" Icon="{ui:SymbolIcon PanelBottom20}">
+                            <ui:CardExpander.Header><TextBlock Text="The Windows taskbar is gone" Style="{StaticResource CardTitle}" /></ui:CardExpander.Header>
+                            <StackPanel>
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CardText}"
+                                           Text="CHROVIQ hides it only while its own taskbar shows, and brings it back when it closes, even after a crash. If it stays gone, this brings it back now (and turns off &quot;Hide the Windows taskbar&quot;). Without CHROVIQ running, run Restore-Taskbar.ps1 from the app's folder." />
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <ui:Button Content="Show the Windows taskbar" Margin="0,0,8,0" Click="HelpShowTaskbar_Click" />
+                                    <ui:Button Content="Open the app's folder" Click="OpenAppFolder_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ui:CardExpander>
+                        <ui:CardExpander Margin="0,0,0,4" Icon="{ui:SymbolIcon Desktop24}">
+                            <ui:CardExpander.Header><TextBlock Text="Shell mode went wrong" Style="{StaticResource CardTitle}" /></ui:CardExpander.Header>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource CardText}"
+                                       Text="Press Ctrl+Alt+Del, open Task Manager, choose File &gt; Run new task and type explorer.exe. Then run Restore-Shell.ps1 from the app's folder to make Explorer your shell again from the next sign-in. If you can't use your account at all: sign in to another administrator account and run Restore-Shell.ps1 -ForUser &lt;your user name&gt; in PowerShell as administrator." />
+                        </ui:CardExpander>
+                        <ui:CardExpander Margin="0,0,0,4" Icon="{ui:SymbolIcon ShieldError24}">
+                            <ui:CardExpander.Header><TextBlock Text="&quot;Windows protected your PC&quot; when installing" Style="{StaticResource CardTitle}" /></ui:CardExpander.Header>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource CardText}"
+                                       Text="The setup isn't code-signed yet, so Windows SmartScreen doesn't know it. Click More info, then Run anyway. The setup comes from CHROVIQ's GitHub releases page; only download it there." />
+                        </ui:CardExpander>
+                        <ui:CardExpander Margin="0,0,0,4" Icon="{ui:SymbolIcon Gauge24}">
+                            <ui:CardExpander.Header><TextBlock Text="It feels slow, or something looks wrong" Style="{StaticResource CardTitle}" /></ui:CardExpander.Header>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource CardText}"
+                                       Text="Animated materials and live glass use the graphics card the most: lower the material frame rate (Appearance) or turn live glass off. A material that looks wrong can be set back to none in its settings. If the problem stays, report it with the logs." />
+                        </ui:CardExpander>
+                        <ui:CardExpander Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowReset24}">
+                            <ui:CardExpander.Header><TextBlock Text="Start over" Style="{StaticResource CardTitle}" /></ui:CardExpander.Header>
+                            <StackPanel>
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CardText}"
+                                           Text="Run the setup wizard again to pick the basics, or restore a backup of your settings (About page). Your current settings are backed up first." />
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <ui:Button Content="Run the setup wizard" Margin="0,0,8,0" Click="RunSetupWizard_Click" />
+                                    <ui:Button Content="Restore a backup..." Click="RestoreSettings_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ui:CardExpander>
+
+                        <TextBlock Text="More" Style="{StaticResource Section}" />
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Globe24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="CHROVIQ on GitHub" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="The documentation, the source code, and every release with its notes." Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Website" Margin="0,0,8,0" Click="HelpWebsite_Click" />
+                                <ui:Button Content="Release notes" Click="HelpReleases_Click" />
+                            </StackPanel>
+                        </ui:CardControl>
+                        <TextBlock Style="{StaticResource CardText}" Margin="4,12,0,0" TextWrapping="Wrap"
+                                   Text="CHROVIQ is made by IdkMyNaam with the help of AI (Anthropic's Claude). It's open source under the MIT license." />
+                    </StackPanel>
+                </ScrollViewer>
+
                 <ScrollViewer x:Name="PageAbout" VerticalScrollBarVisibility="Auto" Padding="24,8,24,24" Visibility="Collapsed">
                     <StackPanel MaxWidth="1000">
                         <TextBlock Text="About" Style="{StaticResource PageTitle}" />

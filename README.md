@@ -1,3 +1,5 @@
+<p align="center"><img src="Assets/CHROVIQ.png" width="128" alt="CHROVIQ icon"></p>
+
 # CHROVIQ
 
 Make Windows look and work the way you want. CHROVIQ replaces and extends parts of the Windows shell, and
@@ -62,6 +64,10 @@ Windows taskbar back and asks whether to keep your settings.
 | `docs/` | Extra notes (Wallpaper Engine integration) |
 
 Settings and data are in `%AppData%\WindowsCustomizer\` (the folder kept its first name so settings carry over).
+
+## Support
+
+CHROVIQ is free. If you enjoy it, you can support its development on [Ko-fi](https://ko-fi.com/idkmynaam). Thank you!
 
 ## License
 

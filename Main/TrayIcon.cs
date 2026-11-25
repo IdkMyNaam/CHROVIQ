@@ -68,8 +68,22 @@ public sealed class TrayIcon : IDisposable
     }
 
     /// <summary>The icon of this exe (the default app icon until the project gets its own).</summary>
+    /// <summary>
+    /// The app icon in the tray's own size (16 px, more with display scaling), straight from the .ico, so it's
+    /// sharp instead of a shrunk 32 px icon.
+    /// </summary>
     private static Icon LoadAppIcon()
     {
+        try
+        {
+            var resource = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/CHROVIQ.ico"));
+            if (resource != null)
+                using (resource.Stream) return new Icon(resource.Stream, Forms.SystemInformation.SmallIconSize);
+        }
+        catch (Exception)
+        {
+            // Try the exe's icon below.
+        }
         try
         {
             if (Environment.ProcessPath is { } exe && Icon.ExtractAssociatedIcon(exe) is { } icon)

@@ -43,7 +43,7 @@ internal sealed class LogWindow : Wpf.Ui.Controls.FluentWindow
         _filter.TextChanged += (_, _) => Load(force: true);
 
         var report = new Wpf.Ui.Controls.Button { Content = "Report a problem...", Appearance = Wpf.Ui.Controls.ControlAppearance.Primary, Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Bug24) };
-        report.Click += (_, _) => Report(this);
+        report.Click += (_, _) => new ReportWindow(ReportSender.Kind.Problem) { Owner = this }.Show();
         var folder = new Wpf.Ui.Controls.Button { Content = "Open folder", Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.FolderOpen24), Margin = new Thickness(0, 0, 8, 0) };
         folder.Click += (_, _) => ShellLaunch.OpenFolder(AppSettings.Folder);
         var copy = new Wpf.Ui.Controls.Button { Content = "Copy", Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Copy24), Margin = new Thickness(0, 0, 8, 0) };
@@ -135,7 +135,7 @@ internal sealed class LogWindow : Wpf.Ui.Controls.FluentWindow
             "Report a problem", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private static string AboutThisPc()
+    public static string AboutThisPc()
     {
         var text = new StringBuilder();
         text.AppendLine($"CHROVIQ {typeof(App).Assembly.GetName().Version}");

@@ -29,6 +29,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 OutputDir=..\bin\installer
 OutputBaseFilename=CHROVIQ-Setup-{#AppVersion}
+SetupIconFile=..\Assets\CHROVIQ.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 Compression=lzma2/ultra64
