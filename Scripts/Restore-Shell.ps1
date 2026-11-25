@@ -58,7 +58,9 @@ if (-not $ForUser -or $ForUser -eq $env:USERNAME) {
     Save-Backup "HKCU\$winlogon" (Join-Path $env:APPDATA 'WindowsCustomizer\Backups')
     Remove-ShellValue "HKCU:\$winlogon" 'Your user'
 
-    if (Get-Process -Name 'explorer' -ErrorAction SilentlyContinue) { Write-Host 'Explorer is already running.' }
+    # Only this sign-in counts: with "Switch user", other accounts have their own Explorer running.
+    $session = (Get-Process -Id $PID).SessionId
+    if (Get-Process -Name 'explorer' -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session) { Write-Host 'Explorer is already running.' }
     elseif ($DryRun) { Write-Host '[dry run] Would start explorer.exe' }
     else { Start-Process 'explorer.exe'; Write-Host 'Explorer started.' }
 }

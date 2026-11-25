@@ -1108,8 +1108,53 @@ public partial class MainWindow : Window
             desktop.Show();
             _desktops.Add(desktop);
             // The shell window: with one registered, explorer.exe only opens file windows instead of taking over.
-            if (monitor.IsPrimary) SetShellWindow(desktop.Handle);
+            if (monitor.IsPrimary) RegisterShellWindow(desktop.Handle);
         }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetShellWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool IsWindow(IntPtr hwnd);
+
+    private DispatcherTimer? _shellWindowTimer;
+
+    /// <summary>
+    /// Registers our desktop as the shell window. Right after another shell window went away (Explorer's),
+    /// Windows refuses this for a moment, so it is retried every half second for up to 30 seconds.
+    /// Never pushes aside a different shell window that is still alive.
+    /// </summary>
+    private void RegisterShellWindow(IntPtr desktop)
+    {
+        _shellWindowTimer?.Stop();
+        int attempts = 0;
+        bool TryOnce()
+        {
+            attempts++;
+            var current = GetShellWindow();
+            if (current == desktop) return true;
+            if (current != IntPtr.Zero && IsWindow(current)) return false; // someone else is the shell: don't fight
+            SetShellWindow(desktop);
+            return GetShellWindow() == desktop;
+        }
+
+        if (TryOnce()) return;
+        _shellWindowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _shellWindowTimer.Tick += (_, _) =>
+        {
+            if (TryOnce())
+            {
+                _shellWindowTimer!.Stop();
+                StatusText.Text = $"Registered as the shell window (attempt {attempts}).";
+            }
+            else if (attempts >= 60)
+            {
+                _shellWindowTimer!.Stop();
+                StatusText.Text = "Could not register as the shell window: opening a folder may start Explorer as the shell.";
+            }
+        };
+        _shellWindowTimer.Start();
     }
 
     private void UpdateShellStatus()

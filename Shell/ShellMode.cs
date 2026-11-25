@@ -25,10 +25,39 @@ internal static class ShellMode
     /// <summary>True when the startup programs should be started this run (command line "--startup", once per sign-in).</summary>
     public static bool RunStartupPrograms { get; private set; }
 
+    /// <summary>True when "--shell" was asked for but refused, because Explorer is the shell right now.</summary>
+    public static bool RefusedBecauseExplorer { get; private set; }
+
     public static void ReadCommandLine(string[] args)
     {
         IsShell = args.Any(a => a.Equals("--shell", StringComparison.OrdinalIgnoreCase));
         RunStartupPrograms = IsShell && args.Any(a => a.Equals("--startup", StringComparison.OrdinalIgnoreCase));
+
+        // Safety: never run as the shell next to a live Explorer shell. Fighting it over the shell window and the
+        // work area is what left Explorer hung in the first test. Run as a normal app instead.
+        if (IsShell && ExplorerIsShell())
+        {
+            IsShell = RunStartupPrograms = false;
+            RefusedBecauseExplorer = true;
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr FindWindow(string? className, string? title);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+
+    /// <summary>True when Explorer owns the shell window or the taskbar (Shell_TrayWnd).</summary>
+    private static bool ExplorerIsShell()
+    {
+        static bool OwnedByExplorer(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return false;
+            GetWindowThreadProcessId(hwnd, out var pid);
+            try { using var p = Process.GetProcessById((int)pid); return p.ProcessName.Equals("explorer", StringComparison.OrdinalIgnoreCase); }
+            catch (ArgumentException) { return false; } // the process is gone
+        }
+        return OwnedByExplorer(GetShellWindow()) || OwnedByExplorer(FindWindow("Shell_TrayWnd", null));
     }
 
     private static string LauncherPath => Path.Combine(AppContext.BaseDirectory, "ShellLauncher.ps1");
