@@ -71,6 +71,7 @@ public sealed class QuickSettingsWindow : Window, ILiveGlassWindow
         FontSize = Math.Clamp(look.FontSize, 8, 24);
 
         Content = BuildLayout();
+        Loaded += (_, _) => Loc.TranslateTree(this); // its texts in the chosen language
         Deactivated += (_, _) => CloseQuietly();
         KeyDown += (_, e) => { if (e.Key == Key.Escape) CloseQuietly(); };
         Closed += (_, _) =>
@@ -156,6 +157,7 @@ public sealed class QuickSettingsWindow : Window, ILiveGlassWindow
         tile.MouseEnter += (_, _) => Paint();
         tile.MouseLeave += (_, _) => Paint();
         tile.MouseLeftButtonUp += (_, _) => { if (tile.IsEnabled) onClick(); };
+        Accessibility.Clickable(tile, name, () => { if (tile.IsEnabled) onClick(); });
         tile.MouseRightButtonUp += (_, _) => Launch(settingsPage);
         Paint();
         return (tile, (state, text) =>
@@ -341,6 +343,7 @@ public sealed class QuickSettingsWindow : Window, ILiveGlassWindow
         button.MouseEnter += (_, _) => button.SetResourceReference(Border.BackgroundProperty, "QsTileHover");
         button.MouseLeave += (_, _) => button.Background = Brushes.Transparent;
         button.MouseLeftButtonUp += (_, _) => onClick();
+        Accessibility.Clickable(button, toolTip, onClick);
         return button;
     }
 

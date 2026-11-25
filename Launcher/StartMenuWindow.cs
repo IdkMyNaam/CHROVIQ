@@ -87,6 +87,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
 
         ApplyColors();
         Content = BuildLayout();
+        Loaded += (_, _) => Loc.TranslateTree(this); // its texts in the chosen language
 
         _box.TextChanged += (_, _) => UpdateSearch();
         _box.PreviewKeyDown += OnKey;

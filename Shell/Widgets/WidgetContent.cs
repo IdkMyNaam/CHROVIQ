@@ -276,11 +276,11 @@ internal sealed class MediaContent : WidgetContent
         var coverBox = new Border { CornerRadius = new CornerRadius(6), ClipToBounds = true, Child = cover, VerticalAlignment = VerticalAlignment.Center };
         var title = Text("Nothing playing", 1.05, bold: true);
         var artist = Text("", 0.9, opacity: 0.75);
-        var play = Button("", 1.6, watcher.PlayPause);
+        var play = Button("", 1.6, watcher.PlayPause, "Play or pause");
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-6, 4, 0, 0) };
-        buttons.Children.Add(Button("", 1.2, watcher.Previous));
+        buttons.Children.Add(Button("", 1.2, watcher.Previous, "Previous"));
         buttons.Children.Add(play);
-        buttons.Children.Add(Button("", 1.2, watcher.Next));
+        buttons.Children.Add(Button("", 1.2, watcher.Next, "Next"));
         var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         texts.Children.Add(title);
         texts.Children.Add(artist);
@@ -307,7 +307,7 @@ internal sealed class MediaContent : WidgetContent
         _ = watcher.StartAsync();
     }
 
-    private Border Button(string glyph, double factor, Action onClick)
+    private Border Button(string glyph, double factor, Action onClick, string name = "")
     {
         var text = new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = Size(factor), VerticalAlignment = VerticalAlignment.Center };
         var button = new Border { Child = text, Padding = new Thickness(6), CornerRadius = new CornerRadius(6), Background = Brushes.Transparent, Cursor = System.Windows.Input.Cursors.Hand };
@@ -317,6 +317,7 @@ internal sealed class MediaContent : WidgetContent
         // Handled, so a click isn't also the start of dragging the widget.
         button.MouseLeftButtonDown += (_, e) => e.Handled = true;
         button.MouseLeftButtonUp += (_, e) => { e.Handled = true; onClick(); };
+        Accessibility.Clickable(button, name, onClick);
         return button;
     }
 }

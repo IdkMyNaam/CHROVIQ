@@ -36,6 +36,7 @@
     <!-- The built-in materials (shaders) go next to the .exe as Materials\<name>\material.hlsl + material.json. -->
     <!-- (Removed and included again so %(RecursiveDir) is the material's folder, not the whole path from the project.) -->
     <None Remove="Materials\BuiltIn\**" />
+    <None Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Materials\BuiltIn\**\*" CopyToOutputDirectory="PreserveNewest" Link="Materials\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

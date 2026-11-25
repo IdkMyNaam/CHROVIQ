@@ -29,6 +29,7 @@ internal static class FluentLook
         root.Children.Add(content);
         window.Content = root;
         AppThemes.Register(window); // the app theme, now and when it changes
+        window.Loaded += (_, _) => Loc.TranslateTree(window); // its texts in the chosen language
     }
 
     /// <summary>

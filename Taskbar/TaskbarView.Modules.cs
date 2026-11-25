@@ -477,12 +477,12 @@ public partial class TaskbarView
 
     // ---------- Helpers ----------
 
-    private Button BarButton(object content, string? toolTip) => new()
+    private Button BarButton(object content, string? toolTip) => Accessibility.Named(new Button
     {
         Style = (Style)Resources["BarButton"],
         Content = content,
         ToolTip = toolTip,
-    };
+    }, toolTip);
 
     private Button GlyphButton(string glyph, string toolTip, Action? onClick)
     {

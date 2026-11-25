@@ -11,6 +11,9 @@ public sealed record AppMenuItem(
     bool IsEnabled = true,
     string? Shortcut = null)
 {
+    /// <summary>The entry's text, in the chosen language.</summary>
+    public string Text { get; init; } = Loc.T(Text);
+
     public static AppMenuItem Separator { get; } = new("-");
 
     public bool IsSeparator => Text == "-" && OnClick == null;

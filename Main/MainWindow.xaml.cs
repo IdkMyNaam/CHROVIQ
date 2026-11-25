@@ -40,7 +40,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     };
 
     private TrayIcon _trayIcon = null!;
-    private GlobalHotKey _hotKey = null!;
+    private Hotkeys _hotkeys = null!;
+    private HotkeysWindow? _hotkeysWindow;
 
     // The profile applied last (check mark in the tray, starting point for "next").
     private Profile? _current;
@@ -53,10 +54,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     public MainWindow()
     {
+        // The language, before any window is made (each translates its texts as it opens).
+        Loc.Load(_settings.Language);
+        Loaded += (_, _) => Loc.TranslateTree(this);
+
         // Before any bar or window with a material is made: what glass materials show.
         WallpaperBehind.Live = _settings.LiveGlass;
-        // The app theme (how this app's own windows look); "Windows" follows Windows' light/dark.
-        AppThemes.Apply(AppThemes.Find(_settings.AppTheme));
+        // The app theme (how this app's own windows look); "Windows" follows Windows' light/dark,
+        // and a Windows contrast theme switches to "High contrast".
+        AppThemes.Apply(EffectiveAppTheme());
+        SystemParameters.StaticPropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SystemParameters.HighContrast)) Dispatcher.InvokeAsync(() => AppThemes.Apply(EffectiveAppTheme()));
+        };
         InitializeComponent();
         AppThemes.Register(this);
         SetUpAppearance();
@@ -134,6 +144,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         SnapCheck.IsChecked = _settings.Snap.Enabled;
         Dispatcher.BeginInvoke(_snap.Update, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
+        FillLanguages();
+
         // Desktop widgets.
         ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
         WidgetManager.Start(_settings, SaveSettings);
@@ -196,7 +208,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             _snap.Dispose();
             _saveTimer.Stop();
             SaveProfiles(); // a pending save may not have run yet
-            _hotKey.Dispose();
+            _hotkeys.Dispose();
             // Bring the Windows taskbar back first, but keep the setting, so it is hidden again next start.
             WindowsTaskbar.Restore();
             CloseBars(); // releases the reserved screen space
@@ -211,14 +223,111 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void SetUpTrayAndHotKey()
     {
-        _hotKey = new GlobalHotKey(this, ModifierKeys.Control | ModifierKeys.Alt, Key.P);
-        _hotKey.Pressed += () => _ = ApplyNextAsync();
+        // All keyboard shortcuts (changed in "Keyboard shortcuts..."); snap ones only while snap layouts are on.
+        _hotkeys = new Hotkeys(this, _settings, new Dictionary<HotkeyAction, Action>
+        {
+            [HotkeyAction.NextProfile] = () => _ = ApplyNextAsync(),
+            [HotkeyAction.OpenStartMenu] = OpenStartMenu,
+            [HotkeyAction.OpenSearch] = () => SearchWindow.Toggle(_settings.Search ??= new SearchLook()),
+            [HotkeyAction.OpenQuickSettings] = OpenQuickSettings,
+            [HotkeyAction.OpenCustomizer] = ShowFromTray,
+            [HotkeyAction.ToggleTaskbar] = () => SetTaskbarVisible(!TaskbarShown),
+            [HotkeyAction.ToggleWidgets] = () =>
+            {
+                _settings.ShowWidgets = !_settings.ShowWidgets;
+                ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
+                SaveSettings();
+                WidgetManager.Update();
+            },
+            [HotkeyAction.NextWallpaper] = () => _ = _dailyWallpaper.NextAsync(),
+            [HotkeyAction.SnapPrevious] = () => _snap.Step(-1),
+            [HotkeyAction.SnapNext] = () => _snap.Step(+1),
+            [HotkeyAction.SnapPicker] = () => _snap.PickForActiveWindow(),
+        }, action => action is not (HotkeyAction.SnapPrevious or HotkeyAction.SnapNext or HotkeyAction.SnapPicker)
+                     || (_settings.Snap.Enabled && _settings.Snap.Hotkeys));
 
         _trayIcon = new TrayIcon(BuildAppMenu);
         _trayIcon.Clicked += ShowFromTray;
 
-        if (!_hotKey.IsRegistered && StatusText.Text.Length == 0)
-            StatusText.Text = $"The hotkey {_hotKey} is already used by another program, so it is turned off.";
+        if (_hotkeys.Apply() is { } taken && StatusText.Text.Length == 0) StatusText.Text = taken;
+    }
+
+    /// <summary>The shortcut for an action, for menus and tips ("" when it has none).</summary>
+    private string ShortcutOf(HotkeyAction action) => _hotkeys.Get(action).ToString();
+
+    private void OpenHotkeys()
+    {
+        if (_hotkeysWindow != null) { _hotkeysWindow.Activate(); return; }
+        _hotkeysWindow = new HotkeysWindow(_hotkeys, () =>
+        {
+            SaveSettings();
+            if (_hotkeys.Apply() is { } taken) StatusText.Text = taken;
+        });
+        _hotkeysWindow.Closed += (_, _) => _hotkeysWindow = null;
+        _hotkeysWindow.Show();
+    }
+
+    private void Hotkeys_Click(object sender, RoutedEventArgs e) => OpenHotkeys();
+
+    /// <summary>Your app theme, or "High contrast" while Windows uses a contrast theme (Settings > Accessibility).</summary>
+    private AppTheme EffectiveAppTheme() =>
+        _settings.FollowHighContrast && Accessibility.HighContrast
+            ? AppThemes.BuiltIns.First(t => t.Name == "High contrast")
+            : AppThemes.Find(_settings.AppTheme);
+
+    private LogWindow? _logWindow;
+
+    private void ShowLogs_Click(object sender, RoutedEventArgs e)
+    {
+        if (_logWindow != null) { _logWindow.Activate(); return; }
+        _logWindow = new LogWindow();
+        _logWindow.Closed += (_, _) => _logWindow = null;
+        _logWindow.Show();
+    }
+
+    private void ReportProblem_Click(object sender, RoutedEventArgs e) => LogWindow.Report(this);
+
+    // ---------- Language ----------
+
+    private List<(string Code, string Name)> _languages = new();
+
+    private void FillLanguages()
+    {
+        _languages = Loc.Available();
+        _loading = true;
+        LanguageBox.ItemsSource = _languages.Select(l => l.Name).ToList();
+        LanguageBox.SelectedIndex = Math.Max(0, _languages.FindIndex(l => l.Code == (_settings.Language ?? "en")));
+        _loading = false;
+    }
+
+    private void LanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || LanguageBox.SelectedIndex < 0) return;
+        string code = _languages[LanguageBox.SelectedIndex].Code;
+        _settings.Language = code == "en" ? null : code;
+        SaveSettings();
+        StatusText.Text = Loc.T("The language changes the next time Windows Customizer starts.");
+    }
+
+    /// <summary>Writes a file with every text the app has shown, to translate (in your Languages folder).</summary>
+    private void MakeTranslation_Click(object sender, RoutedEventArgs e)
+    {
+        string? code = InputDialog.Ask(this, "Make a translation file",
+            "Language code (two letters, like nl for Dutch, de for German, fr for French):", _settings.Language ?? "");
+        code = code?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(code) || code == "en" || code.Length > 10 || code.Any(c => !char.IsLetter(c) && c != '-')) return;
+        string name;
+        try { name = System.Globalization.CultureInfo.GetCultureInfo(code).NativeName; }
+        catch (System.Globalization.CultureNotFoundException) { name = code; }
+        try
+        {
+            var file = Loc.WriteTemplate(code, name);
+            ShellLaunch.OpenFolder(Loc.UserFolder);
+            FillLanguages();
+            StatusText.Text = $"Made {System.IO.Path.GetFileName(file)}: fill in the translations, then choose \"{name}\" and restart. " +
+                              "It has every text shown so far; open more windows and make it again to add theirs (your translations are kept).";
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { StatusText.Text = $"Could not write the file: {ex.Message}"; }
     }
 
     /// <summary>The app menu, shown by the tray icon and by the custom taskbar's menu button.</summary>
@@ -243,7 +352,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         DesktopPreviewButton.IsEnabled = !ShellMode.IsShell;
         yield return new AppMenuItem("Own Alt+Tab switcher", () => { _settings.OwnAltTab = !_settings.OwnAltTab; SaveSettings(); UpdateAltTab(); },
             IsChecked: _altTab != null, IsEnabled: !ShellMode.IsShell); // as the shell it's always on (Windows' own needs Explorer)
-        yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
+        yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: ShortcutOf(HotkeyAction.NextProfile));
+        yield return new AppMenuItem("Keyboard shortcuts...", OpenHotkeys);
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
     }
@@ -404,7 +514,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (_settings.TrayHintShown) return;
 
         _trayIcon.ShowMessage("Windows Customizer is still running",
-            $"Press {_hotKey} to switch profiles. Right-click the tray icon to exit.");
+            ShortcutOf(HotkeyAction.NextProfile) is { Length: > 0 } keys
+                ? $"Press {keys} to switch profiles. Right-click the tray icon to exit."
+                : "Right-click the tray icon for the menu, or to exit.");
         _settings.TrayHintShown = true;
         SaveSettings();
     }
@@ -759,13 +871,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _settings.Snap.Enabled = SnapCheck.IsChecked == true;
         SaveSettings();
         _snap.Update();
+        _hotkeys.Apply(); // the snap shortcuts only while snap is on
     }
 
     private void SnapSettings_Click(object sender, RoutedEventArgs e)
     {
         if (_snapSettings != null) { _snapSettings.Activate(); return; }
         // Every change is saved and used at once (hotkeys on or off, say).
-        _snapSettings = new SnapSettingsWindow(_settings.Snap, () => { SaveSettings(); _snap.Update(); }, _snap.PickForActiveWindow);
+        _snapSettings = new SnapSettingsWindow(_settings.Snap, () => { SaveSettings(); _snap.Update(); _hotkeys.Apply(); }, _snap.PickForActiveWindow);
         _snapSettings.Closed += (_, _) => _snapSettings = null;
         _snapSettings.Show();
     }

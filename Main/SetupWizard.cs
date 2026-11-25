@@ -254,13 +254,17 @@ internal sealed class SetupWizard : FluentWindow
         }
         tile.MouseEnter += (_, _) => Paint(tile);
         tile.MouseLeave += (_, _) => Paint(tile);
-        tile.MouseLeftButtonUp += (_, _) =>
+        void Choose()
         {
             foreach (var other in group.Children.OfType<Border>()) { other.Tag = false; Paint(other); }
             tile.Tag = true;
             Paint(tile);
             onChoose();
-        };
+        }
+        tile.MouseLeftButtonUp += (_, _) => Choose();
+        // Keyboard and screen readers: the tile's text is its name.
+        string name = string.Join(" ", ((content as Panel)?.Children.OfType<TextBlock>() ?? new[] { content as TextBlock }.OfType<TextBlock>()).Select(t => t.Text));
+        Accessibility.Clickable(tile, name, Choose);
         Paint(tile);
         return tile;
     }

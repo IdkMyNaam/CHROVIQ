@@ -81,8 +81,17 @@ public class AppSettings
     /// <summary>A new wallpaper every day (Bing, Spotlight or a folder).</summary>
     public DailyWallpaperSettings DailyWallpaper { get; set; } = new();
 
+    /// <summary>Keyboard shortcuts you changed: action name to "Ctrl+Alt+P" ("" = none). Missing: the default.</summary>
+    public Dictionary<string, string> Hotkeys { get; set; } = new();
+
     /// <summary>Snap layouts: zones to drop windows in, hotkeys, own layouts.</summary>
     public SnapSettings Snap { get; set; } = new();
+
+    /// <summary>While Windows uses a contrast theme, Windows Customizer's own windows use the "High contrast" app theme.</summary>
+    public bool FollowHighContrast { get; set; } = true;
+
+    /// <summary>Language of the app's windows (a code like "nl"); empty: English.</summary>
+    public string? Language { get; set; }
 
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;

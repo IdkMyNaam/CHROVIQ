@@ -232,6 +232,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         var tile = new Border { Child = label, CornerRadius = new CornerRadius(6), Margin = new Thickness(0, 2, 0, 2), Cursor = System.Windows.Input.Cursors.Hand };
         int index = _sections.Count;
         tile.MouseLeftButtonUp += (_, _) => Choose(index);
+        Accessibility.Clickable(tile, name, () => Choose(index));
         tile.MouseEnter += (_, _) => PaintTile(index);
         tile.MouseLeave += (_, _) => PaintTile(index);
         _tiles.Children.Add(tile);

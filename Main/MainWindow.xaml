@@ -576,6 +576,20 @@
                         <TextBlock Text="Start, Search, Alt+Tab" Style="{StaticResource PageTitle}" />
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="LocalLanguage24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Language" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="The language of Windows Customizer's windows (used after a restart). Make a translation file to translate it yourself." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Make a translation file..." Margin="0,0,8,0" Click="MakeTranslation_Click" />
+                                <ComboBox x:Name="LanguageBox" Width="170" SelectionChanged="LanguageBox_SelectionChanged" />
+                            </StackPanel>
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Keyboard24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>
@@ -815,6 +829,31 @@
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:Button Content="Open folder" Icon="{ui:SymbolIcon FolderOpen24}" Click="OpenDataFolder_Click" />
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Bug24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Logs and problems" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="Read what the app has been doing, or put the logs, settings and PC details in one .zip on your desktop to attach to a bug report (nothing is sent)." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="Show logs" Icon="{ui:SymbolIcon DocumentText24}" Margin="0,0,8,0" Click="ShowLogs_Click" />
+                                <ui:Button Content="Report a problem..." Icon="{ui:SymbolIcon Bug24}" Click="ReportProblem_Click" />
+                            </StackPanel>
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Keyboard24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Keyboard shortcuts" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="Every shortcut in one place: next profile, open the start menu, search or Quick Settings, show or hide the taskbar and widgets, snap." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Keyboard shortcuts..." Icon="{ui:SymbolIcon Keyboard24}" Click="Hotkeys_Click" />
                         </ui:CardControl>
                         <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Sparkle24" /></ui:CardControl.Icon>

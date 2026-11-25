@@ -18,7 +18,6 @@ internal sealed class SnapEngine : IDisposable
     private readonly WinEventProc _moveSizeCallback; // kept in a field so the GC doesn't collect it
     private IntPtr _hook;
     private readonly DispatcherTimer _poll = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
-    private readonly List<GlobalHotKey> _hotkeys = new();
 
     private IntPtr _dragged;
     private ZonesOverlay? _overlay;
@@ -43,28 +42,12 @@ internal sealed class SnapEngine : IDisposable
         if (!_settings.Enabled) return;
         _hook = SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, IntPtr.Zero, _moveSizeCallback, 0, 0,
                                 WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-        if (_settings.Hotkeys)
-        {
-            var failed = new List<string>();
-            void Add(Key key, Action action)
-            {
-                var hotkey = new GlobalHotKey(_hotkeyWindow, ModifierKeys.Windows | ModifierKeys.Alt, key);
-                if (!hotkey.IsRegistered) { failed.Add(hotkey.ToString()); hotkey.Dispose(); return; }
-                hotkey.Pressed += action;
-                _hotkeys.Add(hotkey);
-            }
-            Add(Key.Left, () => Step(-1));
-            Add(Key.Right, () => Step(+1));
-            Add(Key.Z, PickForActiveWindow);
-            if (failed.Count > 0) Status?.Invoke($"Snap: {string.Join(", ", failed)} is already used by another program, so it does nothing here.");
-        }
+        // The hotkeys (Win+Alt+Left/Right/Z by default) are registered with all the others (Hotkeys.cs).
     }
 
     public void Stop()
     {
         if (_hook != IntPtr.Zero) { UnhookWinEvent(_hook); _hook = IntPtr.Zero; }
-        foreach (var hotkey in _hotkeys) hotkey.Dispose();
-        _hotkeys.Clear();
         EndDrag();
     }
 
@@ -166,7 +149,7 @@ internal sealed class SnapEngine : IDisposable
     // ---------- Hotkeys ----------
 
     /// <summary>Win+Alt+Left/Right: the active window to the previous/next zone; past the last one, on to the next screen.</summary>
-    private void Step(int direction)
+    public void Step(int direction)
     {
         var hwnd = GetForegroundWindow();
         if (!WindowMover.IsMovable(hwnd)) return;
