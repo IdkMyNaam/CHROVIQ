@@ -111,9 +111,17 @@ Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "mat
 - [ ] Later: a Direct3D surface for heavier effects (multi-pass blur, real refraction, newer shader versions)
 
 ### 5d. More customization everywhere
-- [ ] Desktop: icon size, spacing, label font/color/shadow, hide labels, icons on every monitor
-- [ ] Taskbar/start menu/search/tray: more look and behavior options (to be listed per area while redesigning)
-- [ ] Menus: their colors, corners and font follow the chosen look
+- [x] Desktop ("Desktop settings..."): icon size (presets or custom), spacing, label font/size/color/shadow, hide labels, which monitor has the icons; [ ] later icons on every monitor at once
+- [x] Menus ("Menu settings..."): colors, corners, font and a material for the desktop right-click menus
+- [x] Alt+Tab ("Alt+Tab settings..."): colors, selection border, corners, tile and preview size, titles/icons, font, tiles per row, monitor and position, only this monitor's windows, minimized windows, show delay
+- [x] Taskbar (designer): window icon size, active-window marker (line, dot, pill, glow, none), border and shadow, lines between the zones, clock font and size
+- [x] Start menu: pinned icon size, search box at the top or bottom, your name and picture (or your own), scroll bar (thin, hidden, Windows)
+- [x] Search: result icon size, where each app is, highest list height, scroll bar
+- [x] Tray: hide chosen icons, one color for all icons
+- [x] Opening animations for start menu, search and Alt+Tab: presets (fade, slide, zoom, pop) or Custom (fade, slide distance and direction, start size), length and speed curve (even, smooth, strong, overshoot, bounce, elastic); [ ] later also menus, tray flyout, window previews, auto-hide slide
+- [x] Live glass per popup (start menu, search, Alt+Tab), each with its own switch (left out of screen capture while on); big surfaces captured at half resolution
+- [x] Settings windows in the designer's style: section tiles on the left, that section's settings on the right
+- [x] Start menu speed: only the visible apps are laid out (virtualized list), content kept as a ready-drawn picture above animated materials, icons load after the opening animation
 
 ### 5e. Installer
 - [ ] Installer per user (no admin needed): Start menu shortcut, optional start with Windows, uninstaller
