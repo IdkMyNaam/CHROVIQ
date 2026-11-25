@@ -87,6 +87,7 @@ Order: speed first (measure before changing), then the desktop, then the new UI 
 - [ ] Multi-select: drag a selection box, Ctrl+click, Shift+click, Ctrl+A; open/delete/copy several items at once
 - [ ] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin, drag files in and out of File Explorer
 - [ ] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows
+- [ ] Alt tabing like windows -manualy writen
 
 ### 5c. New, professional UI
 - [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
