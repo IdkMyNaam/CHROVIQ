@@ -25,6 +25,7 @@ public sealed class DesktopWindow : Window
     private readonly MonitorInfo _monitor;
     private readonly bool _showIcons;
     private readonly WrapPanel _icons = new() { Orientation = Orientation.Vertical, Margin = new Thickness(6) };
+    private readonly System.Windows.Shapes.Rectangle _wallpaper = new();
     private readonly List<FileSystemWatcher> _watchers = new();
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private Border? _selected;
@@ -41,16 +42,18 @@ public sealed class DesktopWindow : Window
         _showIcons = showIcons;
         Title = "Desktop";
         WindowStyle = WindowStyle.None;
-        AllowsTransparency = true;
-        // Alpha 1, not 0: fully transparent pixels would let clicks fall through to nothing.
-        Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
+        // Opaque, with the wallpaper drawn here: without Explorer nothing else draws it (the screen stays black).
+        Background = Brushes.Black;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
         ShowActivated = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
         UseLayoutRounding = true;
 
-        Content = _icons;
+        var layers = new Grid();
+        layers.Children.Add(_wallpaper);
+        layers.Children.Add(_icons);
+        Content = layers;
         MouseLeftButtonDown += (_, _) => Select(null);
         MouseRightButtonUp += (_, e) =>
         {
@@ -76,6 +79,7 @@ public sealed class DesktopWindow : Window
         SetWindowPos(hwnd, HWND_BOTTOM, b.Left, b.Top, b.Right - b.Left, b.Bottom - b.Top, SWP_NOACTIVATE);
         HwndSource.FromHwnd(hwnd).AddHook(KeepAtBottom);
         FitIconsToWorkArea();
+        ShowWallpaper();
 
         if (!_showIcons) return;
         // After the window is up and registered as the shell window, not before (that has to happen first).
@@ -108,6 +112,38 @@ public sealed class DesktopWindow : Window
     private const int WM_SETTINGCHANGE = 0x001A;
     private const int SPI_SETWORKAREA = 0x002F;
 
+    private const int SPI_SETDESKWALLPAPER = 0x0014;
+
+    /// <summary>Draws the user's wallpaper (loaded in the background) with its placement and background color.</summary>
+    private void ShowWallpaper()
+    {
+        var (file, placement, color) = Wallpaper.Current();
+        Background = new SolidColorBrush(color);
+        if (file == null) { _wallpaper.Fill = null; ShellMode.Log("Desktop: no wallpaper picture, only the background color"); return; }
+
+        Task.Run(() => Wallpaper.Load(file)).ContinueWith(t =>
+        {
+            if (t.Result is not { } image) { _wallpaper.Fill = null; return; }
+            var brush = new ImageBrush(image) { AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
+            switch (placement)
+            {
+                case Wallpaper.Placement.Fit: brush.Stretch = Stretch.Uniform; break;
+                case Wallpaper.Placement.Stretch: brush.Stretch = Stretch.Fill; break;
+                case Wallpaper.Placement.Center: brush.Stretch = Stretch.None; break;
+                case Wallpaper.Placement.Tile:
+                    brush.Stretch = Stretch.None;
+                    brush.TileMode = TileMode.Tile;
+                    brush.ViewportUnits = BrushMappingMode.Absolute;
+                    brush.Viewport = new Rect(0, 0, image.Width, image.Height);
+                    break;
+                default: brush.Stretch = Stretch.UniformToFill; break; // Fill; Span is shown as Fill on each monitor
+            }
+            brush.Freeze();
+            _wallpaper.Fill = brush;
+            ShellMode.Log($"Desktop: wallpaper drawn ({placement}): {file}");
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
     /// <summary>Icons start inside the usable area, so a bar at the top or bottom doesn't cover them.</summary>
     private void FitIconsToWorkArea()
     {
@@ -127,6 +163,9 @@ public sealed class DesktopWindow : Window
         // The work area changed (a bar was added, moved or removed): move the icons with it.
         if (msg == WM_SETTINGCHANGE && wParam.ToInt32() == SPI_SETWORKAREA)
             Dispatcher.InvokeAsync(FitIconsToWorkArea);
+        // The wallpaper was changed (Settings > Personalization): draw the new one.
+        if (msg == WM_SETTINGCHANGE && wParam.ToInt32() == SPI_SETDESKWALLPAPER)
+            Dispatcher.InvokeAsync(ShowWallpaper);
 
         if (msg == WM_WINDOWPOSCHANGING)
         {

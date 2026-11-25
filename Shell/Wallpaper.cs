@@ -17,6 +17,60 @@ internal static class Wallpaper
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool SystemParametersInfo(int action, int param, string value, int flags);
 
+    public enum Placement { Fill, Fit, Stretch, Tile, Center, Span }
+
+    /// <summary>The wallpaper as Settings > Personalization has it: picture (null if none), placement, background color.</summary>
+    public static (string? File, Placement Placement, System.Windows.Media.Color Color) Current()
+    {
+        using var desktop = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop");
+        string? file = desktop?.GetValue("Wallpaper") as string;
+        if (!string.IsNullOrWhiteSpace(file)) file = Environment.ExpandEnvironmentVariables(file);
+        if (string.IsNullOrWhiteSpace(file) || !File.Exists(file))
+        {
+            string transcoded = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                             @"Microsoft\Windows\Themes\TranscodedWallpaper");
+            file = File.Exists(transcoded) ? transcoded : null;
+        }
+
+        var placement = (desktop?.GetValue("WallpaperStyle") as string, desktop?.GetValue("TileWallpaper") as string) switch
+        {
+            ("6", _) => Placement.Fit,
+            ("2", _) => Placement.Stretch,
+            ("22", _) => Placement.Span,
+            ("0", "1") => Placement.Tile,
+            ("0", _) => Placement.Center,
+            _ => Placement.Fill, // "10", and Windows' default
+        };
+
+        var color = System.Windows.Media.Colors.Black;
+        using (var colors = Registry.CurrentUser.OpenSubKey(@"Control Panel\Colors"))
+            if (colors?.GetValue("Background") is string rgb && rgb.Split(' ') is { Length: 3 } parts &&
+                byte.TryParse(parts[0], out var r) && byte.TryParse(parts[1], out var g) && byte.TryParse(parts[2], out var b))
+                color = System.Windows.Media.Color.FromRgb(r, g, b);
+
+        return (file, placement, color);
+    }
+
+    /// <summary>Loads a picture for drawing on any thread (frozen); null if it can't be read.</summary>
+    public static System.Windows.Media.Imaging.BitmapSource? Load(string file)
+    {
+        try
+        {
+            var image = new System.Windows.Media.Imaging.BitmapImage();
+            image.BeginInit();
+            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // read now, don't keep the file open
+            image.UriSource = new Uri(file);
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception ex)
+        {
+            ShellMode.Log($"Wallpaper: could not load '{file}': {ex.Message}");
+            return null;
+        }
+    }
+
     public static void Apply()
     {
         try
