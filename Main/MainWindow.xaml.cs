@@ -118,6 +118,8 @@ public partial class MainWindow : Window
         UpdateHideWindowsTaskbarCheck();
 
         if (ShellMode.IsShell) StartShellMode();
+        AppTrace.WatchForFreezes();
+        UpdateAltTab();
 
         // Windows shutting down or signing out must not be blocked by "hide instead of close".
         Application.Current.SessionEnding += (_, _) => _exiting = true;
@@ -141,6 +143,7 @@ public partial class MainWindow : Window
             CloseBars(); // releases the reserved screen space
             TrayHost.Shutdown(); // tray icons back to Explorer, even if a bar didn't get to clean up
             _winKeyHook?.Dispose(); // the Windows key opens Start again
+            _altTab?.Dispose();     // Windows' own Alt+Tab again
             _trayIcon.Dispose();
         };
     }
@@ -177,9 +180,29 @@ public partial class MainWindow : Window
         yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
         yield return new AppMenuItem("Start menu", OpenStartMenu);
         if (!ShellMode.IsShell) yield return new AppMenuItem("Desktop preview", OpenDesktopPreview);
+        yield return new AppMenuItem("Own Alt+Tab switcher", () => { _settings.OwnAltTab = !_settings.OwnAltTab; SaveSettings(); UpdateAltTab(); },
+            IsChecked: _altTab != null, IsEnabled: !ShellMode.IsShell); // as the shell it's always on (Windows' own needs Explorer)
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
+    }
+
+    private AltTabSwitcher? _altTab;
+
+    /// <summary>Turns our Alt+Tab switcher on or off to match the setting (always on as the shell).</summary>
+    private void UpdateAltTab()
+    {
+        bool wanted = _settings.OwnAltTab || ShellMode.IsShell;
+        if (wanted && _altTab == null)
+        {
+            try { _altTab = new AltTabSwitcher(); }
+            catch (Exception ex) { StatusText.Text = $"Alt+Tab switcher: {ex.Message}"; }
+        }
+        else if (!wanted && _altTab != null)
+        {
+            _altTab.Dispose(); // Windows' own Alt+Tab again
+            _altTab = null;
+        }
     }
 
     private DesktopWindow? _desktopPreview;

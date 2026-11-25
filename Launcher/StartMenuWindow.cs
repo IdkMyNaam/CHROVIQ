@@ -541,7 +541,7 @@ public sealed class StartMenuWindow : Window
         SetWindowPos(hwnd, HWND_TOPMOST, x, y, width, height, 0);
     }
 
-    [DllImport("user32.dll")] private static extern uint GetCurrentThreadId();
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId(); // kernel32, not user32
     [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint attach, uint attachTo, bool on);
     [DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hwnd);
 

@@ -234,7 +234,7 @@ public sealed class WindowTracker : IDisposable
     }
 
     /// <summary>Roughly the Alt+Tab rules: visible, not owned, not a tool window, not cloaked, has a title.</summary>
-    private static List<(IntPtr hwnd, string title)> FindTaskWindows()
+    internal static List<(IntPtr hwnd, string title)> FindTaskWindows()
     {
         var result = new List<(IntPtr, string)>();
         var className = new StringBuilder(256);

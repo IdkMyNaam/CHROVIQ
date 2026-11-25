@@ -69,12 +69,71 @@ public static class TaskbarRestore
 
     [DllImport("user32.dll")]
     public static extern bool SendNotifyMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+
+    private delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern bool IsHungAppWindow(IntPtr hwnd);
+
+    /// <summary>True if a visible window of that process is "not responding".</summary>
+    public static bool IsFrozen(int processId)
+    {
+        bool frozen = false;
+        EnumWindows((hwnd, l) =>
+        {
+            uint pid;
+            GetWindowThreadProcessId(hwnd, out pid);
+            if (pid == processId && IsWindowVisible(hwnd) && IsHungAppWindow(hwnd)) { frozen = true; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return frozen;
+    }
 }
 '@
 
+function Show-WindowsTaskbar {
+    $tray = [TaskbarRestore]::FindWindowEx([IntPtr]::Zero, [IntPtr]::Zero, 'Shell_TrayWnd', $null)
+    if ($tray -eq [IntPtr]::Zero) { return }
+    if (-not $KeepAutoHide) {
+        $data = New-Object TaskbarRestore+APPBARDATA
+        $data.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($data)
+        $data.hWnd = $tray
+        $data.lParam = [IntPtr]2
+        [void][TaskbarRestore]::SHAppBarMessage(10, [ref]$data)
+    }
+    [void][TaskbarRestore]::ShowWindow($tray, 5)
+    $other = [IntPtr]::Zero
+    while (($other = [TaskbarRestore]::FindWindowEx([IntPtr]::Zero, $other, 'Shell_SecondaryTrayWnd', $null)) -ne [IntPtr]::Zero) {
+        [void][TaskbarRestore]::ShowWindow($other, 5)
+    }
+    [void][TaskbarRestore]::SetWindowPos($tray, [IntPtr](-1), 0, 0, 0, 0, 0x13)
+}
+
+function Write-Trace([string]$text) {
+    try { Add-Content -Path (Join-Path $env:APPDATA 'WindowsCustomizer\trace.log') -Value ('{0:HH:mm:ss.fff} [watchdog] {1}' -f (Get-Date), $text) } catch { }
+}
+
 if ($WaitForProcessId -gt 0) {
     # Watchdog mode: wait for the app to end (normally the app stops this watchdog itself first).
-    Wait-Process -Id $WaitForProcessId -ErrorAction SilentlyContinue
+    # Meanwhile: if the app stops responding for 8 seconds, show the Windows taskbar, so you are never left
+    # without one. (If the app recovers, it hides it again by itself.)
+    $frozenFor = 0
+    $shownForFreeze = $false
+    while (Get-Process -Id $WaitForProcessId -ErrorAction SilentlyContinue) {
+        Start-Sleep -Seconds 2
+        if ([TaskbarRestore]::IsFrozen($WaitForProcessId)) { $frozenFor += 2 }
+        else {
+            if ($shownForFreeze) { Write-Trace 'Windows Customizer responds again' }
+            $frozenFor = 0
+            $shownForFreeze = $false
+        }
+        if ($frozenFor -ge 8 -and -not $shownForFreeze) {
+            Write-Trace 'Windows Customizer has not responded for 8 s: showing the Windows taskbar'
+            Show-WindowsTaskbar
+            $shownForFreeze = $true
+        }
+    }
     Start-Sleep -Seconds 1
     # Started again meanwhile? Then the new instance manages the taskbar; leave it alone.
     if (Get-Process -Name 'WindowsCustomizer' -ErrorAction SilentlyContinue) { exit 0 }

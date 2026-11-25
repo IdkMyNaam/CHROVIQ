@@ -69,16 +69,27 @@ public partial class AppBarWindow : Window
         bool overWindows = _design.AutoHide || (_view.IsFloating && !look.Floating!.ReserveSpace);
         double reserve = overWindows ? 0 : _view.BarHeight + 2 * _view.DockMargin;
         _appBar = new AppBar(this, _monitorDevice, _edge, reserve, PlaceWindow);
-        _appBar.FullscreenChanged += fullscreen =>
-        {
-            // Get out of the way of games and fullscreen videos on this monitor.
-            _fullscreen = fullscreen;
-            if (fullscreen) Hide();
-            else if (!_design.AutoHide) Show();
-            else _hidden = true; // auto-hide: stay away until the mouse comes to the edge
-        };
+        _appBar.FullscreenChanged += SetFullscreen;
+        // While hidden for a fullscreen app, look every 2 seconds whether it's still there: Windows doesn't always
+        // say when it ends (and a bar that stays hidden leaves you without a taskbar).
+        _fullscreenCheck.Tick += (_, _) => { if (!_appBar.IsFullscreenOnOurMonitor()) SetFullscreen(false); };
+        Closed += (_, _) => _fullscreenCheck.Stop();
 
         if (_design.AutoHide) StartAutoHide();
+    }
+
+    private readonly System.Windows.Threading.DispatcherTimer _fullscreenCheck = new() { Interval = TimeSpan.FromSeconds(2) };
+
+    /// <summary>Gets out of the way of games and fullscreen videos on this monitor, and comes back after.</summary>
+    private void SetFullscreen(bool fullscreen)
+    {
+        if (fullscreen == _fullscreen) return;
+        _fullscreen = fullscreen;
+        AppTrace.Log($"Taskbar on {_monitorDevice}: {(fullscreen ? "hidden for a fullscreen app" : "back")}");
+        if (fullscreen) { Hide(); _fullscreenCheck.Start(); return; }
+        _fullscreenCheck.Stop();
+        if (!_design.AutoHide) Show();
+        else _hidden = true; // auto-hide: stay away until the mouse comes to the edge
     }
 
     // ---------- Auto-hide ----------

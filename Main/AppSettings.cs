@@ -36,6 +36,9 @@ public class AppSettings
     /// <summary>Older setting: Windows key opens our search. Replaced by <see cref="WinKey"/>, still read for old files.</summary>
     public bool WinKeyOpensSearch { get; set; }
 
+    /// <summary>Alt+Tab shows our switcher instead of Windows' own (always, when Windows Customizer is the shell).</summary>
+    public bool OwnAltTab { get; set; }
+
     /// <summary>What the Windows key opens. Empty in older files: taken from <see cref="WinKeyOpensSearch"/>.</summary>
     public WinKeyAction? WinKey { get; set; }
 

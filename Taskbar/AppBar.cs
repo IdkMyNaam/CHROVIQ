@@ -138,7 +138,7 @@ internal sealed class AppBar : IDisposable
             rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top, SWP_NOACTIVATE);
 
     /// <summary>True if the foreground window covers this bar's whole monitor (a game or fullscreen video).</summary>
-    private bool IsFullscreenOnOurMonitor()
+    public bool IsFullscreenOnOurMonitor()
     {
         var foreground = GetForegroundWindow();
         if (foreground == IntPtr.Zero || Monitors.DeviceOf(foreground) != _monitorDevice) return false;
