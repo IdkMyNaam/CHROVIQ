@@ -137,6 +137,14 @@ internal sealed class AppBar : IDisposable
         SetWindowPos(new WindowInteropHelper(window).Handle, HWND_TOPMOST,
             rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top, SWP_NOACTIVATE);
 
+    /// <summary>
+    /// Only moves the window (same size, same place in the window order): the cheap way for animations,
+    /// so WPF doesn't redo its layout every frame.
+    /// </summary>
+    public static void MoveWindowOnly(Window window, int x, int y) =>
+        SetWindowPos(new WindowInteropHelper(window).Handle, IntPtr.Zero, x, y, 0, 0,
+            SWP_NOACTIVATE | 0x0001 /* SWP_NOSIZE */ | 0x0004 /* SWP_NOZORDER */ | 0x0200 /* SWP_NOOWNERZORDER */);
+
     /// <summary>True if the foreground window covers this bar's whole monitor (a game or fullscreen video).</summary>
     public bool IsFullscreenOnOurMonitor()
     {

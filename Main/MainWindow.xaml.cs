@@ -54,6 +54,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         InitializeComponent();
         AppThemes.Register(this);
         SetUpAppearance();
+        // While this window is open (on screen: not minimized, not in the tray), auto-hiding taskbars show,
+        // so you see what you change. Can be turned off on the Taskbar page.
+        IsVisibleChanged += (_, _) => UpdateKeepTaskbarShown();
+        StateChanged += (_, _) => UpdateKeepTaskbarShown();
         NavList.SelectedIndex = 0;
         VersionText.Text = $"Version {typeof(App).Assembly.GetName().Version?.ToString(3)}";
         BuildAccentSwatches();
@@ -83,7 +87,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         PauseForGamesCheck.IsChecked = _settings.PauseForGames;
 
+        MaterialClock.FramesPerSecond = _settings.MaterialFps;
+        ShowTaskbarWhileOpenCheck.IsChecked = _settings.ShowTaskbarWhileOpen;
         _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
+        MaterialFpsBox.SelectedIndex = Math.Max(0, Array.IndexOf(FpsChoices, _settings.MaterialFps) is var i && i >= 0 ? i : 1);
         ShowTaskbarCheck.IsChecked = _settings.ShowTaskbar;
         TaskbarEdgeBox.SelectedIndex = (int)_settings.TaskbarEdge;
         TaskbarButtonsBox.SelectedIndex = (int)_settings.TaskbarButtons;
@@ -203,6 +210,26 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var pages = new FrameworkElement[] { PageProfiles, PageAppearance, PageTaskbar, PageStart, PageDesktop, PageWallpaper, PageAbout };
         for (int i = 0; i < pages.Length; i++)
             pages[i].Visibility = i == NavList.SelectedIndex ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void UpdateKeepTaskbarShown() =>
+        AppBarWindow.KeepShown = _settings.ShowTaskbarWhileOpen && IsVisible && WindowState != WindowState.Minimized;
+
+    private void ShowTaskbarWhileOpenCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ShowTaskbarWhileOpen = ShowTaskbarWhileOpenCheck.IsChecked == true;
+        SaveSettings();
+        UpdateKeepTaskbarShown();
+    }
+
+    private static readonly int[] FpsChoices = { 15, 30, 60 };
+
+    private void MaterialFpsBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || MaterialFpsBox.SelectedIndex < 0) return;
+        _settings.MaterialFps = FpsChoices[MaterialFpsBox.SelectedIndex];
+        MaterialClock.FramesPerSecond = _settings.MaterialFps;
+        SaveSettings();
     }
 
     private void AltTabCheck_Click(object sender, RoutedEventArgs e)

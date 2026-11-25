@@ -33,6 +33,10 @@
          for them there: the watchdog runs Restore-Taskbar.ps1 if the app is killed while it hides the taskbar,
          and the shell mode uses ShellLauncher.ps1 (starts Explorer whenever the app ends) and Restore-Shell.ps1. -->
     <None Update="Scripts\*.ps1" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
+    <!-- The built-in materials (shaders) go next to the .exe as Materials\<name>\material.hlsl + material.json. -->
+    <!-- (Removed and included again so %(RecursiveDir) is the material's folder, not the whole path from the project.) -->
+    <None Remove="Materials\BuiltIn\**" />
+    <None Include="Materials\BuiltIn\**\*" CopyToOutputDirectory="PreserveNewest" Link="Materials\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

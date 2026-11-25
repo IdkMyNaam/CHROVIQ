@@ -668,6 +668,8 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         CheckField(LookOptions, "Blur behind the bar (experimental)", look.Blur, v => look.Blur = v,
             "Use a see-through background. Shows on the real taskbar only, not in this preview, and not with a floating dock yet.");
 
+        BuildMaterialOptions(look);
+
         CheckField(LookOptions, "Floating dock", look.Floating != null, on =>
         {
             look.Floating = on ? new FloatingDock() : null;
@@ -679,6 +681,98 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             CheckField(LookOptions, "Reserve screen space", dock.ReserveSpace, v => dock.ReserveSpace = v,
                 "Off: the dock floats over windows instead of pushing them aside.");
         }
+    }
+
+    // ---------- Material (shader) ----------
+
+    /// <summary>The material dropdown, its description, its settings (made from material.json) and any compile error.</summary>
+    private void BuildMaterialOptions(TaskbarLook look)
+    {
+        Header(LookOptions, "Material (shader)");
+        var materials = Materials.LoadAll();
+        Label(LookOptions, "Material");
+        var box = new ComboBox { ItemsSource = new[] { "(none: plain background)" }.Concat(materials.Select(m => m.Name)).ToList() };
+        var current = materials.FirstOrDefault(m => m.Name.Equals(look.Material, StringComparison.CurrentCultureIgnoreCase));
+        box.SelectedIndex = current == null ? 0 : materials.IndexOf(current) + 1;
+        // Only the part below the dropdown is rebuilt when it changes: rebuilding the dropdown itself while it is
+        // closing (WPF-UI animates it) crashes WPF.
+        var details = new StackPanel();
+        box.SelectionChanged += (_, _) =>
+        {
+            look.Material = box.SelectedIndex <= 0 ? null : materials[box.SelectedIndex - 1].Name;
+            Changed();
+            FillMaterialDetails(details, look, box.SelectedIndex <= 0 ? null : materials[box.SelectedIndex - 1]);
+        };
+        LookOptions.Children.Add(box);
+        LookOptions.Children.Add(details);
+        FillMaterialDetails(details, look, current);
+
+        var folders = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        folders.Children.Add(SmallButton("Your materials folder", () =>
+        {
+            System.IO.Directory.CreateDirectory(Materials.UserFolder);
+            ShellLaunch.OpenFolder(Materials.UserFolder);
+        }));
+        folders.Children.Add(SmallButton("Built-in materials", () => ShellLaunch.OpenFolder(Materials.BuiltInFolder)));
+        LookOptions.Children.Add(folders);
+        Hint(LookOptions, "Your own: copy a built-in material's folder into your materials folder, give it a new name in material.json, " +
+                          "and edit material.hlsl. Reopen this tab to see changes.");
+    }
+
+    /// <summary>The chosen material's description, compile error (if any) and settings.</summary>
+    private void FillMaterialDetails(Panel details, TaskbarLook look, Material? current)
+    {
+        details.Children.Clear();
+        if (current == null)
+        {
+            Hint(details, "A material draws the bar's surface with a shader: glass, glow, painted styles, animations. Icons and text stay sharp on top.");
+            return;
+        }
+        Hint(details, (current.Description ?? "") + (current.Animated
+            ? $" Animated: redrawn up to {MaterialClock.FramesPerSecond} times a second, paused while a fullscreen app or game is in front."
+            : ""));
+
+        // Doesn't compile: say why (the line numbers are those of material.hlsl).
+        Materials.Compile(current, out var error);
+        if (error != null)
+            details.Children.Add(new TextBlock
+            {
+                Text = "This material doesn't compile, so the bar shows its plain background:\n" + error,
+                Foreground = Brushes.IndianRed, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0),
+                FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 11,
+            });
+
+        var values = look.MaterialValues ??= new Dictionary<string, string>();
+        foreach (var parameter in current.Parameters)
+        {
+            string value = values.TryGetValue(parameter.Name, out var v) ? v : parameter.Default;
+            if (parameter.Type == MaterialParameterType.Color)
+                ColorField(details, parameter.Name, value, text => values[parameter.Name] = text, parameter.Hint);
+            else
+                SliderField(details, parameter, value, number => values[parameter.Name] = number.ToString("0.###", CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>A slider with its value next to it.</summary>
+    private void SliderField(Panel panel, MaterialParameter parameter, string value, Action<double> set)
+    {
+        Label(panel, parameter.Name);
+        double number = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : parameter.Min;
+        var row = new DockPanel();
+        var shown = new TextBlock { Width = 44, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+        DockPanel.SetDock(shown, Dock.Right);
+        var slider = new Slider { Minimum = parameter.Min, Maximum = Math.Max(parameter.Max, parameter.Min + 0.001), Value = number, VerticalAlignment = VerticalAlignment.Center };
+        shown.Text = number.ToString("0.##", CultureInfo.CurrentCulture);
+        slider.ValueChanged += (_, _) =>
+        {
+            shown.Text = slider.Value.ToString("0.##", CultureInfo.CurrentCulture);
+            set(slider.Value);
+            Changed();
+        };
+        row.Children.Add(shown);
+        row.Children.Add(slider);
+        panel.Children.Add(row);
+        if (parameter.Hint != null) Hint(panel, parameter.Hint);
     }
 
     // ---------- Preview and saving ----------

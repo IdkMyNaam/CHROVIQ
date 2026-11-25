@@ -204,6 +204,12 @@ public class TaskbarLook
     /// </summary>
     public bool Blur { get; set; }
 
+    /// <summary>A material (shader) drawn as the bar's surface, behind the icons; null for a plain background.</summary>
+    public string? Material { get; set; }
+
+    /// <summary>The material's settings by name (numbers or colors as text); missing ones use the material's defaults.</summary>
+    public Dictionary<string, string>? MaterialValues { get; set; }
+
     /// <summary>Set to float the bar as a dock instead of filling the screen edge. Empty: normal full-width bar.</summary>
     public FloatingDock? Floating { get; set; }
 }

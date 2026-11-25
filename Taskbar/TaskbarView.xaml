@@ -201,7 +201,11 @@
 
     <!-- The visible bar. Its contents are built from the design (see TaskbarView.Modules.cs). -->
     <!-- Tray icon template is added in code (TaskbarView.TrayModule.cs) so it can use the button style above. -->
-    <Border x:Name="Surface" Background="{DynamicResource BarBackground}">
-        <Border x:Name="Root" Margin="4,3" />
+    <!-- MaterialLayer draws the background (and a material's shader, if any) behind the icons, in the bar's shape. -->
+    <Border x:Name="Surface">
+        <Grid>
+            <Border x:Name="MaterialLayer" Background="{DynamicResource BarBackground}" />
+            <Border x:Name="Root" Margin="4,3" />
+        </Grid>
     </Border>
 </UserControl>

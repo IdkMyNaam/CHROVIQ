@@ -1,0 +1,11 @@
+{
+  "Name": "Tinted glass",
+  "Description": "A color tint with a soft sheen and fine grain. With a see-through background and blur: frosted glass.",
+  "Animated": false,
+  "Parameters": [
+    { "Name": "Tint", "Type": "Color", "Default": "#3A7BD5" },
+    { "Name": "Tint strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.35" },
+    { "Name": "Sheen", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" },
+    { "Name": "Grain", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.4" }
+  ]
+}

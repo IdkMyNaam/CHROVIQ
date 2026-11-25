@@ -37,6 +37,7 @@ public partial class TaskbarView : UserControl
         _look = design.Look ?? new TaskbarLook();
         InitializeComponent();
         ApplyLook();
+        SetUpMaterialInput();
         UpdateAccentBrush();
 
         Loaded += (_, _) => Build();
@@ -68,7 +69,46 @@ public partial class TaskbarView : UserControl
     public void SetBlurActive(bool active)
     {
         // Alpha 1 instead of 0: fully transparent pixels would let clicks fall through the empty parts of the bar.
-        Resources["BarBackground"] = new SolidColorBrush(active ? Color.FromArgb(1, 0, 0, 0) : BackgroundColor);
+        // With a material, keep the (see-through) background: the material is drawn in it, over the blur.
+        Resources["BarBackground"] = new SolidColorBrush(active && MaterialLayer.Effect == null ? Color.FromArgb(1, 0, 0, 0) : BackgroundColor);
+    }
+
+    /// <summary>Why the design's material can't be shown (it doesn't compile), or null.</summary>
+    public string? MaterialError { get; private set; }
+
+    /// <summary>The design's material on the background layer (or none); animated ones join the material clock.</summary>
+    private void ApplyMaterial()
+    {
+        MaterialLayer.Effect = null;
+        MaterialError = null;
+        if (Materials.Find(_look.Material) is not { } material) return;
+        var accent = ParseColor(_look.Accent, SystemParameters.WindowGlassColor);
+        var effect = Materials.CreateEffect(material, _look.MaterialValues, accent, out var error);
+        MaterialError = error;
+        if (effect == null) return;
+        MaterialLayer.Effect = effect;
+        UpdateMaterialSize();
+        MaterialClock.Add(effect, MaterialLayer);
+    }
+
+    private void UpdateMaterialSize()
+    {
+        if (MaterialLayer.Effect is not MaterialEffect effect) return;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        effect.SetSize(MaterialLayer.ActualWidth * dpi.DpiScaleX, MaterialLayer.ActualHeight * dpi.DpiScaleY);
+    }
+
+    /// <summary>Materials can react to the mouse (MOUSE, HOVER in the shader).</summary>
+    private void SetUpMaterialInput()
+    {
+        MaterialLayer.SizeChanged += (_, _) => UpdateMaterialSize();
+        Surface.MouseMove += (_, e) =>
+        {
+            if (MaterialLayer.Effect is not MaterialEffect effect || MaterialLayer.ActualWidth <= 0) return;
+            var at = e.GetPosition(MaterialLayer);
+            effect.SetMouse(new Point(at.X / MaterialLayer.ActualWidth, at.Y / Math.Max(1, MaterialLayer.ActualHeight)));
+        };
+        Surface.MouseLeave += (_, _) => (MaterialLayer.Effect as MaterialEffect)?.SetMouse(null);
     }
 
     /// <summary>The window list's buttons (windows or app groups), built from the tracked windows.</summary>
@@ -165,6 +205,8 @@ public partial class TaskbarView : UserControl
         Resources["ColorIconOpacity"] = _look.TintIcons ? 0.0 : 1.0;
 
         Surface.CornerRadius = new CornerRadius(Math.Max(0, _look.CornerRadius));
+        MaterialLayer.CornerRadius = Surface.CornerRadius;
+        ApplyMaterial();
         // Floating dock: only as wide as its contents, centered in the (transparent) window.
         Surface.HorizontalAlignment = IsFloating ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
 

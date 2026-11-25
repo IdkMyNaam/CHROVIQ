@@ -1,0 +1,12 @@
+{
+  "Name": "Watercolor",
+  "Description": "Two colors in soft paint blotches with darker edges and paper grain.",
+  "Animated": false,
+  "Parameters": [
+    { "Name": "Color 1", "Type": "Color", "Default": "#4F8FBF" },
+    { "Name": "Color 2", "Type": "Color", "Default": "#9DD3A8" },
+    { "Name": "Blotch size", "Type": "Slider", "Min": 0.3, "Max": 4, "Default": "1" },
+    { "Name": "Strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" },
+    { "Name": "Paper grain", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.5" }
+  ]
+}

@@ -449,6 +449,34 @@
                             <ui:ToggleSwitch x:Name="HideWindowsTaskbarCheck" Click="HideWindowsTaskbarCheck_Click" />
                         </ui:CardControl>
 
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Eye24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Show auto-hiding taskbars while this window is open" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="For designs with auto-hide: the bar comes in while Windows Customizer is on screen (not minimized), so you see what you change." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="ShowTaskbarWhileOpenCheck" Click="ShowTaskbarWhileOpenCheck_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Play24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Animation frame rate" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Style="{StaticResource CardText}"
+                                               Text="For animated materials (shaders) on the taskbar. Lower uses less of the graphics card; they always pause while a fullscreen app or game is in front." />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ComboBox x:Name="MaterialFpsBox" Width="200" SelectionChanged="MaterialFpsBox_SelectionChanged">
+                                <ComboBoxItem Content="15 per second" />
+                                <ComboBoxItem Content="30 per second" />
+                                <ComboBoxItem Content="60 per second" />
+                            </ComboBox>
+                        </ui:CardControl>
+
                         <TextBlock Text="Design" Style="{StaticResource Section}" />
                         <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="DesignIdeas24" /></ui:CardControl.Icon>

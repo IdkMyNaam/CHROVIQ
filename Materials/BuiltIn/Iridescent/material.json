@@ -1,0 +1,11 @@
+{
+  "Name": "Iridescent",
+  "Description": "Slowly shifting rainbow colors, like a soap bubble; brighter where the mouse is. Animated.",
+  "Animated": true,
+  "Parameters": [
+    { "Name": "Speed", "Type": "Slider", "Min": 0, "Max": 3, "Default": "1" },
+    { "Name": "Color intensity", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.55" },
+    { "Name": "Brightness", "Type": "Slider", "Min": 0.1, "Max": 1, "Default": "0.6" },
+    { "Name": "Mix with background", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" }
+  ]
+}

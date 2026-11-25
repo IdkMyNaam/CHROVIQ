@@ -95,7 +95,6 @@ public partial class AppBarWindow : Window
     // ---------- Auto-hide ----------
 
     private readonly System.Windows.Threading.DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
-    private readonly System.Windows.Threading.DispatcherTimer _slideTimer = new() { Interval = TimeSpan.FromMilliseconds(15) };
     private RECT _strip;            // the strip at the edge from the last PlaceWindow (physical pixels)
     private RECT _shownRect;        // where the bar is when fully shown
     private bool _hidden;           // slid away (or sliding away)
@@ -114,10 +113,15 @@ public partial class AppBarWindow : Window
     private void StartAutoHide()
     {
         _autoHideTimer.Tick += (_, _) => CheckMouse();
-        _slideTimer.Tick += (_, _) => SlideStep();
         _autoHideTimer.Start();
-        Closed += (_, _) => { _autoHideTimer.Stop(); _slideTimer.Stop(); };
+        Closed += (_, _) => { _autoHideTimer.Stop(); if (_sliding) System.Windows.Media.CompositionTarget.Rendering -= OnSlideFrame; };
     }
+
+    /// <summary>While true (the Windows Customizer window is open), auto-hide bars come in and stay.</summary>
+    public static bool KeepShown { get; set; }
+
+    /// <summary>Come in and stay: the Customizer window, or the start menu / search (opened with the Windows key too).</summary>
+    private static bool StayShown => KeepShown || StartMenuWindow.IsOpen || SearchWindow.IsOpen;
 
     private void CheckMouse()
     {
@@ -133,11 +137,11 @@ public partial class AppBarWindow : Window
 
         if (_hidden)
         {
-            if (atEdge) SlideTo(0);
+            if (atEdge || StayShown) SlideTo(0);
             return;
         }
 
-        if (overBar || atEdge || _view.IsMenuOpen)
+        if (overBar || atEdge || _view.IsMenuOpen || StayShown)
         {
             _mouseLeftAt = null;
         }
@@ -148,42 +152,87 @@ public partial class AppBarWindow : Window
         }
     }
 
+    // The slide is timed (not a number of steps), so it looks the same however busy the PC is, and it is drawn
+    // in step with the screen (CompositionTarget.Rendering) instead of on a timer that fires unevenly.
+    private const double SlideMs = 200;
+    private readonly System.Diagnostics.Stopwatch _slideClock = new();
+    private double _slideFrom;
+    private bool _sliding;
+
     private void SlideTo(double target)
     {
         _slideTarget = target;
         _hidden = target > 0;
         _mouseLeftAt = null;
-        if (target == 0 && !IsVisible) Show(); // appears at its hidden position, then slides in
-        _slideTimer.Start();
-    }
-
-    /// <summary>One animation step (about 150 ms in total), easing toward the target.</summary>
-    private void SlideStep()
-    {
-        _slide += Math.Sign(_slideTarget - _slide) * 0.1;
-        if (Math.Abs(_slide - _slideTarget) < 0.05) _slide = _slideTarget;
-        MoveToSlidePosition();
-
-        if (_slide == _slideTarget)
+        if (target == 0 && !IsVisible)
         {
-            _slideTimer.Stop();
-            if (_slide >= 1) Hide(); // fully away: also never peeks onto a monitor beyond this edge
+            Show(); // appears at its hidden position, then slides in
+            MoveToSlidePosition(force: true);
+        }
+        _slideFrom = _slide;
+        _slideClock.Restart();
+        if (!_sliding)
+        {
+            _sliding = true;
+            System.Windows.Media.CompositionTarget.Rendering += OnSlideFrame;
         }
     }
 
-    /// <summary>Moves the window to the shown position, pushed off the edge by the current slide amount.</summary>
-    private void MoveToSlidePosition()
+    private void OnSlideFrame(object? sender, EventArgs e)
+    {
+        double distance = Math.Abs(_slideTarget - _slideFrom);
+        double progress = distance < 0.001 ? 1 : Math.Min(1, _slideClock.Elapsed.TotalMilliseconds / (SlideMs * distance));
+        double eased = 1 - Math.Pow(1 - progress, 3); // quick start, gentle stop
+        _slide = _slideFrom + (_slideTarget - _slideFrom) * eased;
+        MoveToSlidePosition();
+
+        if (progress < 1) return;
+        _slide = _slideTarget;
+        System.Windows.Media.CompositionTarget.Rendering -= OnSlideFrame;
+        _sliding = false;
+        // Fully away. Hidden for real only if another monitor is beyond this edge (it would peek onto it);
+        // otherwise it waits just off the screen, so sliding back in needs no redraw first.
+        if (_slide >= 1 && OffscreenRectTouchesAMonitor()) Hide();
+    }
+
+    private int _lastSlideOffset = int.MinValue;
+
+    /// <summary>Moves the window to the shown position, pushed off the edge by the current slide amount (only moves it).</summary>
+    private void MoveToSlidePosition(bool force = false)
+    {
+        int offset = SlideOffset(_slide);
+        if (!force && offset == _lastSlideOffset) return;
+        _lastSlideOffset = offset;
+        if (force)
+        {
+            // Placing the bar (or showing it): its full size and its place on top, not only where it is.
+            var rc = _shownRect;
+            rc.Top += offset;
+            rc.Bottom += offset;
+            AppBar.MoveWindow(this, rc);
+        }
+        else AppBar.MoveWindowOnly(this, _shownRect.Left, _shownRect.Top + offset); // animation frames: only move
+    }
+
+    private int SlideOffset(double slide)
     {
         int height = _shownRect.Bottom - _shownRect.Top;
         int distanceToEdge = _edge == TaskbarEdge.Top ? _shownRect.Bottom - _strip.Top : _strip.Bottom - _shownRect.Top;
-        double eased = 1 - Math.Pow(1 - _slide, 2); // starts fast, slows down at the end
-        int offset = (int)Math.Round(Math.Min(distanceToEdge, height + 20) * (_slideTarget > 0 ? eased : _slide));
-        if (_edge == TaskbarEdge.Top) offset = -offset;
+        int offset = (int)Math.Round(Math.Min(distanceToEdge, height + 20) * slide);
+        return _edge == TaskbarEdge.Top ? -offset : offset;
+    }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromRect(ref RECT rect, uint flags);
+
+    /// <summary>Would the fully slid-away bar overlap a monitor (one beyond this edge)?</summary>
+    private bool OffscreenRectTouchesAMonitor()
+    {
+        int offset = SlideOffset(1);
         var rc = _shownRect;
         rc.Top += offset;
         rc.Bottom += offset;
-        AppBar.MoveWindow(this, rc);
+        return MonitorFromRect(ref rc, 0 /* MONITOR_DEFAULTTONULL */) != IntPtr.Zero;
     }
 
     /// <summary>
@@ -204,7 +253,7 @@ public partial class AppBarWindow : Window
         _strip = strip;
         _shownRect = new RECT { Left = left, Top = top, Right = right, Bottom = top + height };
 
-        if (_design.AutoHide) MoveToSlidePosition(); // keep the current slide state
+        if (_design.AutoHide) MoveToSlidePosition(force: true); // keep the current slide state (the place itself changed)
         else AppBar.MoveWindow(this, _shownRect);
     }
 

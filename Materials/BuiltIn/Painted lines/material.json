@@ -1,0 +1,11 @@
+{
+  "Name": "Painted lines",
+  "Description": "Hand-drawn looking hatching lines over the background.",
+  "Animated": false,
+  "Parameters": [
+    { "Name": "Ink", "Type": "Color", "Default": "#2E4A7A" },
+    { "Name": "Line distance", "Type": "Slider", "Min": 3, "Max": 30, "Default": "8" },
+    { "Name": "Angle", "Type": "Slider", "Min": 0, "Max": 180, "Default": "35" },
+    { "Name": "Strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.6" }
+  ]
+}

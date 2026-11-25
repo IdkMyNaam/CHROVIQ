@@ -1,0 +1,12 @@
+{
+  "Name": "Aurora",
+  "Description": "Two colors flowing in soft waves, like northern lights. Animated.",
+  "Animated": true,
+  "Parameters": [
+    { "Name": "Color 1", "Type": "Color", "Default": "#22D3A6" },
+    { "Name": "Color 2", "Type": "Color", "Default": "#7B5CFF" },
+    { "Name": "Speed", "Type": "Slider", "Min": 0, "Max": 3, "Default": "1" },
+    { "Name": "Waves", "Type": "Slider", "Min": 0.5, "Max": 10, "Default": "3" },
+    { "Name": "Strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.7" }
+  ]
+}

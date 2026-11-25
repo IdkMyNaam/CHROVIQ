@@ -36,6 +36,12 @@ public class AppSettings
     /// <summary>Older setting: Windows key opens our search. Replaced by <see cref="WinKey"/>, still read for old files.</summary>
     public bool WinKeyOpensSearch { get; set; }
 
+    /// <summary>Auto-hiding taskbars come in and stay while the Windows Customizer window is open (on screen).</summary>
+    public bool ShowTaskbarWhileOpen { get; set; } = true;
+
+    /// <summary>Frames per second for animated materials (shaders) on the taskbar: 15, 30 or 60.</summary>
+    public int MaterialFps { get; set; } = 30;
+
     /// <summary>The app theme (how Windows Customizer's own windows look); see AppThemes. Empty: "Windows".</summary>
     public string? AppTheme { get; set; }
 

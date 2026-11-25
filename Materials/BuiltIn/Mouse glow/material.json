@@ -1,0 +1,10 @@
+{
+  "Name": "Mouse glow",
+  "Description": "A soft light that follows the mouse over the bar.",
+  "Animated": false,
+  "Parameters": [
+    { "Name": "Glow color", "Type": "Color", "Default": "#6CB6FF" },
+    { "Name": "Size", "Type": "Slider", "Min": 0.3, "Max": 6, "Default": "2" },
+    { "Name": "Strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.5" }
+  ]
+}
