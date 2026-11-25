@@ -436,11 +436,7 @@ public partial class TaskbarView
     {
         try
         {
-            Process.Start(new ProcessStartInfo(target)
-            {
-                UseShellExecute = true,
-                Arguments = arguments ?? "",
-            })?.Dispose();
+            ShellLaunch.Start(target, arguments);
         }
         catch (Exception ex)
         {

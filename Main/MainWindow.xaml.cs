@@ -999,7 +999,7 @@ public partial class MainWindow : Window
         try
         {
             System.IO.Directory.CreateDirectory(TaskbarDesigns.Folder);
-            System.Diagnostics.Process.Start("explorer.exe", $"\"{TaskbarDesigns.Folder}\"")?.Dispose();
+            ShellLaunch.OpenFolder(TaskbarDesigns.Folder);
         }
         catch (Exception ex)
         {
@@ -1066,9 +1066,7 @@ public partial class MainWindow : Window
     // ---------- Shell (Phase 4) ----------
 
     private readonly List<DesktopWindow> _desktops = new();
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool SetShellWindow(IntPtr hwnd);
+    private ShellWindow? _shellWindow;
 
     /// <summary>
     /// Started as the user's shell (Explorer isn't running): desktops, a taskbar no matter what,
@@ -1082,16 +1080,23 @@ public partial class MainWindow : Window
 
         ShellMode.WatchForExplorer(TimeSpan.FromMinutes(3));
 
-        // The shell window first (icons load afterwards): until it is registered, anything that starts
-        // explorer.exe makes Explorer take over as a second shell.
-        var registered = OpenDesktops();
+        // The shell window first: until one is registered, anything that starts explorer.exe makes
+        // Explorer take over as a second shell.
+        var registered = RegisterShellWindow();
+        Wallpaper.Apply();
+        OpenDesktops();
 
         // As the shell, never leave the user without a taskbar, whatever the setting says.
         if (!TaskbarShown) SetTaskbarVisible(true);
         ShellMode.Log("Taskbar shown");
 
         if (ShellMode.RunStartupPrograms) _ = StartStartupProgramsAsync(registered);
-        Closed += (_, _) => { foreach (var d in _desktops) d.Close(); ShellMode.Log("Windows Customizer closed"); };
+        Closed += (_, _) =>
+        {
+            foreach (var d in _desktops) d.Close();
+            _shellWindow?.Dispose();
+            ShellMode.Log("Windows Customizer closed");
+        };
     }
 
     /// <summary>The startup programs, only once our shell window is registered (or after 35 s at most).</summary>
@@ -1102,63 +1107,52 @@ public partial class MainWindow : Window
         await StartupApps.RunAllAsync(ShellMode.Log);
     }
 
-    /// <summary>One desktop per monitor (icons on the main one); the main one is registered as the shell window.</summary>
-    private Task<bool> OpenDesktops()
+    /// <summary>One desktop per monitor (icons on the main one).</summary>
+    private void OpenDesktops()
     {
         foreach (var d in _desktops) d.Close();
         _desktops.Clear();
-        Task<bool> registered = Task.FromResult(false);
         foreach (var monitor in Monitors.All())
         {
             var desktop = new DesktopWindow(monitor, showIcons: monitor.IsPrimary) { OpenCustomizer = ShowFromTray };
             desktop.Show();
             _desktops.Add(desktop);
-            // The shell window: with one registered, explorer.exe only opens file windows instead of taking over.
-            if (monitor.IsPrimary) registered = RegisterShellWindow(desktop.Handle);
         }
         ShellMode.Log($"Desktops opened on {_desktops.Count} monitor(s)");
-        return registered;
     }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr GetShellWindow();
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool IsWindow(IntPtr hwnd);
 
     private DispatcherTimer? _shellWindowTimer;
 
     /// <summary>
-    /// Registers our desktop as the shell window. Right after another shell window went away (Explorer's),
-    /// Windows refuses this for a moment, so it is retried every half second for up to 30 seconds.
-    /// Never pushes aside a different shell window that is still alive.
+    /// Registers our (hidden) shell window, see <see cref="ShellWindow"/>. If Windows refuses at first
+    /// (for a moment after another shell window went away), it is retried every half second for up to 30 seconds.
     /// </summary>
-    private Task<bool> RegisterShellWindow(IntPtr desktop)
+    private Task<bool> RegisterShellWindow()
     {
-        _shellWindowTimer?.Stop();
         var done = new TaskCompletionSource<bool>();
-        int attempts = 0;
-        bool TryOnce()
+        try { _shellWindow = new ShellWindow(); }
+        catch (Exception ex)
         {
-            attempts++;
-            var current = GetShellWindow();
-            if (current == desktop) return true;
-            if (current != IntPtr.Zero && IsWindow(current)) return false; // someone else is the shell: don't fight
-            SetShellWindow(desktop);
-            return GetShellWindow() == desktop;
+            ShellMode.Log($"Could not create the shell window: {ex.Message}");
+            done.SetResult(false);
+            return done.Task;
         }
 
-        if (TryOnce())
+        int attempts = 1;
+        string? problem = _shellWindow.TryRegister();
+        if (problem == null)
         {
             ShellMode.Log("Registered as the shell window (first attempt)");
             done.SetResult(true);
             return done.Task;
         }
-        ShellMode.Log($"Shell window not registered yet (current shell window: {GetShellWindow()}); retrying");
+        ShellMode.Log($"Shell window not registered yet: {problem}; retrying");
         _shellWindowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _shellWindowTimer.Tick += (_, _) =>
         {
-            if (TryOnce())
+            attempts++;
+            problem = _shellWindow.TryRegister();
+            if (problem == null)
             {
                 _shellWindowTimer!.Stop();
                 StatusText.Text = $"Registered as the shell window (attempt {attempts}).";
@@ -1169,7 +1163,7 @@ public partial class MainWindow : Window
             {
                 _shellWindowTimer!.Stop();
                 StatusText.Text = "Could not register as the shell window: opening a folder may start Explorer as the shell.";
-                ShellMode.Log($"{StatusText.Text} (current shell window: {GetShellWindow()})");
+                ShellMode.Log($"{StatusText.Text} Last reason: {problem}");
                 done.TrySetResult(false);
             }
         };
@@ -1231,7 +1225,7 @@ public partial class MainWindow : Window
     private void OpenBackups_Click(object sender, RoutedEventArgs e)
     {
         Directory.CreateDirectory(ShellMode.BackupFolder);
-        System.Diagnostics.Process.Start("explorer.exe", $"\"{ShellMode.BackupFolder}\"")?.Dispose();
+        ShellLaunch.OpenFolder(ShellMode.BackupFolder);
     }
 
     // ---------- Search ----------

@@ -240,7 +240,7 @@ public sealed class DesktopWindow : Window
 
     private static void Open(string path)
     {
-        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })?.Dispose(); }
+        try { ShellLaunch.Start(path); }
         catch (Exception ex) { MessageBox.Show($"Could not open it:\n{ex.Message}", "Desktop", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
@@ -329,7 +329,7 @@ public sealed class DesktopWindow : Window
     {
         var menu = new ContextMenu();
         Add(menu, "Open", () => Open(path));
-        Add(menu, "Open file location", () => Process.Start("explorer.exe", $"/select,\"{path}\"")?.Dispose());
+        Add(menu, "Open file location", () => ShellLaunch.ShowInFolder(path));
         menu.Items.Add(new Separator());
         Add(menu, "Rename", () => Rename(path));
         Add(menu, "Delete", () => Delete(path));
@@ -343,7 +343,7 @@ public sealed class DesktopWindow : Window
         var menu = new ContextMenu();
         Add(menu, "Refresh", Refresh);
         Add(menu, "New folder", NewFolder);
-        Add(menu, "Open desktop folder", () => Process.Start("explorer.exe", $"\"{UserDesktop}\"")?.Dispose());
+        Add(menu, "Open desktop folder", () => ShellLaunch.OpenFolder(UserDesktop));
         menu.Items.Add(new Separator());
         Add(menu, "Display settings", () => Process.Start(new ProcessStartInfo("ms-settings:display") { UseShellExecute = true })?.Dispose());
         Add(menu, "Personalize", () => Process.Start(new ProcessStartInfo("ms-settings:personalization") { UseShellExecute = true })?.Dispose());

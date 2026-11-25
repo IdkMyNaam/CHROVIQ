@@ -348,7 +348,7 @@ public sealed class StartMenuWindow : Window
 
         menu.Items.Add(new Separator());
         // Store apps have no file to show or to run as administrator.
-        Add(menu, "Open file location", () => { Start("explorer.exe", $"/select,\"{app.LaunchPath}\""); CloseQuietly(); }, enabled: !app.IsShellApp);
+        Add(menu, "Open file location", () => { ShellLaunch.ShowInFolder(app.LaunchPath); CloseQuietly(); }, enabled: !app.IsShellApp);
         Add(menu, "Run as administrator", () =>
         {
             try { Process.Start(new ProcessStartInfo(app.LaunchPath) { UseShellExecute = true, Verb = "runas" })?.Dispose(); }
@@ -475,7 +475,7 @@ public sealed class StartMenuWindow : Window
     }
 
     private static void Start(string target, string? arguments = null) =>
-        Process.Start(new ProcessStartInfo(target) { UseShellExecute = true, Arguments = arguments ?? "" })?.Dispose();
+        ShellLaunch.Start(target, arguments);
 
     /// <summary>A search result row: icon (or a symbol) and name.</summary>
     private static DataTemplate AppTemplate()

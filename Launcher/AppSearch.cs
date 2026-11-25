@@ -17,9 +17,9 @@ public sealed record AppEntry(string Name, string LaunchPath, bool IsShellApp)
     public void Launch()
     {
         if (IsShellApp)
-            Process.Start("explorer.exe", $"shell:AppsFolder\\{LaunchPath}")?.Dispose();
+            ShellLaunch.Start("explorer.exe", $"shell:AppsFolder\\{LaunchPath}");
         else
-            Process.Start(new ProcessStartInfo(LaunchPath) { UseShellExecute = true })?.Dispose();
+            ShellLaunch.Start(LaunchPath);
     }
 
     public override string ToString() => Name;
