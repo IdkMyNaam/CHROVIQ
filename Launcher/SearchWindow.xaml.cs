@@ -284,7 +284,7 @@ public partial class SearchWindow : Window, ILiveGlassWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not open it:\n{ex.Message}", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show($"Could not open it:\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         CloseQuietly();
     }

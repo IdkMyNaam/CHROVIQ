@@ -83,7 +83,7 @@ internal sealed class Hotkeys : IDisposable
         new(HotkeyAction.OpenStartMenu, "Open", "Open the start menu", Shortcut.None),
         new(HotkeyAction.OpenSearch, "Open", "Open search", Shortcut.None),
         new(HotkeyAction.OpenQuickSettings, "Open", "Open Quick Settings", Shortcut.None),
-        new(HotkeyAction.OpenCustomizer, "Open", "Open Windows Customizer", Shortcut.None),
+        new(HotkeyAction.OpenCustomizer, "Open", "Open CHROVIQ", Shortcut.None),
         new(HotkeyAction.ToggleTaskbar, "Show and hide", "Show or hide the custom taskbar", Shortcut.None),
         new(HotkeyAction.ToggleWidgets, "Show and hide", "Show or hide the desktop widgets", Shortcut.None),
         new(HotkeyAction.NextWallpaper, "Show and hide", "Next daily wallpaper", Shortcut.None),

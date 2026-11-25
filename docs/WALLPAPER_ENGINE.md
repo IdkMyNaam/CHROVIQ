@@ -1,44 +1,46 @@
-# Wallpaper Engine integration: notes for Claude Code
+# Wallpaper Engine integration
 
-Context for the `WindowsCustomizer` project (C#, WPF, .NET 8, Windows only). Read `PLAN.md` first for the overall vision. This file explains only the Wallpaper Engine (WE) part.
+CHROVIQ can use [Wallpaper Engine](https://store.steampowered.com/app/431960/Wallpaper_Engine/) as a profile's wallpaper
+and pause it automatically while you play games. This document describes how that works.
 
-## Goal
-Each theme profile can set the desktop wallpaper through Wallpaper Engine instead of (or in addition to) a normal image, and WE can be paused while games run.
+## Overview
 
-## How it works
-The app does not talk to WE through an API. It starts WE's own executable (`wallpaper64.exe` or `wallpaper32.exe`) with command-line arguments. WE has to be running to receive them, so the app starts it first if needed.
-
-Commands used (written from memory, **verify them against the current Wallpaper Engine documentation and fix `WallpaperEngine.cs` if a command or argument differs**):
+CHROVIQ does not use an API to talk to Wallpaper Engine. It runs Wallpaper Engine's own executable
+(`wallpaper64.exe` or `wallpaper32.exe`) with command-line arguments. Wallpaper Engine has to be running to receive
+them, so CHROVIQ starts it first when needed.
 
 | Purpose | Arguments |
 |---|---|
 | Open a wallpaper | `-control openWallpaper -file "<path>\project.json"` |
-| Load a WE profile | `-control openProfile -profile "<name>"` |
-| Stop / pause / resume | `-control stop`, `-control pause`, `-control play` |
+| Load a Wallpaper Engine profile | `-control openProfile -profile "<name>"` |
+| Stop, pause, resume | `-control stop`, `-control pause`, `-control play` |
 
-## Files (all in the project root)
-- `Profile.cs`: `WallpaperKind` enum (`Image`, `WallpaperEngineFile`, `WallpaperEngineProfile`) and `WallpaperValue` (image path, project.json path, or WE profile name depending on the kind).
-- `WallpaperEngine.cs`: static helper.
-  - Finds the exe via Steam: registry `SteamPath` / `InstallPath`, plus extra libraries parsed from `steamapps\libraryfolders.vdf`, looking in `steamapps\common\wallpaper_engine`. A saved path in settings wins if it exists.
-  - `IsRunning` checks processes `wallpaper64` / `wallpaper32`.
-  - `EnsureRunningAsync()` starts the exe and waits a fixed 4 seconds (crude, could be improved).
-  - `FindWallpapers()` lists wallpapers from `steamapps\workshop\content\431960\*` (431960 is WE's Steam app id) and from `wallpaper_engine\projects\myprojects` and `defaultprojects`, reading the `title` from each `project.json`.
-- `ThemeService.cs`: `ApplyAsync(Profile)` sets dark/light mode, then handles the wallpaper by kind. For `Image` it stops WE first (WE draws over the normal wallpaper), waits 700 ms, then calls `SystemParametersInfo`.
-- `GameWatcher.cs`: a `DispatcherTimer` every 5 seconds. If any process name from the settings is running, it pauses WE; when none are, it resumes.
-- `AppSettings.cs`: JSON settings in `%AppData%\WindowsCustomizer\settings.json` (game process list, pause on/off, saved WE exe path).
-- `WorkshopPicker.xaml(.cs)`: dialog to pick a wallpaper from `FindWallpapers()` with a title filter.
-- `MainWindow.xaml(.cs)`: wallpaper type dropdown, value box, browse button, apply button, game mode section.
+## Components
 
-## Known weak points and ideas
-- The code has not been compiled or tested on a real WE install yet. Build first and fix errors.
-- The 4 second wait after starting WE is a guess. Better: poll until WE responds or the process is up.
-- The 700 ms wait after `stop` before setting an image is also a guess.
-- Profiles are only in memory (lost on close). Next planned step: save and load profiles as JSON.
-- Game detection is by process name only. WE also has its own pause-on-fullscreen setting, which may overlap.
-- Error handling is minimal: failures from starting WE are mostly silent. Consider checking exit codes and logging.
+- **`Themes/Profile.cs`**: `WallpaperKind` (`Image`, `WallpaperEngineFile`, `WallpaperEngineProfile`) and `WallpaperValue`
+  (an image path, a `project.json` path, or a Wallpaper Engine profile name, depending on the kind).
+- **`WallpaperEngine/WallpaperEngine.cs`**:
+  - Finds the executable through Steam (`SteamPath` / `InstallPath` in the registry, plus the extra libraries in
+    `steamapps\libraryfolders.vdf`) in `steamapps\common\wallpaper_engine`. A path chosen in the settings takes precedence.
+  - `IsRunning` checks for the `wallpaper64` / `wallpaper32` processes.
+  - `EnsureRunningAsync()` starts Wallpaper Engine and waits until it can receive commands.
+  - `FindWallpapers()` lists Workshop wallpapers (`steamapps\workshop\content\431960`) and local projects
+    (`projects\myprojects`, `projects\defaultprojects`), reading each title from `project.json`.
+- **`Themes/ThemeService.cs`**: `ApplyAsync(Profile)` applies dark/light mode, accent and cursors, then the wallpaper.
+  For a normal image it stops Wallpaper Engine first, since Wallpaper Engine draws over the Windows wallpaper.
+- **`WallpaperEngine/GameWatcher.cs`**: pauses Wallpaper Engine while a game from the list is running and resumes it afterwards.
+  It checks when the active window changes, with a 30-second fallback, and only resumes a pause it made itself.
+- **`WallpaperEngine/WorkshopPicker.xaml`**: a dialog to choose a wallpaper from `FindWallpapers()`, with a title filter.
+- **Settings** (`%AppData%\WindowsCustomizer\settings.json`): the game list, the pause option and an optional executable path.
 
-## Working agreement with the user
-- Always ask for confirmation before changing any file, even when asked to.
-- Keep answers short and direct.
-- Suggest extra ideas, but clearly label them as optional.
-- Phases from `PLAN.md` are built one at a time. Do not touch shell replacement (Phase 4) without the safety rules in `PLAN.md`.
+## Interaction with other features
+
+- **Daily wallpaper** doesn't change the wallpaper while Wallpaper Engine is running, because it would be hidden behind it.
+- **Glass materials** show the Windows wallpaper picture behind a surface; with **live glass** they show what's really
+  on screen, including a running Wallpaper Engine wallpaper.
+- **Desktop widgets** sit just above the desktop, so they appear on top of a Wallpaper Engine wallpaper.
+
+## Known limitations
+
+- The commands are based on Wallpaper Engine's command-line interface; a future Wallpaper Engine version could change them.
+- Game detection is by process name. Wallpaper Engine's own "pause when an application is fullscreen" setting may overlap with it.

@@ -163,7 +163,7 @@ public partial class TaskbarView
 
     private FrameworkElement MenuModule()
     {
-        var button = GlyphButton("", "Windows Customizer", null);
+        var button = GlyphButton("", "CHROVIQ", null);
         button.Click += (_, _) => ShowAppMenu(button);
         return button;
     }
@@ -468,7 +468,7 @@ public partial class TaskbarView
         button.Click += (_, _) =>
         {
             if (target == null)
-                MessageBox.Show("This button has no target yet. Set \"Target\" in the design file.", "Windows Customizer");
+                MessageBox.Show("This button has no target yet. Set \"Target\" in the design file.", "CHROVIQ");
             else
                 Launch(target, module.Arguments);
         };
@@ -518,7 +518,7 @@ public partial class TaskbarView
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not open \"{target}\":\n{ex.Message}", "Windows Customizer",
+            MessageBox.Show($"Could not open \"{target}\":\n{ex.Message}", "CHROVIQ",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

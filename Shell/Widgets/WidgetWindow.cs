@@ -37,7 +37,7 @@ internal sealed class WidgetWindow : Window
         ShowActivated = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
         UseLayoutRounding = true;
-        Title = "Windows Customizer widget";
+        Title = "CHROVIQ widget";
         Left = widget.Left;
         Top = widget.Top;
         Width = Math.Clamp(widget.Width, 80, 2000);
@@ -97,7 +97,7 @@ internal sealed class WidgetWindow : Window
         var remove = new MenuItem { Header = "Remove widget" };
         remove.Click += (_, _) =>
         {
-            if (MessageBox.Show($"Remove the {Widget} widget?", "Windows Customizer", MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
+            if (MessageBox.Show($"Remove the {Widget} widget?", "CHROVIQ", MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
                 _remove(this);
         };
         menu.Items.Add(settings);

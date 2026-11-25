@@ -319,7 +319,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             UpdateText.Text = $"Version {release.Version} is out (you have {Updates.Current.ToString(3)}).";
             if (quiet && !IsVisible)
             {
-                _trayIcon.ShowMessage("Update available", $"Windows Customizer {release.Version} is out. Open the app (About page) to install it.");
+                _trayIcon.ShowMessage("Update available", $"CHROVIQ {release.Version} is out. Open the app (About page) to install it.");
                 return;
             }
             var status = await Updates.OfferAsync(this, release);
@@ -348,7 +348,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         string code = _languages[LanguageBox.SelectedIndex].Code;
         _settings.Language = code == "en" ? null : code;
         SaveSettings();
-        StatusText.Text = Loc.T("The language changes the next time Windows Customizer starts.");
+        StatusText.Text = Loc.T("The language changes the next time CHROVIQ starts.");
     }
 
     /// <summary>Writes a file with every text the app has shown, to translate (in your Languages folder).</summary>
@@ -555,7 +555,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Hide();
         if (_settings.TrayHintShown) return;
 
-        _trayIcon.ShowMessage("Windows Customizer is still running",
+        _trayIcon.ShowMessage("CHROVIQ is still running",
             ShortcutOf(HotkeyAction.NextProfile) is { Length: > 0 } keys
                 ? $"Press {keys} to switch profiles. Right-click the tray icon to exit."
                 : "Right-click the tray icon for the menu, or to exit.");
@@ -1608,7 +1608,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             foreach (var d in _desktops) d.Close();
             _shellWindow?.Dispose();
-            ShellMode.Log("Windows Customizer closed");
+            ShellMode.Log("CHROVIQ closed");
         };
     }
 
@@ -1692,9 +1692,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void UpdateShellStatus()
     {
         bool installed = ShellMode.IsInstalled();
-        string now = ShellMode.IsShell ? "Windows Customizer is your shell right now." : "Explorer is your shell right now.";
+        string now = ShellMode.IsShell ? "CHROVIQ is your shell right now." : "Explorer is your shell right now.";
         string next = installed
-            ? "From the next sign-in: Windows Customizer (if it ever closes, Explorer starts automatically)."
+            ? "From the next sign-in: CHROVIQ (if it ever closes, Explorer starts automatically)."
             : ShellMode.CurrentUserShell() is { } other ? $"Your user has another shell set: {other}" : "From the next sign-in: Explorer.";
         ShellStatusText.Text = $"{now} {next}";
         UseAsShellButton.IsEnabled = !installed;
@@ -1704,9 +1704,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void UseAsShell_Click(object sender, RoutedEventArgs e)
     {
         var answer = MessageBox.Show(this,
-            "Make Windows Customizer your shell instead of Explorer, from your next sign-in?\n\n" +
+            "Make CHROVIQ your shell instead of Explorer, from your next sign-in?\n\n" +
             "• Only your user is changed; a backup of the setting is saved first.\n" +
-            "• If Windows Customizer ever closes or crashes, Explorer starts automatically.\n" +
+            "• If CHROVIQ ever closes or crashes, Explorer starts automatically.\n" +
             "• Not available without Explorer: Quick Settings (Win+A) and the notification center (Win+N).\n\n" +
             "To go back: the \"Back to Explorer\" button, or Restore-Shell.ps1 next to the app " +
             "(also from Ctrl+Alt+Del > Task Manager > Run new task).\n\n" +
@@ -1717,7 +1717,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             var backup = ShellMode.Install();
-            StatusText.Text = $"Windows Customizer will be your shell from the next sign-in. Backup: {backup}";
+            StatusText.Text = $"CHROVIQ will be your shell from the next sign-in. Backup: {backup}";
         }
         catch (Exception ex)
         {

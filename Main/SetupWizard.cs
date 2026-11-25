@@ -65,7 +65,7 @@ internal sealed class SetupWizard : FluentWindow
         DockPanel.SetDock(bottom, Dock.Bottom);
         body.Children.Add(bottom);
         body.Children.Add(new ScrollViewer { Content = _page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
-        FluentLook.Apply(this, "Set up Windows Customizer", body);
+        FluentLook.Apply(this, "Set up CHROVIQ", body);
         Show(0);
     }
 
@@ -88,7 +88,7 @@ internal sealed class SetupWizard : FluentWindow
 
     private UIElement LookPage()
     {
-        var page = Page("Welcome!", "Windows Customizer changes how Windows looks and works: the taskbar, start menu, desktop, Alt+Tab and more. " +
+        var page = Page("Welcome!", "CHROVIQ changes how Windows looks and works: the taskbar, start menu, desktop, Alt+Tab and more. " +
                                     "First, how should this app's own windows look? (You see it right away.)");
         var tiles = new WrapPanel();
         foreach (var theme in AppThemes.BuiltIns)
@@ -124,7 +124,7 @@ internal sealed class SetupWizard : FluentWindow
 
     private UIElement TaskbarPage()
     {
-        var page = Page("Taskbar", "Keep the Windows taskbar, or use one of Windows Customizer's. You can design your own later in the taskbar designer.");
+        var page = Page("Taskbar", "Keep the Windows taskbar, or use one of CHROVIQ's. You can design your own later in the taskbar designer.");
         var tiles = new WrapPanel();
         var options = new (string? design, string title, string text, SymbolRegular icon)[]
         {
@@ -155,7 +155,7 @@ internal sealed class SetupWizard : FluentWindow
         }
         extras.Children.Add(Heading("Screen edge"));
         extras.Children.Add(edges);
-        extras.Children.Add(Toggle("Hide the Windows taskbar", "Only yours shows. It comes back by itself when Windows Customizer closes.",
+        extras.Children.Add(Toggle("Hide the Windows taskbar", "Only yours shows. It comes back by itself when CHROVIQ closes.",
             Choices.HideWindowsTaskbar, v => Choices.HideWindowsTaskbar = v));
         UpdateExtras();
         page.Children.Add(extras);
@@ -181,7 +181,7 @@ internal sealed class SetupWizard : FluentWindow
             tiles.Children.Add(Tile(content, Choices.WinKey == action, () => Choices.WinKey = action, tiles));
         }
         page.Children.Add(tiles);
-        page.Children.Add(Toggle("Use Windows Customizer's Alt+Tab", "Live previews of your windows, with your own colors, size and animation.",
+        page.Children.Add(Toggle("Use CHROVIQ's Alt+Tab", "Live previews of your windows, with your own colors, size and animation.",
             Choices.OwnAltTab, v => Choices.OwnAltTab = v));
         return page;
     }
@@ -194,8 +194,8 @@ internal sealed class SetupWizard : FluentWindow
               (Choices.HideWindowsTaskbar ? ", Windows' own hidden" : "");
         string key = Choices.WinKey switch
         {
-            WinKeyAction.StartMenu => "opens Windows Customizer's start menu",
-            WinKeyAction.Search => "opens Windows Customizer's search",
+            WinKeyAction.StartMenu => "opens CHROVIQ's start menu",
+            WinKeyAction.Search => "opens CHROVIQ's search",
             _ => "opens Windows Start",
         };
         foreach (var (icon, text) in new[]
@@ -203,7 +203,7 @@ internal sealed class SetupWizard : FluentWindow
                      (SymbolRegular.PaintBrush24, $"App look: {Choices.AppTheme}"),
                      (SymbolRegular.PanelBottom20, $"Taskbar: {taskbar}"),
                      (SymbolRegular.Keyboard24, $"Windows key: {key}"),
-                     (SymbolRegular.WindowMultiple20, $"Alt+Tab: {(Choices.OwnAltTab ? "Windows Customizer's" : "Windows' own")}"),
+                     (SymbolRegular.WindowMultiple20, $"Alt+Tab: {(Choices.OwnAltTab ? "CHROVIQ's" : "Windows' own")}"),
                  })
         {
             page.Children.Add(new CardControl

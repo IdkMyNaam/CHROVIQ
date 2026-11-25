@@ -96,7 +96,7 @@ internal static class ShellMode
             if (NtQueryInformationProcess(p.Handle, 0, ref info, System.Runtime.InteropServices.Marshal.SizeOf<ProcessBasicInfo>(), out _) != 0) return "?";
             int parent = info.ParentProcessId.ToInt32();
             string name;
-            try { using var pp = Process.GetProcessById(parent); name = pp.Id == Environment.ProcessId ? "Windows Customizer (this app)" : pp.ProcessName; }
+            try { using var pp = Process.GetProcessById(parent); name = pp.Id == Environment.ProcessId ? "CHROVIQ (this app)" : pp.ProcessName; }
             catch (ArgumentException) { name = "a process that has ended"; }
             return $"{name} (pid {parent})";
         }

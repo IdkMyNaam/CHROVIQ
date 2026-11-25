@@ -44,7 +44,7 @@ internal static class MaterialFiles
         }
         catch (Exception ex)
         {
-            MessageBox.Show(owner, $"Could not import the material:\n{ex.Message}", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(owner, $"Could not import the material:\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
         finally
@@ -65,7 +65,7 @@ internal static class MaterialFiles
         }
         catch (Exception ex)
         {
-            MessageBox.Show(owner, $"Could not export the material:\n{ex.Message}", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(owner, $"Could not export the material:\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

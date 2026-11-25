@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Makes Windows Explorer the shell again (undoes "Use Windows Customizer as shell").
+    Makes Windows Explorer the shell again (undoes "Use CHROVIQ as shell").
 
 .DESCRIPTION
     1. Saves a backup of the Winlogon settings (a .reg file in that user's
@@ -10,7 +10,7 @@
     3. For your own account: starts Explorer right now if it isn't running, so you get your taskbar
        and desktop back without signing out.
 
-    Works on its own: it does not need Windows Customizer to start.
+    Works on its own: it does not need CHROVIQ to start.
 
     From a black screen: press Ctrl+Alt+Del > Task Manager > File > Run new task, and type:
         powershell -ExecutionPolicy Bypass -File "<path to this file>"
@@ -24,8 +24,8 @@
     Shows what would happen, changes nothing.
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\Restore-Shell.ps1 -ForUser idkmy
-    From a backup admin account (PowerShell "Run as administrator"): gives the user "idkmy"
+    powershell -ExecutionPolicy Bypass -File .\Restore-Shell.ps1 -ForUser <user name>
+    From a backup admin account (PowerShell "Run as administrator"): gives that user
     Explorer back. Works whether that user is signed in or not.
 #>
 param(

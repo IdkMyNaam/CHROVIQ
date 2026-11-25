@@ -104,7 +104,7 @@ internal sealed class LogWindow : Wpf.Ui.Controls.FluentWindow
     public static void Report(Window owner)
     {
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-        string zipPath = Path.Combine(desktop, $"Windows Customizer report {DateTime.Now:yyyy-MM-dd HHmm}.zip");
+        string zipPath = Path.Combine(desktop, $"CHROVIQ report {DateTime.Now:yyyy-MM-dd HHmm}.zip");
         try
         {
             using (var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
@@ -138,7 +138,7 @@ internal sealed class LogWindow : Wpf.Ui.Controls.FluentWindow
     private static string AboutThisPc()
     {
         var text = new StringBuilder();
-        text.AppendLine($"Windows Customizer {typeof(App).Assembly.GetName().Version}");
+        text.AppendLine($"CHROVIQ {typeof(App).Assembly.GetName().Version}");
         text.AppendLine($"Windows {Environment.OSVersion.Version} ({RuntimeInformation.OSArchitecture}), .NET {Environment.Version}");
         text.AppendLine($"Running as the shell: {(ShellMode.IsShell ? "yes" : "no")}");
         text.AppendLine($"Made: {DateTime.Now:yyyy-MM-dd HH:mm}");

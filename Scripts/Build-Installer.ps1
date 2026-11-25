@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Builds the Windows Customizer setup: publishes the app (with .NET included) and packs it with Inno Setup.
+    Builds the CHROVIQ setup: publishes the app (with .NET included) and packs it with Inno Setup.
 
 .DESCRIPTION
     1. dotnet publish with the Release profile (bin\publish).
-    2. Inno Setup's compiler (iscc.exe) packs it into bin\installer\WindowsCustomizer-Setup-<version>.exe.
+    2. Inno Setup's compiler (iscc.exe) packs it into bin\installer\CHROVIQ-Setup-<version>.exe.
     The version comes from <Version> in WindowsCustomizer.csproj.
 
     Needs Inno Setup 6 (https://jrsoftware.org/isinfo.php). Run from anywhere:
@@ -22,7 +22,7 @@ $project = Join-Path $root 'WindowsCustomizer.csproj'
 [xml]$xml = Get-Content $project
 $version = ($xml.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
 if (-not $version) { throw "No <Version> in WindowsCustomizer.csproj" }
-Write-Host "Windows Customizer $version"
+Write-Host "CHROVIQ $version"
 
 # Inno Setup's compiler.
 if (-not $Iscc) {
@@ -46,6 +46,6 @@ Write-Host 'Building the setup...'
 & $Iscc "/DAppVersion=$version" (Join-Path $root 'Installer\WindowsCustomizer.iss')
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed ($LASTEXITCODE)" }
 
-$setup = Join-Path $root "bin\installer\WindowsCustomizer-Setup-$version.exe"
+$setup = Join-Path $root "bin\installer\CHROVIQ-Setup-$version.exe"
 Write-Host ''
 Write-Host "Done: $setup ($([math]::Round((Get-Item $setup).Length / 1MB, 1)) MB)"

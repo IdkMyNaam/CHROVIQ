@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Starts Windows Customizer as your shell, with a failsafe: whenever it ends, Explorer starts.
+    Starts CHROVIQ as your shell, with a failsafe: whenever it ends, Explorer starts.
 
 .DESCRIPTION
-    When "Use Windows Customizer as shell" is on, Windows runs THIS script at sign-in instead of
+    When "Use CHROVIQ as shell" is on, Windows runs THIS script at sign-in instead of
     Explorer (it is set as the Shell value in your user's Winlogon key).
 
     It starts the app and waits for it for the whole session. If the app ends for ANY reason

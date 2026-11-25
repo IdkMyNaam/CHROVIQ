@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Brings the Windows taskbar back if Windows Customizer hid it (for example after a crash).
+    Brings the Windows taskbar back if CHROVIQ hid it (for example after a crash).
 
 .DESCRIPTION
-    1. Closes Windows Customizer if it is running (otherwise it would hide the taskbar again).
+    1. Closes CHROVIQ if it is running (otherwise it would hide the taskbar again).
     2. Starts Explorer if it is not running.
     3. Turns taskbar auto-hide off (unless -KeepAutoHide is given).
     4. Shows the taskbar on every monitor and puts it back on top.
@@ -124,12 +124,12 @@ if ($WaitForProcessId -gt 0) {
         Start-Sleep -Seconds 2
         if ([TaskbarRestore]::IsFrozen($WaitForProcessId)) { $frozenFor += 2 }
         else {
-            if ($shownForFreeze) { Write-Trace 'Windows Customizer responds again' }
+            if ($shownForFreeze) { Write-Trace 'CHROVIQ responds again' }
             $frozenFor = 0
             $shownForFreeze = $false
         }
         if ($frozenFor -ge 8 -and -not $shownForFreeze) {
-            Write-Trace 'Windows Customizer has not responded for 8 s: showing the Windows taskbar'
+            Write-Trace 'CHROVIQ has not responded for 8 s: showing the Windows taskbar'
             Show-WindowsTaskbar
             $shownForFreeze = $true
         }
@@ -142,7 +142,7 @@ else {
     # 1. The app would hide the taskbar again, so close it first.
     $app = Get-Process -Name 'WindowsCustomizer' -ErrorAction SilentlyContinue
     if ($app) {
-        Write-Host 'Closing Windows Customizer...'
+        Write-Host 'Closing CHROVIQ...'
         $app | Stop-Process -Force
         Start-Sleep -Seconds 1
     }

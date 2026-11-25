@@ -1,7 +1,7 @@
 <Window x:Class="WindowsCustomizer.AppBarWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Windows Customizer taskbar"
+        Title="CHROVIQ taskbar"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False" Topmost="True"
         WindowStartupLocation="Manual" Width="800" Height="40"
         AllowsTransparency="True" Background="Transparent">

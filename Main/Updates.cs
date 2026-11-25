@@ -14,7 +14,7 @@ namespace WindowsCustomizer;
 internal static class Updates
 {
     /// <summary>The GitHub repository ("owner/name") the releases come from. Empty: updates aren't set up yet.</summary>
-    public const string Repository = "";
+    public const string Repository = "IdkMyNaam/CHROVIQ";
 
     public static bool IsSetUp => Repository.Length > 0;
 
@@ -47,7 +47,8 @@ internal static class Updates
             foreach (var asset in root.GetProperty("assets").EnumerateArray())
             {
                 string name = asset.GetProperty("name").GetString() ?? "";
-                if (name.StartsWith("WindowsCustomizer-Setup", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                if ((name.StartsWith("CHROVIQ-Setup", StringComparison.OrdinalIgnoreCase) || name.StartsWith("WindowsCustomizer-Setup", StringComparison.OrdinalIgnoreCase))
+                    && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                     setup = asset.GetProperty("browser_download_url").GetString();
             }
             return (new Release(version, root.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "", setup,
@@ -67,7 +68,7 @@ internal static class Updates
     {
         string notes = release.Notes.Length > 800 ? release.Notes[..800] + "..." : release.Notes;
         var answer = MessageBox.Show(owner,
-            $"Windows Customizer {release.Version} is out (you have {Current.ToString(3)}).\n\n{notes}\n\nDownload and install it now? Your settings are kept.",
+            $"CHROVIQ {release.Version} is out (you have {Current.ToString(3)}).\n\n{notes}\n\nDownload and install it now? Your settings are kept.",
             "Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
         if (answer != MessageBoxResult.Yes) return "";
         if (release.SetupUrl == null)
@@ -77,7 +78,7 @@ internal static class Updates
         }
         try
         {
-            string file = Path.Combine(Path.GetTempPath(), $"WindowsCustomizer-Setup-{release.Version}.exe");
+            string file = Path.Combine(Path.GetTempPath(), $"CHROVIQ-Setup-{release.Version}.exe");
             await File.WriteAllBytesAsync(file, await Http.GetByteArrayAsync(release.SetupUrl));
             AppTrace.Log($"Update: starting {file}");
             Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });

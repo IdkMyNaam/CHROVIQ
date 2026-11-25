@@ -12,9 +12,9 @@ public partial class App : Application
         // "--shell" when started by ShellLauncher.ps1 as the user's shell (Phase 4).
         ShellMode.ReadCommandLine(e.Args);
         if (ShellMode.RefusedBecauseExplorer)
-            MessageBox.Show("Explorer is the shell right now, so Windows Customizer starts as a normal app instead of as the shell.\n\n" +
+            MessageBox.Show("Explorer is the shell right now, so CHROVIQ starts as a normal app instead of as the shell.\n\n" +
                             "Shell mode only starts when you sign in with \"Use as shell\" turned on.",
-                            "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Information);
+                            "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Information);
 
         // If the app crashes or is ended while the Windows taskbar is hidden, bring it back.
         // These don't swallow the error; they only clean up first. (Killing the process from

@@ -28,7 +28,7 @@ public sealed class TrayIcon : IDisposable
         _icon = new Forms.NotifyIcon
         {
             Icon = LoadAppIcon(),
-            Text = "Windows Customizer",
+            Text = "CHROVIQ",
             ContextMenuStrip = _menu,
             Visible = true,
         };

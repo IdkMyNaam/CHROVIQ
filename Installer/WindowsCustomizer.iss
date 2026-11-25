@@ -8,7 +8,7 @@
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
-#define AppName "Windows Customizer"
+#define AppName "CHROVIQ"
 #define AppExe "WindowsCustomizer.exe"
 #define PublishDir "..\bin\publish"
 
@@ -28,7 +28,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 OutputDir=..\bin\installer
-OutputBaseFilename=WindowsCustomizer-Setup-{#AppVersion}
+OutputBaseFilename=CHROVIQ-Setup-{#AppVersion}
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 Compression=lzma2/ultra64
@@ -39,7 +39,7 @@ CloseApplications=yes
 RestartApplications=no
 
 [Tasks]
-Name: "startup"; Description: "Start Windows Customizer when I sign in"; GroupDescription: "Starting:"
+Name: "startup"; Description: "Start CHROVIQ when I sign in"; GroupDescription: "Starting:"
 Name: "desktopicon"; Description: "A shortcut on the desktop"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
@@ -55,7 +55,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
     ValueData: """{app}\{#AppExe}"""; Tasks: startup; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Start Windows Customizer now"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Start CHROVIQ now"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 ; 1. Close the app (it can't clean up itself during an uninstall).
@@ -75,7 +75,7 @@ begin
   begin
     Settings := ExpandConstant('{userappdata}\WindowsCustomizer');
     if DirExists(Settings) and not UninstallSilent then
-      if MsgBox('Also remove your Windows Customizer settings (profiles, themes, taskbar designs, widgets, backups)?' + #13#10 + #13#10 +
+      if MsgBox('Also remove your CHROVIQ settings (profiles, themes, taskbar designs, widgets, backups)?' + #13#10 + #13#10 +
                 'Choose No to keep them, for example to install it again later.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
         DelTree(Settings, True, True, True);
   end;

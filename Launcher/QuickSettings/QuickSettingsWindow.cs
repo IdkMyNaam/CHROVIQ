@@ -107,7 +107,7 @@ public sealed class QuickSettingsWindow : Window, ILiveGlassWindow
         footer.Children.Add(settings);
         if (_openCustomizer != null)
         {
-            var customizer = FooterButton("", "Windows Customizer", () => { CloseQuietly(); _openCustomizer(); });
+            var customizer = FooterButton("", "CHROVIQ", () => { CloseQuietly(); _openCustomizer(); });
             DockPanel.SetDock(customizer, Dock.Right);
             footer.Children.Add(customizer);
         }

@@ -25,7 +25,7 @@ internal static class SettingsBackup
 
     private sealed class Manifest
     {
-        public string App { get; set; } = "Windows Customizer";
+        public string App { get; set; } = "CHROVIQ";
         public string? Version { get; set; }
         public DateTime Created { get; set; }
         /// <summary>Where the files were (%AppData%\WindowsCustomizer on that PC), to fix up stored paths on another PC.</summary>
@@ -49,9 +49,9 @@ internal static class SettingsBackup
     {
         var dialog = new SaveFileDialog
         {
-            Title = "Back up all Windows Customizer settings",
-            Filter = "Windows Customizer backup (*.zip)|*.zip",
-            FileName = $"Windows Customizer backup {DateTime.Now:yyyy-MM-dd}.zip",
+            Title = "Back up all CHROVIQ settings",
+            Filter = "CHROVIQ backup (*.zip)|*.zip",
+            FileName = $"CHROVIQ backup {DateTime.Now:yyyy-MM-dd}.zip",
         };
         if (dialog.ShowDialog(owner) != true) return null;
         try
@@ -112,7 +112,7 @@ internal static class SettingsBackup
     public static string? Restore(Window owner, out bool restartNow)
     {
         restartNow = false;
-        var dialog = new OpenFileDialog { Title = "Restore Windows Customizer settings", Filter = "Windows Customizer backup (*.zip)|*.zip" };
+        var dialog = new OpenFileDialog { Title = "Restore CHROVIQ settings", Filter = "CHROVIQ backup (*.zip)|*.zip" };
         if (dialog.ShowDialog(owner) != true) return null;
 
         Manifest? manifest;
@@ -120,7 +120,7 @@ internal static class SettingsBackup
         {
             using var zip = ZipFile.OpenRead(dialog.FileName);
             var entry = zip.GetEntry(ManifestName);
-            if (entry == null) return "That .zip isn't a Windows Customizer backup (it has no windows-customizer-backup.json).";
+            if (entry == null) return "That .zip isn't a CHROVIQ backup (it has no windows-customizer-backup.json).";
             using var reader = new StreamReader(entry.Open());
             manifest = JsonSerializer.Deserialize<Manifest>(reader.ReadToEnd());
         }
@@ -131,8 +131,8 @@ internal static class SettingsBackup
 
         string when = manifest?.Created is { } created && created != default ? $" from {created:d MMM yyyy, HH:mm}" : "";
         string how = ShellMode.IsShell
-            ? "It's used the next time you sign in (Windows Customizer is your shell, so it doesn't restart now)."
-            : "Windows Customizer restarts to use it.";
+            ? "It's used the next time you sign in (CHROVIQ is your shell, so it doesn't restart now)."
+            : "CHROVIQ restarts to use it.";
         if (MessageBox.Show(owner,
                 $"Restore the backup{when}?\n\nThis replaces all your current settings, profiles, themes, taskbar designs and materials. " +
                 $"Your current settings are backed up first (in Backups\\Settings), so you can go back.\n\n{how}",
@@ -171,7 +171,7 @@ internal static class SettingsBackup
         AppTrace.Log($"Restore staged from {dialog.FileName}");
         if (ShellMode.IsShell) return "The backup is ready; it's used the next time you sign in.";
         restartNow = true;
-        return "Restoring: restarting Windows Customizer...";
+        return "Restoring: restarting CHROVIQ...";
     }
 
     /// <summary>Starts a new copy of the app that waits for this one to close, then applies the restore.</summary>
@@ -232,7 +232,7 @@ internal static class SettingsBackup
         {
             AppTrace.Log($"Restore failed: {ex.Message}");
             MessageBox.Show($"The settings backup could not be restored ({ex.Message}).\n\nYour settings from before are in " +
-                            $"{AutoBackupFolder}.", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            $"{AutoBackupFolder}.", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

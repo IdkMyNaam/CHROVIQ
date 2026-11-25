@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Windows Customizer" Width="1040" Height="720" MinWidth="860" MinHeight="560"
+        Title="CHROVIQ" Width="1040" Height="720" MinWidth="860" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" WindowCornerPreference="Round">
 
@@ -73,7 +73,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="Windows Customizer" />
+        <ui:TitleBar Grid.Row="0" Title="CHROVIQ" />
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -289,7 +289,7 @@
                     <StackPanel MaxWidth="1000">
                         <TextBlock Text="Appearance" Style="{StaticResource PageTitle}" />
                         <TextBlock Style="{StaticResource CardText}" Margin="0,-8,0,16"
-                                   Text="How Windows Customizer's own windows look. Pick a theme, or make your own: every change shows right away. (The taskbar, desktop and start menu have their own designs.)" />
+                                   Text="How CHROVIQ's own windows look. Pick a theme, or make your own: every change shows right away. (The taskbar, desktop and start menu have their own designs.)" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="250" />
@@ -472,7 +472,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Hide the Windows taskbar" Style="{StaticResource CardTitle}" />
                                     <TextBlock Style="{StaticResource CardText}"
-                                               Text="Only while the custom taskbar shows. It comes back by itself if Windows Customizer closes, crashes or stops responding; Restore-Taskbar.ps1 next to the app is the manual way back." />
+                                               Text="Only while the custom taskbar shows. It comes back by itself if CHROVIQ closes, crashes or stops responding; Restore-Taskbar.ps1 next to the app is the manual way back." />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="HideWindowsTaskbarCheck" Click="HideWindowsTaskbarCheck_Click" />
@@ -484,7 +484,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Show auto-hiding taskbars while this window is open" Style="{StaticResource CardTitle}" />
                                     <TextBlock Style="{StaticResource CardText}"
-                                               Text="For designs with auto-hide: the bar comes in while Windows Customizer is on screen (not minimized), so you see what you change." />
+                                               Text="For designs with auto-hide: the bar comes in while CHROVIQ is on screen (not minimized), so you see what you change." />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="ShowTaskbarWhileOpenCheck" Click="ShowTaskbarWhileOpenCheck_Click" />
@@ -595,7 +595,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Language" Style="{StaticResource CardTitle}" />
                                     <TextBlock Style="{StaticResource CardText}"
-                                               Text="The language of Windows Customizer's windows (used after a restart). Make a translation file to translate it yourself." />
+                                               Text="The language of CHROVIQ's windows (used after a restart). Make a translation file to translate it yourself." />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <StackPanel Orientation="Horizontal">
@@ -614,8 +614,8 @@
                             </ui:CardControl.Header>
                             <ComboBox x:Name="WinKeyBox" Width="260" SelectionChanged="WinKeyBox_SelectionChanged">
                                 <ComboBoxItem Content="The Windows Start menu" />
-                                <ComboBoxItem Content="Windows Customizer search" />
-                                <ComboBoxItem Content="Windows Customizer start menu" />
+                                <ComboBoxItem Content="CHROVIQ search" />
+                                <ComboBoxItem Content="CHROVIQ start menu" />
                             </ComboBox>
                         </ui:CardControl>
 
@@ -658,7 +658,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Own Alt+Tab switcher" Style="{StaticResource CardTitle}" />
                                     <TextBlock Style="{StaticResource CardText}"
-                                               Text="Live previews of every window; Ctrl+Alt+Tab keeps it open, Delete closes a window. Always on when Windows Customizer is your shell." />
+                                               Text="Live previews of every window; Ctrl+Alt+Tab keeps it open, Delete closes a window. Always on when CHROVIQ is your shell." />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AltTabCheck" Click="AltTabCheck_Click" />
@@ -688,7 +688,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Desktop preview" Style="{StaticResource CardTitle}" />
                                     <TextBlock Style="{StaticResource CardText}"
-                                               Text="The desktop Windows Customizer uses as your shell, in a normal window. It shows your real Desktop folder: renaming or deleting there really happens." />
+                                               Text="The desktop CHROVIQ uses as your shell, in a normal window. It shows your real Desktop folder: renaming or deleting there really happens." />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:Button x:Name="DesktopPreviewButton" Content="Open preview" Icon="{ui:SymbolIcon Open24}" Click="OpenDesktopPreview_Click" />
@@ -746,7 +746,7 @@
 
                         <TextBlock Text="Shell (replace Explorer)" Style="{StaticResource Section}" />
                         <ui:InfoBar Title="Advanced: this replaces Windows' own shell" IsOpen="True" IsClosable="False" Severity="Warning" Margin="0,0,0,8"
-                                    Message="With Windows Customizer as your shell, Explorer doesn't start at sign-in. If Windows Customizer ever closes, Explorer starts by itself. Some Windows features need Explorer (Quick Settings Win+A, notifications Win+N). Way back: &quot;Back to Explorer&quot;, or Restore-Shell.ps1 next to the app." />
+                                    Message="With CHROVIQ as your shell, Explorer doesn't start at sign-in. If CHROVIQ ever closes, Explorer starts by itself. Some Windows features need Explorer (Quick Settings Win+A, notifications Win+N). Way back: &quot;Back to Explorer&quot;, or Restore-Shell.ps1 next to the app." />
                         <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="Shield24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
@@ -830,7 +830,7 @@
                         <TextBlock Text="About" Style="{StaticResource PageTitle}" />
                         <ui:Card Margin="0,0,0,4">
                             <StackPanel>
-                                <TextBlock Text="Windows Customizer" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="CHROVIQ" FontSize="18" FontWeight="SemiBold" />
                                 <TextBlock x:Name="VersionText" Style="{StaticResource CardText}" Margin="0,4,0,0" />
                             </StackPanel>
                         </ui:Card>

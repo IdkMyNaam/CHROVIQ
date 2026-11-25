@@ -53,7 +53,7 @@ public sealed partial class DesktopWindow
         ModernMenu.Item(menu, ModernMenu.Personalize, "Personalize", () => OpenSettings("ms-settings:personalization"));
         ModernMenu.Separator(menu);
         ModernMenu.Item(menu, ModernMenu.Terminal, "Open in Terminal", OpenTerminal);
-        if (OpenCustomizer != null) ModernMenu.Item(menu, ModernMenu.Settings, "Windows Customizer", OpenCustomizer);
+        if (OpenCustomizer != null) ModernMenu.Item(menu, ModernMenu.Settings, "CHROVIQ", OpenCustomizer);
         ModernMenu.Separator(menu);
         ModernMenu.Item(menu, ModernMenu.More, "Show more options", () => ShowClassicDesktopMenu(at, extended: false), "Shift+F10");
 

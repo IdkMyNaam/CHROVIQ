@@ -438,10 +438,10 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         switch (m.Type)
         {
             case ModuleType.Menu:
-                Hint(ModuleOptions, "Opens the Windows Customizer menu: profiles, taskbar options, exit. No options.");
+                Hint(ModuleOptions, "Opens the CHROVIQ menu: profiles, taskbar options, exit. No options.");
                 break;
             case ModuleType.Start:
-                CheckField(ModuleOptions, "Open Windows Customizer's start menu", m.CustomStart == true,
+                CheckField(ModuleOptions, "Open CHROVIQ's start menu", m.CustomStart == true,
                     v => m.CustomStart = v ? true : null,
                     "Off: opens the Windows Start menu. On: opens our start menu next to the button " +
                     "(its look is set in the main window under Start menu > \"Start menu settings...\").");
@@ -450,7 +450,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                 Hint(ModuleOptions, "Battery level; hidden on PCs without a battery. No options.");
                 break;
             case ModuleType.QuickSettings:
-                CheckField(ModuleOptions, "Open Windows Customizer's Quick Settings", m.OwnQuickSettings == true,
+                CheckField(ModuleOptions, "Open CHROVIQ's Quick Settings", m.OwnQuickSettings == true,
                     v => m.OwnQuickSettings = v ? true : null,
                     "Off: opens Windows Quick Settings (Win+A). On: our own panel with Wi-Fi, Bluetooth, night light, brightness and volume " +
                     "(its look is set in the main window under Start menu > \"Quick Settings settings...\"). As the shell it's always our own, " +

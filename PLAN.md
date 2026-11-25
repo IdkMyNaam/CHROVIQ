@@ -1,154 +1,139 @@
-# Windows Customizer: Project Plan
+# CHROVIQ Roadmap
 
-## Vision
-A C# / WPF app that switches between full Windows "themes" (wallpaper, colors, cursor, dark/light) and eventually replaces parts of the Windows shell (taskbar, start menu, maybe Explorer itself).
+CHROVIQ is a C# / WPF application for Windows that lets you reshape the desktop: switch complete looks in one go,
+replace the taskbar, start menu, search, Alt+Tab and Quick Settings with fully customizable versions, decorate
+every surface with GPU shader materials, and optionally run as the Windows shell instead of Explorer.
 
-## Decisions log
-- **Framework: WPF (.NET)**. More mature than WinUI 3 for custom taskbar/overlay windows; the AppBar API is easier to use from it.
-- **Language: C#** (matches school NATIVE track).
-- **Approach:** build in phases. Each phase must work on its own before the next starts.
-- **Source control:** git from day one.
+This document records the decisions behind the project and tracks progress. Checked items are finished;
+unchecked items are planned or open.
 
-## Safety rules (read before Phase 4)
-- Always keep a "Restore Explorer" script ready before touching the shell.
-- Keep a second admin account as a fallback.
-- Test shell replacement in a VM first, never on the main PC first.
-- Back up registry keys before changing them (export to .reg).
+CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Code).
+
+## Principles
+
+- **WPF on .NET 8.** More mature than WinUI 3 for custom taskbar and overlay windows, and the AppBar API is
+  straightforward to use from it.
+- **Built in phases.** Each phase works on its own before the next one starts, and is tested on real hardware.
+- **Safety first.** Anything that touches the shell or system settings can always be undone.
+- **Measure before optimizing.** Performance work starts from numbers, not guesses.
+
+## Safety rules
+
+- A recovery script (`Restore-Shell.ps1`, `Restore-Taskbar.ps1`) is always available before the shell is touched.
+- Shell replacement is tested in a separate standard account, with a second administrator account as a fallback.
+- Registry keys are backed up (exported to .reg) before they are changed; changes are per user (HKCU) only.
+- If the app stops responding or is closed, a watchdog brings back the Windows taskbar and tray icons.
 
 ## Phase 1: Theme engine
-- [x] Create WPF project + git repo
-- [x] Profile model (name, wallpaper, accent color, dark/light, cursor)
-- [x] Apply wallpaper via `SystemParametersInfo`
-- [x] Apply accent color + dark/light mode via registry
-- [x] Apply cursor scheme
-- [x] Settings UI to create/edit/delete profiles
-- [x] Tray icon + global hotkey to cycle profiles
-- [x] Save/load profiles as JSON
+- [x] Profiles: name, wallpaper, accent color, dark/light mode, cursor scheme, saved as JSON
+- [x] Applying wallpapers (`SystemParametersInfo`), accent color and dark/light mode (registry), cursor schemes
+- [x] Settings UI to create, edit and delete profiles
+- [x] Tray icon and a global hotkey to cycle profiles
 
-## Phase 2: Custom taskbar / dock
-- [x] Window that reserves screen space via `SHAppBarMessage` (AppBar API)
-- [x] List open windows (EnumWindows) with icons
-- [x] Click to focus / minimize / restore
-- [x] Clock + basic system tray area
-- [x] Native taskbar stays running underneath (low risk)
-- [x] Option to hide the native taskbar (auto-hide + hidden, restored on exit/crash; `Restore-Taskbar.ps1` as fallback)
+## Phase 2: Custom taskbar and dock
+- [x] A bar that reserves screen space through the AppBar API (`SHAppBarMessage`)
+- [x] Open windows with icons; click to focus, minimize or restore
+- [x] Clock and system tray area
+- [x] Optionally hide the Windows taskbar (restored on exit or crash; `Restore-Taskbar.ps1` as a fallback)
 - [x] A bar on every monitor (window buttons on all bars, or only on the window's own monitor)
 
 ## Phase 2b: Fully customizable taskbar
-Goal: design your own taskbar instead of using a fixed layout.
-- [x] Split the bar into modules: menu/start button, window list, pinned apps, clock, battery, Quick Settings, spacer, custom button/text
-- [x] Choose which modules show, their order, and zone (left / center / right), in the designer or the JSON files
-- [x] Save a taskbar design as JSON (`%AppData%\WindowsCustomizer\Taskbars`), reloaded when the file changes
-- [x] Look: height, colors, transparency/blur, corner radius, font, icon-only or icon + title (blur is experimental, not yet with the floating dock)
-- [x] "Floating dock" style (margins from the screen edge, rounded, centered; reserves space or floats over windows)
-- [x] Link a design to a profile (applying the profile switches the taskbar design)
-- [x] Taskbar designer window with a live preview (live updates can be switched off; "Apply to taskbar")
-- [x] Import/export designs as .json files (ties in with "Import/export themes" below)
-- [x] Extras: auto-hide, screen edge per design, a design per monitor
-- [x] Extras: window buttons grouped by app, live thumbnails, middle-click close, dock-style pinned apps, tinted icons, icon-color glow, hover fade
-- [x] Extras: modules for show desktop, Windows search, search box, volume, CPU/memory, media controls, tray icons (ManagedShell)
-- [x] Extras: search window (also on the Windows key) with its own look settings; watchdog restores the taskbar if the app is killed
-- [ ] Later: own widgets as plugins (see open questions)
+- [x] Modules: menu and start buttons, window list, pinned apps, clock, battery, Quick Settings, spacer, text, custom buttons,
+      show desktop, Windows search, search box, volume, CPU/memory, media controls, tray icons, virtual desktops
+- [x] Left, center and right zones; designs saved as JSON (`%AppData%\WindowsCustomizer\Taskbars`) and reloaded on change
+- [x] Look: height, colors, transparency and blur, corners, fonts, icon-only or icon and title, window icon size,
+      active-window marker, border, shadow and zone dividers
+- [x] Floating dock style, auto-hide, screen edge per design, a different design per monitor
+- [x] Window grouping by app, live thumbnails, middle-click to close, dock-style pinned apps, tinted icons, icon-color glow, hover fade
+- [x] Taskbar designer with a live preview; designs can be linked to profiles and imported/exported
+- [ ] Later: widgets as plugins
 
-## Phase 3: Custom start menu / launcher
-- [x] Read installed apps (Start Menu shortcuts + the shell Apps folder, so Store apps too, with their real icons)
-- [x] Popup window with search (start menu, plus a separate search window)
-- [x] Launch apps, pinned favorites (pin/unpin/reorder; pin to taskbar; open file location; run as administrator)
+## Phase 3: Start menu and search
+- [x] Installed apps from Start Menu shortcuts and the shell Apps folder (including Store apps, with their own icons)
+- [x] Start menu with pinned apps (pin, unpin, reorder, pin to taskbar, open file location, run as administrator)
+      and an alphabetical list; a separate search window for apps and the web
 - [x] Power options (lock, sleep, sign out, restart, shut down; the last three ask first)
-- [x] Open it from the Start module, the Windows key or the app menu; look settings in "Start menu settings..."
+- [x] Opened from the Start module, the Windows key or the app menu
 - [ ] Later: recent files, folders of pinned apps
 
-## Phase 4: True shell replacement
-- [x] Recovery first: `Restore-Shell.ps1` (with -DryRun), .reg backups, per-user change only (HKCU), `ShellLauncher.ps1` starts Explorer whenever the app ends
-- [x] VM: not used; tested on the main PC in a separate standard account ("ShellTest"), with the safety net above + a second admin account (ask before every risky step)
-- [x] Replace `explorer.exe` via the `Shell` value in the Winlogon registry key ("Use as shell" / "Back to Explorer"; the launcher runs through `conhost --headless`, so no window); tested in ShellTest
-- [x] Own desktop (icons, right-click menu, draws the wallpaper itself; icons load in the background); tested in ShellTest
-- [x] Startup programs (Run keys, RunOnce, Startup folders; respects Task Manager's on/off; started once the shell window is registered); tested in ShellTest
-- [x] Work area without Explorer (our bars set it directly); tested in ShellTest
-- [ ] Tray icons, notifications (tray via ManagedShell in shell mode works; Windows notifications/Win+A/Win+N need Explorer)
-- [x] File browsing: a hidden "Progman" window is registered as the shell window, and explorer.exe is never started directly, so folders open as File Explorer windows without Explorer taking over; tested in ShellTest
-- [x] Diagnostics: `%AppData%\WindowsCustomizer\shell.log` (timed steps, startup programs, every Explorer that starts and who started it)
-- [ ] Later: use it on the main account
-- [ ] Note: Windows 11 makes this harder; expect issues
+## Phase 4: Shell replacement
+- [x] Recovery first: `Restore-Shell.ps1` (with a dry run), .reg backups, a launcher that starts Explorer whenever the app ends
+- [x] Replacing Explorer through the per-user Winlogon `Shell` value ("Use as shell" / "Back to Explorer")
+- [x] Own desktop: icons, right-click menus, wallpaper
+- [x] Startup programs (Run keys, RunOnce, Startup folders; respects Task Manager's on/off setting)
+- [x] Work area handling without Explorer
+- [x] File browsing: a hidden shell window is registered, so folders open in File Explorer without Explorer taking over the shell
+- [x] Diagnostics: `shell.log` with timed steps and every Explorer start
+- [ ] Windows notifications, Win+A and Win+N (they depend on Explorer)
+- [ ] Use as the shell on a main account (tested so far in a dedicated test account)
 
-## Phase 5: A real product people can use
-Order: speed first (measure before changing), then the desktop, then the new UI and shader materials, then the installer last (it packages the finished app). The optional extras below are wanted too, after Phase 5.
+## Phase 5: Ready for everyday use
 
-### 5a. Lighter and faster
-- [x] Measure first: startup time, memory, idle CPU (about 1.3-2 s to the first window, about 0.5 % of one core idle, about 100 MB private; old vs new measured back to back, the PC's own activity is the biggest noise)
-- [x] Fewer timers and polling (watchdogs, stats, window list, game watcher, clock, volume); event-based where Windows allows it
-- [ ] Load only what's used (modules, search index, tray) and load it later where possible; find what the memory is (icons, search, tray)
-- [x] Release build with ReadyToRun (publish profile `Release`, bin\publish); [ ] check trimming and size
+### 5a. Performance
+- [x] Measured first: about 1.3-2 s to the first window, about 0.5 % of one core when idle, about 100 MB of private memory
+- [x] Fewer timers and less polling; event-based wherever Windows allows it
+- [x] Release build with ReadyToRun
+- [ ] Load features only when used, and investigate memory use (icons, search index, tray)
+- [ ] Check trimming and package size
 
-### 5b. Desktop like Windows' own
-- [x] Desktop preview (app menu): the shell desktop in a normal window, to try everything without being the shell
-- [x] Right-click on the background like Windows 11: View (icon size, auto arrange, align to grid, show icons), Sort by (name, size, type, date modified), Refresh, New (folder, shortcut, the file types Windows offers), Display settings, Personalise, Open in Terminal
-- [x] "Show more options": the full Windows menu, including other apps' entries (Open with Code, Zed, ...)
-- [x] Right-click on icons: the full Windows file menu (Open with, Send to, Cut/Copy, other apps' entries)
-- [x] Multi-select: drag a selection box, Ctrl+click, Shift+click, Ctrl+A, arrow keys; open/delete/copy several items at once
-- [x] Drag and drop: move icons freely (positions saved), drop on folders/Recycle Bin/programs, drag files in and out of File Explorer
-- [x] Cut/Copy/Paste and Undo (Ctrl+X/C/V/Z), like Windows (undo also restores deleted items from the Recycle Bin)
-- [x] Windows' own desktop icons (Recycle Bin, This PC, ...) as set in Desktop icon settings
-- [x] Alt tabing like windows (own switcher with live previews; app menu "Own Alt+Tab switcher", always on as the shell)
-- [ ] Later: "Text Document" in New even when Notepad doesn't register it; Windows' classic menu for icons from both Desktop folders at once
+### 5b. Desktop on par with Windows
+- [x] Desktop preview: the shell desktop in a normal window, to try everything without switching shells
+- [x] Windows 11-style right-click menus (View, Sort by, Refresh, New, Display settings, Personalize, Open in Terminal),
+      plus "Show more options" with the full classic menu and other apps' entries
+- [x] Multi-select, drag and drop, Cut/Copy/Paste and Undo (including restoring from the Recycle Bin)
+- [x] Windows' own desktop icons (Recycle Bin, This PC, ...)
+- [x] Own Alt+Tab switcher with live previews
+- [ ] Later: "Text Document" in New when Notepad doesn't register it; the classic menu for items from both desktop folders at once
 
-### 5c. New, professional UI
-- [x] Redesign the main window: sidebar navigation (Profiles, Appearance, Taskbar, Start/Search/Alt+Tab, Desktop & Shell, Wallpaper Engine & games, About), Windows 11 look (WPF-UI: Mica, rounded, Segoe Fluent icons), dark/light following Windows; settings as cards with toggle switches; lists as tiles
-- [x] All settings windows in that same style (taskbar designer with a shielded live preview, start menu/search settings, Workshop picker, rename dialog)
-- [x] Short explanations next to settings; risky options clearly marked (shell mode warning box, Windows-taskbar hiding explained)
-- [x] App themes (how Windows Customizer itself looks): "Windows" (default, light/dark like Windows), Dark glass, Midnight, Light clean, High contrast; [ ] later more (for example a retro look)
-- [x] Custom app themes: light/dark, accent, background (Mica / acrylic / tabbed / a color / a picture), corner radius, card transparency, font; Appearance page with live editor, saved as JSON, import/export; [ ] later also shader materials (5c+) and more fields (text colors, borders)
+### 5c. Modern user interface
+- [x] Main window redesigned with WPF-UI: sidebar navigation, Mica, rounded corners, Segoe Fluent icons, light/dark following Windows
+- [x] All settings windows in the same style, with short explanations and clearly marked risky options
+- [x] App themes (Windows, Dark glass, Midnight, Light clean, High contrast) and custom themes (mode, accent, background,
+      corners, card transparency, font, material) with a live editor and import/export
+- [ ] Later: more built-in themes, and theme fields for text colors and borders
 
-### 5c+. Shader materials (after the new UI, plugs into the redesigned designer)
-Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "material": a GPU shader instead of a plain color.
-- [x] Built-in materials: Tinted glass (with a see-through background + blur: frosted glass), Iridescent and Aurora (animated), Painted lines, Scribbles, Watercolor (procedural), Mouse glow, Clear glass (bends and blurs what's behind it)
-- [x] Own shaders: a folder with material.hlsl (compiled at runtime with Windows' d3dcompiler_47, ps_3_0) + material.json (up to 8 sliders/colors, optional texture), settings shown automatically; in %AppData%\WindowsCustomizer\Materials
-- [x] Choose a material per surface with live preview: taskbar (designer), Alt+Tab, start menu, search (their settings windows), desktop right-click menus (Menu settings), app themes ("A material" background); import/export as .zip (designer)
-- [x] Inputs for shaders: TIME, SIZE, MOUSE, HOVER, Accent, P0..P7, Texture, helpers (noise, fbm, hsv2rgb), WALLPAPER(uv): the wallpaper picture behind the surface, or with "Live glass" (Taskbar page) what's really on screen behind it (left out of screenshots then)
-- [x] Safety and speed: a shader that doesn't compile is refused with the error (line numbers of material.hlsl) shown; animated ones pause during fullscreen apps/games and while hidden; frame-rate limit 15/30/60
-- Note: Blender materials can't be imported directly (3D ray tracing vs. flat UI), but their looks can be rebuilt as shaders
-- Note: WPF runs only simple pixel shaders (ps_3_0, one pass); bending OTHER windows behind a bar needs live screen capture (costly)
-- [ ] Later: a Direct3D surface for heavier effects (multi-pass blur, real refraction, newer shader versions)
+### 5c+. Shader materials
+Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widgets) can use a material: a GPU pixel shader.
+- [x] Built-in materials: Tinted glass, Clear glass, Iridescent, Aurora, Painted lines, Scribbles, Watercolor, Mouse glow
+- [x] Custom materials: `material.hlsl` (compiled at runtime to ps_3_0) and `material.json` (up to 8 parameters and a texture),
+      with settings generated automatically; import/export as .zip
+- [x] Shader inputs: time, size, mouse, hover, accent color, parameters, texture, helper functions, and the wallpaper behind the surface
+- [x] Live glass: what's really on screen behind a surface (that window is then left out of screen capture)
+- [x] Safety and speed: compile errors shown with line numbers; animations pause for fullscreen apps and hidden windows; 15/30/60 fps limit
+- [ ] Later: a Direct3D surface for heavier effects (multi-pass blur, refraction, newer shader models)
 
-### 5d. More customization everywhere
-- [x] Desktop ("Desktop settings..."): icon size (presets or custom), spacing, label font/size/color/shadow, hide labels, which monitor has the icons; [ ] later icons on every monitor at once
-- [x] Menus ("Menu settings..."): colors, corners, font and a material for the desktop right-click menus
-- [x] Alt+Tab ("Alt+Tab settings..."): colors, selection border, corners, tile and preview size, titles/icons, font, tiles per row, monitor and position, only this monitor's windows, minimized windows, show delay
-- [x] Taskbar (designer): window icon size, active-window marker (line, dot, pill, glow, none), border and shadow, lines between the zones, clock font and size
-- [x] Start menu: pinned icon size, search box at the top or bottom, your name and picture (or your own), scroll bar (thin, hidden, Windows)
-- [x] Search: result icon size, where each app is, highest list height, scroll bar
-- [x] Tray: hide chosen icons, one color for all icons
-- [x] Opening animations for start menu, search and Alt+Tab: presets (fade, slide, zoom, pop) or Custom (fade, slide distance and direction, start size), length and speed curve (even, smooth, strong, overshoot, bounce, elastic); [ ] later also menus, tray flyout, window previews, auto-hide slide
-- [x] Live glass per popup (start menu, search, Alt+Tab), each with its own switch (left out of screen capture while on); big surfaces captured at half resolution
-- [x] Settings windows in the designer's style: section tiles on the left, that section's settings on the right
-- [x] Start menu speed: only the visible apps are laid out (virtualized list), content kept as a ready-drawn picture above animated materials, icons load after the opening animation
+### 5d. Customization everywhere
+- [x] Desktop icons: size, spacing, label font, color and shadow, hidden labels, choice of monitor
+- [x] Menus, Alt+Tab, start menu, search and tray: colors, sizes, fonts, layout, scroll bars and materials
+- [x] Opening animations for popups: presets or fully custom (fade, slide, zoom, easing, duration)
+- [x] Settings windows organized in sections, in the style of the taskbar designer
+- [ ] Later: icons on every monitor at once; animations for menus, the tray flyout, previews and auto-hide
 
-### 5e. Installer
-- [x] Installer per user (no admin needed): Inno Setup (Installer\WindowsCustomizer.iss), into %LocalAppData%\Programs\Windows Customizer; Start menu shortcut, optional start with Windows and desktop shortcut; .NET included (about 59 MB); tested
-- [x] The uninstaller closes the app, turns shell mode off and restores the Windows taskbar first, then asks whether to keep the settings; tested
-- [x] Chosen: a classic installer (Inno Setup). MSIX only if the notification center is wanted later
-- [x] Version numbers (<Version> in the project file, shown on the About page and in the setup's name); Scripts\Build-Installer.ps1 builds bin\installer\WindowsCustomizer-Setup-<version>.exe
-- [ ] Code signing: not now (SmartScreen asks "Run anyway" the first time)
-- [ ] Updates: the check is built (About page, once a day, GitHub Releases); needs the GitHub repository and a first release, with release notes
+### 5e. Installer and releases
+- [x] Per-user installer (Inno Setup, no administrator rights), with Start menu shortcut, optional start at sign-in and desktop shortcut;
+      .NET is included (about 59 MB)
+- [x] The uninstaller restores Explorer and the Windows taskbar first, then asks whether to keep the settings
+- [x] Versioning, and `Scripts\Build-Installer.ps1` to publish and package a release
+- [x] Update check against GitHub Releases (daily, installs only when the user agrees)
+- [ ] Code signing (until then, Windows SmartScreen asks for confirmation on first run)
 
-## Optional extras
-- [x] Auto-switch profiles: time rules (Night from 21:00) and app rules (Gaming while a game runs), Profiles page
-- [x] Desktop widgets: clock, CPU/memory/GPU with graphs, weather (Open-Meteo), media, notes; drag, resize, own look and material
-- [x] Import/export: app themes and taskbar designs as JSON (5c), everything at once with backup/restore
-- [x] Profile examples: Gaming, School, Night ("Add an example...")
-- [x] First-start wizard: app look, taskbar, Windows key, Alt+Tab (About page can run it again)
-- [x] Back up / restore all settings in one .zip (About page); a restore backs up first and is applied at the next start
-- [x] Log viewer and "Report a problem" (logs, settings and PC details in a .zip on the desktop; nothing is sent)
-- [x] Own Quick Settings panel: Wi-Fi, Bluetooth, night light, mute, volume, brightness per monitor (DDC/CI, with "Put back"), battery; [ ] later laptop screen brightness (WMI)
-- [ ] Own notification center (needs MSIX, see 5e)
-- [x] Keyboard shortcut editor for all of the app's shortcuts (About page and app menu)
-- [x] Snap layouts: drag to the top for the picker, Shift-drag for zones, Win+Alt hotkeys, own layouts, a layout per monitor; virtual desktops module on the taskbar
-- [x] Daily wallpaper: Bing picture of the day, Windows Spotlight, or your own folder
-- [x] Accessibility: Tab/Enter/Space on custom tiles and buttons, screen reader names, follows Windows contrast themes
-- [x] Languages groundwork: windows translate as they open, language picker, "Make a translation file"; [ ] translations themselves, status messages
-- [ ] Last of all (after 5e): "Report a problem" sends the report by email, and a support button
+## Extras
+- [x] Automatic profile switching by time of day or running app
+- [x] Desktop widgets: clock, CPU/memory/GPU with graphs, weather (Open-Meteo), media, notes
+- [x] Example profiles (Gaming, School, Night) and a first-start setup wizard
+- [x] Back up and restore all settings in one file
+- [x] Log viewer and "Report a problem" (logs and system details in a .zip on the desktop; nothing is sent)
+- [x] Quick Settings panel: Wi-Fi, Bluetooth, night light, mute, volume, per-monitor brightness (DDC/CI), battery
+- [x] Keyboard shortcut editor for every shortcut in the app
+- [x] Snap layouts (layout picker, Shift-drag zones, hotkeys, custom layouts) and a virtual desktops taskbar module
+- [x] Daily wallpaper from Bing, Windows Spotlight or a folder
+- [x] Accessibility: keyboard navigation, screen reader names, Windows contrast themes
+- [x] Translation support: language picker and translation templates
+- [ ] Translations into other languages
+- [ ] Laptop screen brightness in Quick Settings
+- [ ] A notification center (requires MSIX packaging)
+- [ ] Problem reports sent by email, and a support button
 
 ## Open questions
-- Which Windows version is the target (10 or 11)?
-- Which settings should a profile control beyond the list above?
-- Use a plugin system for widgets later?
+- Should widgets become a plugin system?
+- Which further settings should a profile control?

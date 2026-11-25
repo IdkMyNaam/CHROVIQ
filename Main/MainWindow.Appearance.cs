@@ -157,7 +157,7 @@ public partial class MainWindow
     private void DeleteTheme_Click(object sender, RoutedEventArgs e)
     {
         if (_editingTheme is not { BuiltIn: false } theme) return;
-        if (System.Windows.MessageBox.Show(this, $"Delete the theme \"{theme.Name}\"?", "Windows Customizer",
+        if (System.Windows.MessageBox.Show(this, $"Delete the theme \"{theme.Name}\"?", "CHROVIQ",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _themeSaveTimer.Stop();
         try { AppThemes.Delete(theme); }
@@ -167,7 +167,7 @@ public partial class MainWindow
 
     private void ImportTheme_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Import a theme", Filter = "Windows Customizer theme (*.json)|*.json" };
+        var dialog = new OpenFileDialog { Title = "Import a theme", Filter = "CHROVIQ theme (*.json)|*.json" };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
@@ -182,7 +182,7 @@ public partial class MainWindow
     {
         if (_editingTheme == null) return;
         FlushThemeSave();
-        var dialog = new SaveFileDialog { Title = "Export the theme", Filter = "Windows Customizer theme (*.json)|*.json", FileName = _editingTheme.Name + ".json" };
+        var dialog = new SaveFileDialog { Title = "Export the theme", Filter = "CHROVIQ theme (*.json)|*.json", FileName = _editingTheme.Name + ".json" };
         if (dialog.ShowDialog(this) != true) return;
         try
         {

@@ -203,7 +203,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         var footer = new DockPanel { Margin = new Thickness(0, 12, 0, 0) };
         var power = FooterButton("", "Power");
         power.Click += (_, _) => ShowPowerMenu(power);
-        var customizer = FooterButton("", "Windows Customizer");
+        var customizer = FooterButton("", "CHROVIQ");
         customizer.Click += (_, _) => { CloseQuietly(); _context.OpenCustomizer?.Invoke(); };
         var settings = FooterButton("", "Settings");
         settings.Click += (_, _) => { Start("ms-settings:"); CloseQuietly(); };
@@ -525,7 +525,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     private void Confirmed(string question, Action action)
     {
         _dialogOpen = true;
-        var answer = MessageBox.Show(this, question, "Windows Customizer", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        var answer = MessageBox.Show(this, question, "CHROVIQ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         _dialogOpen = false;
         if (answer != MessageBoxResult.Yes) { Activate(); return; }
         CloseQuietly();
@@ -595,7 +595,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         catch (Exception ex)
         {
             _dialogOpen = true;
-            MessageBox.Show(this, $"Could not open it:\n{ex.Message}", "Windows Customizer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"Could not open it:\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
             _dialogOpen = false;
         }
         CloseQuietly();
