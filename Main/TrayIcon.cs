@@ -18,6 +18,7 @@ public sealed class TrayIcon : IDisposable
     {
         _getMenuItems = getMenuItems;
 
+        _menu.Renderer = new HoverRenderer();
         _menu.Opening += (_, e) =>
         {
             BuildMenu();
@@ -59,6 +60,9 @@ public sealed class TrayIcon : IDisposable
             };
             var onClick = entry.OnClick;
             item.Click += (_, _) => onClick?.Invoke();
+            // Highlight on hover even when the menu isn't the active window (opened from our own tray).
+            item.MouseEnter += (_, _) => { HoverRenderer.Hovered = item; item.Invalidate(); };
+            item.MouseLeave += (_, _) => { if (HoverRenderer.Hovered == item) HoverRenderer.Hovered = null; item.Invalidate(); };
             _menu.Items.Add(item);
         }
     }
@@ -76,6 +80,29 @@ public sealed class TrayIcon : IDisposable
             // Fall through to the stock icon.
         }
         return SystemIcons.Application;
+    }
+
+    /// <summary>The standard menu look, plus a highlight for the item under the mouse.</summary>
+    private sealed class HoverRenderer : Forms.ToolStripProfessionalRenderer
+    {
+        public static Forms.ToolStripItem? Hovered;
+
+        private static readonly Color Highlight = Color.FromArgb(0xE5, 0xF1, 0xFB); // Windows' light blue
+        private static readonly Color HighlightBorder = Color.FromArgb(0xCC, 0xE4, 0xF7);
+
+        protected override void OnRenderMenuItemBackground(Forms.ToolStripItemRenderEventArgs e)
+        {
+            if (e.Item.Enabled && (e.Item.Selected || e.Item == Hovered))
+            {
+                var area = new Rectangle(2, 0, e.Item.Width - 4, e.Item.Height - 1);
+                using var fill = new SolidBrush(Highlight);
+                using var border = new Pen(HighlightBorder);
+                e.Graphics.FillRectangle(fill, area);
+                e.Graphics.DrawRectangle(border, area);
+                return;
+            }
+            base.OnRenderMenuItemBackground(e);
+        }
     }
 
     public void Dispose()

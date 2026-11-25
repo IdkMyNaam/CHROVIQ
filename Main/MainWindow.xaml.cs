@@ -176,9 +176,22 @@ public partial class MainWindow : Window
             IsChecked: WindowsTaskbar.IsHiding, IsEnabled: TaskbarShown);
         yield return new AppMenuItem("Taskbar designer...", OpenDesigner);
         yield return new AppMenuItem("Start menu", OpenStartMenu);
+        if (!ShellMode.IsShell) yield return new AppMenuItem("Desktop preview", OpenDesktopPreview);
         yield return new AppMenuItem("Next profile", () => _ = ApplyNextAsync(), Shortcut: _hotKey.ToString());
         yield return new AppMenuItem("Open", ShowFromTray);
         yield return new AppMenuItem("Exit", ExitApp);
+    }
+
+    private DesktopWindow? _desktopPreview;
+
+    /// <summary>The shell's desktop in a normal window, to try it without being the shell (your real Desktop folder).</summary>
+    private void OpenDesktopPreview()
+    {
+        if (_desktopPreview != null) { _desktopPreview.Activate(); return; }
+        var primary = Monitors.All().FirstOrDefault(m => m.IsPrimary) ?? Monitors.All().First();
+        _desktopPreview = new DesktopWindow(primary, showIcons: true, preview: true) { OpenCustomizer = ShowFromTray };
+        _desktopPreview.Closed += (_, _) => _desktopPreview = null;
+        _desktopPreview.Show();
     }
 
     private void HideToTray()
