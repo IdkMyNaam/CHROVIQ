@@ -93,11 +93,11 @@ Order: speed first (measure before changing), then the desktop, then the new UI 
 - [ ] Later: "Text Document" in New even when Notepad doesn't register it; Windows' classic menu for icons from both Desktop folders at once
 
 ### 5c. New, professional UI
-- [ ] Redesign the main window: sidebar navigation (Themes, Taskbar, Start menu, Search, Desktop, Shell, About), Windows 11 look (rounded, Mica/acrylic, Segoe Fluent icons), dark/light following Windows
-- [ ] All settings windows in that same style (taskbar designer, start menu/search settings)
-- [ ] Short explanations next to settings; risky options clearly marked
-- [ ] App themes (how Windows Customizer itself looks): "Windows" (the Windows 11 look, default, light/dark like Windows) and more built-in ones later (for example a dark glass, a high-contrast, a retro look)
-- [ ] Custom app themes: colors, accent, corner radius, fonts, backdrop (Mica / acrylic / solid / an image), card style; made in a theme editor with live preview, saved as JSON, import/export like taskbar designs; later also shader materials (5c+)
+- [x] Redesign the main window: sidebar navigation (Profiles, Appearance, Taskbar, Start/Search/Alt+Tab, Desktop & Shell, Wallpaper Engine & games, About), Windows 11 look (WPF-UI: Mica, rounded, Segoe Fluent icons), dark/light following Windows; settings as cards with toggle switches; lists as tiles
+- [x] All settings windows in that same style (taskbar designer with a shielded live preview, start menu/search settings, Workshop picker, rename dialog)
+- [x] Short explanations next to settings; risky options clearly marked (shell mode warning box, Windows-taskbar hiding explained)
+- [x] App themes (how Windows Customizer itself looks): "Windows" (default, light/dark like Windows), Dark glass, Midnight, Light clean, High contrast; [ ] later more (for example a retro look)
+- [x] Custom app themes: light/dark, accent, background (Mica / acrylic / tabbed / a color / a picture), corner radius, card transparency, font; Appearance page with live editor, saved as JSON, import/export; [ ] later also shader materials (5c+) and more fields (text colors, borders)
 
 ### 5c+. Shader materials (after the new UI, plugs into the redesigned designer)
 Every surface (taskbar, tray, search, start menu, menus, desktop) can use a "material": a GPU shader instead of a plain color.
