@@ -9,3 +9,6 @@ Main/ReportSender.Secret.cs
 # Cloudflare Wrangler (the report relay)
 Relay/.wrangler/
 Relay/node_modules/
+
+# The roadmap is kept on this PC only
+PLAN.md
