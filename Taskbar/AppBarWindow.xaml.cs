@@ -43,6 +43,7 @@ public partial class AppBarWindow : Window
             WindowFilter = onlyOwnMonitorWindows ? w => Monitors.DeviceOf(w) == _monitorDevice : null,
         };
         Content = _view;
+        if (_view.IsFloating) FollowDockWidth();
 
         SourceInitialized += (_, _) => SetUp();
         Closed += (_, _) => _appBar?.Dispose(); // gives the reserved screen space back
@@ -253,14 +254,47 @@ public partial class AppBarWindow : Window
     /// and the dock itself is drawn centered inside it, as wide as its contents. The rest of the window
     /// is fully transparent, which Windows treats as click-through, so it never blocks the windows behind.
     /// </summary>
+    private double _scale = 1;
+    private double _placedDockWidth = -1;
+    private bool _placed;
+
+    /// <summary>The dock's contents changed (an app opened or closed): its window follows its width a moment later.</summary>
+    private void FollowDockWidth()
+    {
+        var check = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        check.Tick += (_, _) =>
+        {
+            check.Stop();
+            if (!_placed) return;
+            double width = _view.NaturalDockWidth();
+            if (Math.Abs(width - _placedDockWidth) > 0.5) PlaceWindow(_strip, _scale);
+        };
+        _view.LayoutUpdated += (_, _) => { check.Stop(); check.Start(); };
+        Closed += (_, _) => check.Stop();
+    }
+
     private void PlaceWindow(RECT strip, double scale)
     {
+        _scale = scale;
+        _placed = true;
         // The shadow (Look.Shadow) sits outside the bar, so the window is that much taller toward the screen's middle;
         // only the bar itself is reserved.
         int height = (int)Math.Round((_view.BarHeight + _view.ShadowSpace) * scale);
         int margin = (int)Math.Round(_view.DockMargin * scale);
         int left = strip.Left + margin;
         int right = strip.Right - margin;
+        if (_view.IsFloating)
+        {
+            // Only as wide as the dock and its shadow (at most the strip), centered where the dock is drawn.
+            _placedDockWidth = _view.NaturalDockWidth();
+            int width = (int)Math.Ceiling((_placedDockWidth + 2 * _view.ShadowSpace + 2) * scale);
+            if (width < right - left)
+            {
+                int middle = (left + right) / 2;
+                left = middle - width / 2;
+                right = left + width;
+            }
+        }
 
         // Top edge: measure from the top of the strip; bottom edge: from its bottom.
         int top = _edge == TaskbarEdge.Top ? strip.Top + margin : strip.Bottom - margin - height;

@@ -31,6 +31,12 @@ internal static class ScreenBehind
         public WriteableBitmap? Bitmap;
         public IntPtr MemoryDc, Dib, Bits;
         public int Width, Height;
+        /// <summary>A fingerprint of the last copy, and a buffer to compute it in (reused).</summary>
+        public ulong LastPrint;
+        public long[]? PrintBuffer;
+        /// <summary>How many copies in a row were the same as the one before, and when the next copy is due.</summary>
+        public int Unchanged;
+        public long NextCopy;
     }
 
     private static readonly List<Entry> Entries = new();
@@ -106,6 +112,9 @@ internal static class ScreenBehind
                 continue;
             }
             if (!surface.IsVisible || surface.ActualWidth <= 0 || PresentationSource.FromVisual(surface) == null) continue;
+            // Copying the screen costs Windows' compositor (DWM) work every time, even when the result is the same. So
+            // while nothing changes behind the surface, it's copied only 4 times a second; any change: full speed again.
+            if (Environment.TickCount64 < entry.NextCopy) continue;
             try { Capture(entry, surface, effect); }
             catch (Exception ex) { AppTrace.Log($"Live glass: {ex.Message}"); }
         }
@@ -149,7 +158,34 @@ internal static class ScreenBehind
             else BitBlt(entry.MemoryDc, 0, 0, width, height, screen, x, y, SRCCOPY);
         }
         finally { ReleaseDC(IntPtr.Zero, screen); }
+
+        // Nothing changed behind it (a still desktop): hand nothing on. Then nothing redraws - not the surface, not a
+        // Direct3D material, and not Windows' compositor (DWM), which otherwise recomposes the see-through window every frame.
+        ulong print = Fingerprint(entry, width * height * 4);
+        if (print == entry.LastPrint)
+        {
+            // The same again: after about a third of a second of that, slow down.
+            if (++entry.Unchanged >= SlowDownAfter) entry.NextCopy = Environment.TickCount64 + SlowInterval;
+            return;
+        }
+        entry.Unchanged = 0;
+        entry.NextCopy = 0;
+        entry.LastPrint = print;
         entry.Bitmap.WritePixels(new Int32Rect(0, 0, width, height), entry.Bits, width * height * 4, width * 4);
+    }
+
+    private const int SlowDownAfter = 10;   // copies in a row that were the same
+    private const long SlowInterval = 250;  // milliseconds between copies while nothing changes
+
+    /// <summary>A quick fingerprint of the copied pixels (FNV-style over 8 bytes at a time).</summary>
+    private static ulong Fingerprint(Entry entry, int bytes)
+    {
+        int count = bytes / 8;
+        if (entry.PrintBuffer == null || entry.PrintBuffer.Length != count) entry.PrintBuffer = new long[count];
+        Marshal.Copy(entry.Bits, entry.PrintBuffer, 0, count);
+        ulong hash = 14695981039346656037UL;
+        foreach (long value in entry.PrintBuffer) hash = (hash ^ (ulong)value) * 1099511628211UL;
+        return hash == 0 ? 1 : hash; // 0 means "nothing copied yet"
     }
 
     private static void Release(Entry entry)
@@ -158,6 +194,8 @@ internal static class ScreenBehind
         if (entry.MemoryDc != IntPtr.Zero) DeleteDC(entry.MemoryDc);
         entry.Dib = entry.MemoryDc = entry.Bits = IntPtr.Zero;
         entry.Bitmap = null;
+        entry.LastPrint = 0;
+        entry.PrintBuffer = null;
     }
 
     // ---------- GDI ----------

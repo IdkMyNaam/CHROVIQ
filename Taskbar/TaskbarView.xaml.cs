@@ -39,6 +39,17 @@ public partial class TaskbarView : UserControl
     /// <summary>Extra room the window needs on the screen side of the bar for its shadow (Look.Shadow), in WPF units.</summary>
     public double ShadowSpace => _look.Shadow ? 10 : 0;
 
+    /// <summary>
+    /// A floating dock's width as its contents want it (WPF units), however wide its window is now: measured without a
+    /// width limit. Its window is made this wide (plus the shadow), so Windows' compositor blends only the dock, not a
+    /// see-through strip the width of the screen.
+    /// </summary>
+    public double NaturalDockWidth()
+    {
+        Surface.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        return Surface.DesiredSize.Width;
+    }
+
     /// <summary>The bar leaves room for its shadow on the side facing the middle of the screen.</summary>
     private void PlaceShadow()
     {
