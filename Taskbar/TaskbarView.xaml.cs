@@ -54,6 +54,7 @@ public partial class TaskbarView : UserControl
         _look = design.Look ?? new TaskbarLook();
         InitializeComponent();
         ApplyLook();
+        SetUpDropToPin();
         UpdateAccentBrush();
 
         Loaded += (_, _) => Build();
@@ -396,12 +397,13 @@ public partial class TaskbarView : UserControl
     private void TaskButton_MouseUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Middle || !_look.MiddleClickCloses) return;
-        if ((sender as FrameworkElement)?.DataContext is { } item && WindowsOf(item) is { Count: 1 } windows)
-        {
-            CloseThumbnails();
-            WindowTracker.Close(windows[0].Handle);
-            e.Handled = true;
-        }
+        // Every window of the button (an app group has several).
+        var windows = WindowsOf((sender as FrameworkElement)?.DataContext);
+        if (windows.Count == 0) return;
+        e.Handled = true;
+        if (_look.MiddleClickForce) { ForceCloseAll(windows); return; }
+        CloseThumbnails();
+        foreach (var window in windows) WindowTracker.Close(window.Handle);
     }
 
     /// <summary>Right-click "Close": closes the window, or every window of an app group (each may still ask to save).</summary>
@@ -421,7 +423,7 @@ public partial class TaskbarView : UserControl
 
     private void TaskButton_MouseEnter(object sender, MouseEventArgs e)
     {
-        if (!_look.Thumbnails || sender is not FrameworkElement button) return;
+        if (!_look.Thumbnails || IsReordering || sender is not FrameworkElement button) return;
         PrepareThumbnailTimers();
         _hoverButton = button;
         _thumbnailCloseTimer.Stop();

@@ -286,7 +286,8 @@ public sealed class WindowTracker : IDisposable
     }
 
     /// <summary>Asks the window to close, like clicking its X (it can still ask to save first).</summary>
-    public static void Close(IntPtr hwnd) => PostMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+    /// <summary>Asks the window to close, the way Windows' taskbar does (the app may still ask to save).</summary>
+    public static void Close(IntPtr hwnd) => PostMessage(hwnd, 0x0112 /* WM_SYSCOMMAND */, new IntPtr(0xF060) /* SC_CLOSE */, IntPtr.Zero);
 
     public void Dispose()
     {

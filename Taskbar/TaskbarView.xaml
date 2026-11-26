@@ -152,10 +152,15 @@
             <Button x:Name="Btn" Style="{DynamicResource BarButton}" Margin="1,0" Padding="8,0"
                     HorizontalContentAlignment="Stretch" ToolTip="{Binding Title}" Tag="{Binding HoverBrush}"
                     Click="TaskButton_Click" MouseUp="TaskButton_MouseUp"
-                    MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave">
+                    MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave"
+                    PreviewMouseLeftButtonDown="DragSource_PreviewDown" PreviewMouseMove="DragSource_PreviewMove"
+                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture">
                 <Button.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="WindowMenu_Opened">
+                        <MenuItem Header="Pin to taskbar" Tag="pin" Click="PinWindow_Click" />
+                        <Separator />
                         <MenuItem Header="Close" Click="CloseWindow_Click" />
+                        <MenuItem Header="Force close (unsaved work is lost)" Click="ForceCloseWindow_Click" />
                     </ContextMenu>
                 </Button.ContextMenu>
                 <DockPanel>
@@ -190,10 +195,15 @@
             <Button x:Name="Btn" Style="{DynamicResource BarButton}" Margin="1,0" Padding="6,0"
                     ToolTip="{Binding Title}" Tag="{Binding HoverBrush}"
                     Click="TaskButton_Click" MouseUp="TaskButton_MouseUp"
-                    MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave">
+                    MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave"
+                    PreviewMouseLeftButtonDown="DragSource_PreviewDown" PreviewMouseMove="DragSource_PreviewMove"
+                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture">
                 <Button.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="WindowMenu_Opened">
+                        <MenuItem Header="Pin to taskbar" Tag="pin" Click="PinWindow_Click" />
+                        <Separator />
                         <MenuItem Header="Close" Click="CloseWindow_Click" />
+                        <MenuItem Header="Force close (unsaved work is lost)" Click="ForceCloseWindow_Click" />
                     </ContextMenu>
                 </Button.ContextMenu>
                 <Grid>

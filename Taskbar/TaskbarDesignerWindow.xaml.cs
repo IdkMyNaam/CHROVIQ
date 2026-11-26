@@ -681,7 +681,11 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             "One button per app with a window count; clicking it lets you pick the window.");
         CheckField(LookOptions, "Preview windows on hover", look.Thumbnails, v => look.Thumbnails = v,
             "Live thumbnails above the button; click one to switch to that window.");
-        CheckField(LookOptions, "Middle-click closes a window", look.MiddleClickCloses, v => look.MiddleClickCloses = v);
+        ComboField(LookOptions, "Middle-click on a window button", new[] { "Nothing", "Close it", "Force close it (unsaved work is lost)" },
+            !look.MiddleClickCloses ? 0 : look.MiddleClickForce ? 2 : 1,
+            i => { look.MiddleClickCloses = i > 0; look.MiddleClickForce = i == 2; });
+        Hint(LookOptions, "Force close ends the program right away, with the programs it started, like Task Manager's \"End task\". " +
+                          "File Explorer windows are only closed normally. Drag buttons to reorder them; right-click to pin or force close.");
 
         Header(LookOptions, "Icon colors");
         CheckField(LookOptions, "Tint icons in one color", look.TintIcons, v => look.TintIcons = v,

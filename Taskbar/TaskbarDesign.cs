@@ -206,6 +206,9 @@ public class TaskbarLook
     /// <summary>Middle-click a window button to close that window.</summary>
     public bool MiddleClickCloses { get; set; } = true;
 
+    /// <summary>Middle-click force-closes instead (ends the program right away, like Task Manager; unsaved work is lost).</summary>
+    public bool MiddleClickForce { get; set; }
+
     /// <summary>Draw window and app icons in one color (<see cref="IconTint"/>); full color on hover.</summary>
     public bool TintIcons { get; set; }
 

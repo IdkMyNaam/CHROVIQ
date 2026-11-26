@@ -99,6 +99,9 @@ public class AppSettings
     /// <summary>When updates were last looked for.</summary>
     public DateTime? LastUpdateCheck { get; set; }
 
+    /// <summary>The order window buttons were dragged into, by program.</summary>
+    public List<string> WindowOrder { get; set; } = new();
+
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;
 

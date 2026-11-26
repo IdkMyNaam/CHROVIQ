@@ -131,9 +131,23 @@ public sealed class TaskItemList
         Updated?.Invoke();
     }
 
+    /// <summary>The key a button is ordered by: its program (or the window itself for windows without one).</summary>
+    public static string KeyOf(TaskItem item) => item switch
+    {
+        TaskGroup g => g.Key,
+        TaskWindow w => TaskGroup.KeyOf(w),
+        _ => "",
+    };
+
     /// <summary>Makes <see cref="Items"/> equal to <paramref name="wanted"/> with as few moves as possible.</summary>
     private void Sync(List<TaskItem> wanted)
     {
+        // In the order you dragged buttons into (TaskbarView.WindowOrder); the rest after, as they opened.
+        var order = TaskbarView.WindowOrder;
+        if (order.Count > 0)
+            wanted = wanted.Select((item, i) => (item, i))
+                .OrderBy(x => order.IndexOf(KeyOf(x.item)) is var k && k >= 0 ? k : int.MaxValue)
+                .ThenBy(x => x.i).Select(x => x.item).ToList();
         for (int i = Items.Count - 1; i >= 0; i--)
             if (!wanted.Contains(Items[i])) Items.RemoveAt(i);
         for (int i = 0; i < wanted.Count; i++)

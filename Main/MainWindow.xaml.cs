@@ -1798,6 +1798,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Search boxes and Start buttons on the bars open our windows with these settings.
         TaskbarView.SearchLookProvider = () => _settings.Search ??= new SearchLook();
         TaskbarView.StartMenuOpener = (anchor, edge) => StartMenuWindow.Toggle(StartMenuContext(), anchor, edge);
+        // Pins changed on a bar (pin, unpin, drag) and the window order are saved here.
+        TaskbarView.SaveDesign = design =>
+        {
+            try { TaskbarDesigns.Save(design); }
+            catch (Exception ex) { StatusText.Text = $"Could not save the taskbar: {ex.Message}"; }
+        };
+        TaskbarView.WindowOrder = _settings.WindowOrder ??= new List<string>();
+        TaskbarView.WindowOrderChanged = () =>
+        {
+            // Programs only: single windows without one ("window:...") don't outlive this session.
+            _settings.WindowOrder = TaskbarView.WindowOrder.Where(k => !k.StartsWith("window:")).ToList();
+            SaveSettings();
+        };
         TaskbarView.QuickSettingsOpener = (anchor, edge) => QuickSettingsWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), anchor, edge, ShowFromTray);
 
         var action = _settings.EffectiveWinKey;

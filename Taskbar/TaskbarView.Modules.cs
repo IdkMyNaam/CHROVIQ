@@ -266,8 +266,10 @@ public partial class TaskbarView
                 button.MouseUp += TaskButton_MouseUp;
                 button.MouseEnter += TaskButton_MouseEnter;
                 button.MouseLeave += TaskButton_MouseLeave;
-                button.ContextMenu = RunningAppMenu(running, path);
             }
+            button.ContextMenu = RunningAppMenu(running, path, app, dockStyle);
+            _pinOf[button] = new PinTag(module, app);
+            AttachReorder(button);
             row.Children.Add(button);
 
             // Keep the running windows (and the dot) up to date.
@@ -290,16 +292,26 @@ public partial class TaskbarView
     }
 
     /// <summary>Right-click menu of a pinned app: start another one, or close its windows.</summary>
-    private ContextMenu RunningAppMenu(TaskGroup running, string path)
+    private ContextMenu RunningAppMenu(TaskGroup running, string path, string pinned, bool dockStyle)
     {
         var menu = new ContextMenu();
         var start = new MenuItem { Header = "Open new" };
         start.Click += (_, _) => Launch(path, null);
-        var close = new MenuItem { Header = "Close" };
-        close.Click += (_, _) => { foreach (var w in running.Windows) WindowTracker.Close(w.Handle); };
+        var unpin = new MenuItem { Header = "Unpin from taskbar" };
+        unpin.Click += (_, _) => Unpin(pinned);
         menu.Items.Add(start);
-        menu.Items.Add(close);
-        menu.Opened += (_, _) => close.IsEnabled = running.Windows.Count > 0;
+        menu.Items.Add(unpin);
+        if (dockStyle)
+        {
+            var close = new MenuItem { Header = "Close" };
+            close.Click += (_, _) => { foreach (var w in running.Windows) WindowTracker.Close(w.Handle); };
+            var force = new MenuItem { Header = "Force close (unsaved work is lost)" };
+            force.Click += (_, _) => ForceCloseAll(running.Windows.ToList());
+            menu.Items.Add(new Separator());
+            menu.Items.Add(close);
+            menu.Items.Add(force);
+            menu.Opened += (_, _) => close.IsEnabled = force.IsEnabled = running.Windows.Count > 0;
+        }
         return menu;
     }
 
