@@ -67,6 +67,9 @@ public partial class MainWindow
         ThemeCornerSlider.Value = theme.CornerRadius;
         ThemeCardSlider.Value = theme.CardOpacity;
         ThemeFontBox.SelectedItem = string.IsNullOrWhiteSpace(theme.FontFamily) ? WindowsFont : theme.FontFamily;
+        ThemeTextColorBox.Text = theme.TextColor ?? "";
+        ThemeSecondaryColorBox.Text = theme.SecondaryTextColor ?? "";
+        ThemeBorderColorBox.Text = theme.BorderColor ?? "";
         _themeLoading = false;
         UpdateThemeFieldStates();
     }
@@ -101,6 +104,9 @@ public partial class MainWindow
         theme.CornerRadius = ThemeCornerSlider.Value;
         theme.CardOpacity = Math.Round(ThemeCardSlider.Value, 2);
         theme.FontFamily = ThemeFontBox.SelectedItem is string font && font != WindowsFont ? font : null;
+        theme.TextColor = AppThemes.TryColor(ThemeTextColorBox.Text) == null ? null : ThemeTextColorBox.Text.Trim();
+        theme.SecondaryTextColor = AppThemes.TryColor(ThemeSecondaryColorBox.Text) == null ? null : ThemeSecondaryColorBox.Text.Trim();
+        theme.BorderColor = AppThemes.TryColor(ThemeBorderColorBox.Text) == null ? null : ThemeBorderColorBox.Text.Trim();
         UpdateThemeFieldStates();
         AppThemes.Apply(theme);
         _themeSaveTimer.Stop();

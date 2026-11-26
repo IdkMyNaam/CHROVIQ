@@ -47,6 +47,14 @@ internal static class ShellNew
             }
         }
         catch (Exception) { /* no list: the New menu only has Folder and Shortcut */ }
+
+        // "Text Document" is always offered: Windows only lists it while a text editor registers it, and that's
+        // gone on some PCs (Notepad removed, or the Store version). An empty .txt, named the way Windows names it.
+        if (!result.Any(t => t.Extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)))
+        {
+            try { result.Add(Find(".txt") ?? new FileType(".txt", TypeName(".txt", null), null, Array.Empty<byte>())); }
+            catch (Exception) { result.Add(new FileType(".txt", "Text Document", null, Array.Empty<byte>())); }
+        }
         return result.GroupBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).Select(g => g.First())
                      .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }

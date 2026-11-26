@@ -128,6 +128,8 @@ internal sealed class MonitorBrightness : IDisposable
         public required string Name { get; init; }
         /// <summary>Its brightness (0-100) when the panel opened.</summary>
         public required int StartPercent { get; init; }
+        /// <summary>A laptop's built-in screen (set through the display driver, not over a cable).</summary>
+        public bool BuiltIn { get; init; }
         internal int Wanted = -1;
         internal Task? Sending;
     }
@@ -164,6 +166,12 @@ internal sealed class MonitorBrightness : IDisposable
             return true;
         }, IntPtr.Zero);
         control._all = lists.ToArray();
+        // A laptop's own screen doesn't answer over DDC/CI: its display driver sets the brightness.
+        if (LaptopScreen.Brightness() is int laptop)
+        {
+            control._screens.Insert(0, new Screen { Handle = IntPtr.Zero, Min = 0, Max = 100, Name = "Built-in screen", StartPercent = laptop, BuiltIn = true });
+            AppTrace.Log($"Quick Settings: built-in screen brightness is {laptop}");
+        }
         if (control._screens.Count == 0) { control.Dispose(); return null; }
         return control;
     });
@@ -204,7 +212,8 @@ internal sealed class MonitorBrightness : IDisposable
                 value = screen.Wanted;
                 screen.Wanted = -1;
             }
-            SetMonitorBrightness(screen.Handle, (uint)Math.Round(screen.Min + (screen.Max - screen.Min) * value / 100.0));
+            if (screen.BuiltIn) LaptopScreen.SetBrightness(value);
+            else SetMonitorBrightness(screen.Handle, (uint)Math.Round(screen.Min + (screen.Max - screen.Min) * value / 100.0));
         }
     }
 
@@ -233,4 +242,81 @@ internal sealed class MonitorBrightness : IDisposable
     [DllImport("dxva2.dll")] private static extern bool SetMonitorBrightness(IntPtr monitor, uint brightness);
     [DllImport("dxva2.dll")] private static extern bool GetCapabilitiesStringLength(IntPtr monitor, out uint length);
     [DllImport("dxva2.dll", CharSet = CharSet.Ansi)] private static extern bool CapabilitiesRequestAndCapabilitiesReply(IntPtr monitor, System.Text.StringBuilder text, uint length);
+}
+
+/// <summary>
+/// A laptop's built-in screen, through the display driver's brightness control (the "\\.\LCD" device, the same one
+/// Windows' own brightness keys reach). Not there on desktop PCs: then <see cref="Brightness"/> is null.
+/// </summary>
+internal static class LaptopScreen
+{
+    private const uint IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS = 0x230494, IOCTL_VIDEO_QUERY_DISPLAY_BRIGHTNESS = 0x230498,
+                       IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS = 0x23049C;
+    private const uint GENERIC_READ = 0x80000000, GENERIC_WRITE = 0x40000000, FILE_SHARE_READ = 1, FILE_SHARE_WRITE = 2, OPEN_EXISTING = 3;
+    private const byte DISPLAYPOLICY_BOTH = 3; // on battery and plugged in
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DISPLAY_BRIGHTNESS { public byte Policy, AcBrightness, DcBrightness; }
+
+    /// <summary>The levels the screen supports (0-100), or null when there's no built-in screen control.</summary>
+    private static byte[]? Levels()
+    {
+        using var device = Open();
+        if (device == null) return null;
+        var buffer = new byte[256];
+        if (!DeviceIoControl(device, IOCTL_VIDEO_QUERY_SUPPORTED_BRIGHTNESS, IntPtr.Zero, 0, buffer, (uint)buffer.Length, out uint got, IntPtr.Zero) || got == 0)
+            return null;
+        return buffer.Take((int)got).Distinct().OrderBy(b => b).ToArray();
+    }
+
+    /// <summary>Its brightness now (0-100), or null when there's no built-in screen control.</summary>
+    public static int? Brightness()
+    {
+        try
+        {
+            if (Levels() is not { Length: > 0 }) return null;
+            using var device = Open();
+            if (device == null) return null;
+            var current = new DISPLAY_BRIGHTNESS();
+            uint size = (uint)Marshal.SizeOf<DISPLAY_BRIGHTNESS>();
+            if (!DeviceIoControl(device, IOCTL_VIDEO_QUERY_DISPLAY_BRIGHTNESS, IntPtr.Zero, 0, ref current, size, out _, IntPtr.Zero)) return null;
+            // The level for the power state now (on battery: the DC one).
+            bool onBattery = System.Windows.Forms.SystemInformation.PowerStatus.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline;
+            return onBattery ? current.DcBrightness : current.AcBrightness;
+        }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>Sets it to the nearest level the screen supports.</summary>
+    public static void SetBrightness(int percent)
+    {
+        try
+        {
+            var levels = Levels();
+            if (levels is not { Length: > 0 }) return;
+            byte level = levels.OrderBy(l => Math.Abs(l - percent)).First();
+            using var device = Open();
+            if (device == null) return;
+            var wanted = new DISPLAY_BRIGHTNESS { Policy = DISPLAYPOLICY_BOTH, AcBrightness = level, DcBrightness = level };
+            uint size = (uint)Marshal.SizeOf<DISPLAY_BRIGHTNESS>();
+            DeviceIoControl(device, IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS, ref wanted, size, IntPtr.Zero, 0, out _, IntPtr.Zero);
+        }
+        catch (Exception ex) { AppTrace.Log($"Quick Settings: built-in screen brightness: {ex.Message}"); }
+    }
+
+    private static Microsoft.Win32.SafeHandles.SafeFileHandle? Open()
+    {
+        var handle = CreateFile(@"\\.\LCD", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+        if (handle.IsInvalid) { handle.Dispose(); return null; }
+        return handle;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle device, uint code, IntPtr inBuffer, uint inSize, byte[] outBuffer, uint outSize, out uint returned, IntPtr overlapped);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle device, uint code, IntPtr inBuffer, uint inSize, ref DISPLAY_BRIGHTNESS outBuffer, uint outSize, out uint returned, IntPtr overlapped);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle device, uint code, ref DISPLAY_BRIGHTNESS inBuffer, uint inSize, IntPtr outBuffer, uint outSize, out uint returned, IntPtr overlapped);
 }

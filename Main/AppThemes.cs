@@ -36,6 +36,13 @@ public sealed class AppTheme
     /// <summary>How solid the cards are (0.2–1); lower lets the background through.</summary>
     public double CardOpacity { get; set; } = 1;
 
+    /// <summary>Main text color (#RRGGBB). Null: light or dark mode's own.</summary>
+    public string? TextColor { get; set; }
+    /// <summary>Color of descriptions and hints. Null: light or dark mode's own.</summary>
+    public string? SecondaryTextColor { get; set; }
+    /// <summary>Color of the lines around cards, boxes and buttons. Null: light or dark mode's own.</summary>
+    public string? BorderColor { get; set; }
+
     /// <summary>For the "Material" background: a material (shader) behind the window's content, and its settings.</summary>
     public string? Material { get; set; }
     public Dictionary<string, string>? MaterialValues { get; set; }
@@ -49,6 +56,7 @@ public sealed class AppTheme
             Name = name, Mode = Mode, Accent = Accent, Background = Background, BackgroundColor = BackgroundColor,
             BackgroundImage = BackgroundImage, ImageOpacity = ImageOpacity, CornerRadius = CornerRadius,
             FontFamily = FontFamily, CardOpacity = CardOpacity, Material = Material,
+            TextColor = TextColor, SecondaryTextColor = SecondaryTextColor, BorderColor = BorderColor,
             MaterialValues = MaterialValues == null ? null : new Dictionary<string, string>(MaterialValues),
         };
 }
@@ -73,6 +81,18 @@ internal static class AppThemes
         new AppTheme { Name = "Midnight", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#9B7BFF", Background = AppThemeBackground.Color, BackgroundColor = "#0E1016", CornerRadius = 6 },
         new AppTheme { Name = "Light clean", BuiltIn = true, Mode = AppThemeMode.Light, Accent = "#0067C0", Background = AppThemeBackground.Color, BackgroundColor = "#F7F7F7", CornerRadius = 6 },
         new AppTheme { Name = "High contrast", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#FFD800", Background = AppThemeBackground.Color, BackgroundColor = "#000000", CornerRadius = 0 },
+        new AppTheme { Name = "Retro", BuiltIn = true, Mode = AppThemeMode.Light, Accent = "#008080", Background = AppThemeBackground.Color, BackgroundColor = "#C0C0C0",
+                       CornerRadius = 0, FontFamily = "Tahoma", TextColor = "#000000", SecondaryTextColor = "#303030", BorderColor = "#808080" },
+        new AppTheme { Name = "Ocean", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#2EC4E6", Background = AppThemeBackground.Color, BackgroundColor = "#0B1E2D",
+                       CornerRadius = 8, TextColor = "#E6F6FF", SecondaryTextColor = "#8FB3C7", BorderColor = "#1E4A63" },
+        new AppTheme { Name = "Forest", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#5FD068", Background = AppThemeBackground.Color, BackgroundColor = "#0F1A12",
+                       CornerRadius = 6, TextColor = "#E8F5E9", SecondaryTextColor = "#9BB89F", BorderColor = "#234A2C" },
+        new AppTheme { Name = "Sunset", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#FF7A59", Background = AppThemeBackground.Color, BackgroundColor = "#1E1220",
+                       CornerRadius = 10, TextColor = "#FFF1EA", SecondaryTextColor = "#C9A1A9", BorderColor = "#4A2A3A" },
+        new AppTheme { Name = "Nord", BuiltIn = true, Mode = AppThemeMode.Dark, Accent = "#88C0D0", Background = AppThemeBackground.Color, BackgroundColor = "#2E3440",
+                       CornerRadius = 6, TextColor = "#ECEFF4", SecondaryTextColor = "#A9B1C1", BorderColor = "#434C5E" },
+        new AppTheme { Name = "Paper", BuiltIn = true, Mode = AppThemeMode.Light, Accent = "#B5522B", Background = AppThemeBackground.Color, BackgroundColor = "#F4EFE6",
+                       CornerRadius = 4, FontFamily = "Georgia", TextColor = "#2B2622", SecondaryTextColor = "#6E655C", BorderColor = "#D8CFC2" },
     };
 
     public static AppTheme Current { get; private set; } = BuiltIns[0];
@@ -241,6 +261,12 @@ internal static class AppThemes
             }
         }
 
+        // Text and border colors: the theme's own, or (empty) light or dark mode's.
+        SetBrush(window, theme.TextColor, "TextFillColorPrimaryBrush");
+        SetBrush(window, theme.SecondaryTextColor, "TextFillColorSecondaryBrush", "TextFillColorTertiaryBrush");
+        SetBrush(window, theme.BorderColor, "CardStrokeColorDefaultBrush", "ControlStrokeColorDefaultBrush", "ControlStrokeColorSecondaryBrush",
+                 "SurfaceStrokeColorDefaultBrush", "DividerStrokeColorDefaultBrush");
+
         if (string.IsNullOrWhiteSpace(theme.FontFamily)) window.ClearValue(Window.FontFamilyProperty);
         else window.FontFamily = new FontFamily(theme.FontFamily);
 
@@ -305,6 +331,19 @@ internal static class AppThemes
     }
 
     private static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }
+
+    /// <summary>Sets these WPF-UI brushes on the window to the color, or removes them (the mode's own) when it's empty.</summary>
+    private static void SetBrush(FrameworkElement window, string? color, params string[] keys)
+    {
+        if (TryColor(color) is not { } c)
+        {
+            foreach (var key in keys) window.Resources.Remove(key);
+            return;
+        }
+        var brush = new SolidColorBrush(c);
+        brush.Freeze();
+        foreach (var key in keys) window.Resources[key] = brush;
+    }
 
     public static Color? TryColor(string? text)
     {

@@ -450,6 +450,27 @@
                                         <ui:CardControl.Header><TextBlock Text="Font" Style="{StaticResource CardTitle}" /></ui:CardControl.Header>
                                         <ComboBox x:Name="ThemeFontBox" Width="240" SelectionChanged="ThemeField_Changed" />
                                     </ui:CardControl>
+                                    <ui:Card Margin="0,0,0,4">
+                                        <StackPanel>
+                                            <TextBlock Text="Text and border colors" Style="{StaticResource CardTitle}" />
+                                            <TextBlock Text="#RRGGBB, or empty for light or dark mode's own" Style="{StaticResource CardText}" />
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition /><RowDefinition /><RowDefinition />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="Text" VerticalAlignment="Center" Margin="0,0,12,6" />
+                                                <TextBox x:Name="ThemeTextColorBox" Grid.Column="1" Width="160" HorizontalAlignment="Left" Margin="0,0,0,6" TextChanged="ThemeField_Changed" />
+                                                <TextBlock Grid.Row="1" Text="Descriptions" VerticalAlignment="Center" Margin="0,0,12,6" />
+                                                <TextBox x:Name="ThemeSecondaryColorBox" Grid.Row="1" Grid.Column="1" Width="160" HorizontalAlignment="Left" Margin="0,0,0,6" TextChanged="ThemeField_Changed" />
+                                                <TextBlock Grid.Row="2" Text="Borders" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                                <TextBox x:Name="ThemeBorderColorBox" Grid.Row="2" Grid.Column="1" Width="160" HorizontalAlignment="Left" TextChanged="ThemeField_Changed" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </ui:Card>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
