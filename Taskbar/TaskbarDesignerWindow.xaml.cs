@@ -523,8 +523,10 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
                 NumberField(ModuleOptions, "Icon size (pixels)", m.IconSize ?? 16, v => m.IconSize = v, 10, 48);
                 NumberField(ModuleOptions, "Space around each icon", m.IconSpacing ?? 5, v => m.IconSpacing = v, 0, 30);
                 NumberField(ModuleOptions, "Icons per row in the ^ flyout", m.FlyoutColumns ?? 5, v => m.FlyoutColumns = (int)v, 1, 20);
+                CheckField(ModuleOptions, "Flyout uses the taskbar's material", m.FlyoutBarMaterial != false, v => m.FlyoutBarMaterial = v ? null : false,
+                    "With a material on the taskbar (Look tab), the ^ flyout gets it too, with the bar's background, so it looks like part of the bar.");
                 ColorField(ModuleOptions, "Flyout background", m.FlyoutBackground ?? "", v => m.FlyoutBackground = Empty(v),
-                    "Empty = dark gray. #AARRGGBB for see-through.");
+                    "Empty = dark gray (or the bar's background, with its material). #AARRGGBB for see-through.");
                 ColorField(ModuleOptions, "Icon color", m.IconTint ?? "", v => m.IconTint = Empty(v),
                     "Draws every tray icon in this one color. Empty = the icons' own colors.");
                 TrayHiddenIcons(m);

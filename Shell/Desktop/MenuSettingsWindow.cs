@@ -25,15 +25,15 @@ public sealed class MenuLook
     }
 }
 
-/// <summary>"Menu settings...": a material for the desktop's right-click menus, with a sample menu as "Try it".</summary>
+/// <summary>"Menu settings...": the look of CHROVIQ's menus (desktop, tray icon, taskbar menu button), with a sample as "Try it".</summary>
 internal sealed class MenuSettingsWindow : SettingsForm
 {
     public MenuSettingsWindow(MenuLook look, Action save)
         : base("Menu settings", () => { look.Apply(); save(); }, () => { look.Apply(); ShowSample(); })
     {
-        Header("Desktop right-click menus");
-        Hint("The menus you get by right-clicking the desktop or an icon (as your shell, and in the Desktop preview). " +
-             "\"Show more options\" opens Windows' own menu, which keeps Windows' look.");
+        Header("Which menus");
+        Hint("CHROVIQ's own menus: the tray icon's menu, the taskbar's menu button, and right-clicking the desktop or an icon " +
+             "(as your shell, and in the Desktop preview). \"Show more options\" opens Windows' own menu, which keeps Windows' look.");
 
         Header("Colors");
         Hint("Empty: the light or dark default, following Windows' app mode.");

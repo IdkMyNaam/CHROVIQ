@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -69,29 +69,43 @@ public partial class TaskbarView
 
     // ---------- Window buttons: right-click menu ----------
 
-    /// <summary>Fills in "Pin to taskbar" / "Unpin from taskbar" for the window (or app group) the menu belongs to.</summary>
-    private void WindowMenu_Opened(object sender, RoutedEventArgs e)
+    // Segoe Fluent Icons symbols for the menus.
+    private const string PinGlyph = "\uE718", UnpinGlyph = "\uE77A", CloseGlyph = "\uE8BB", ForceGlyph = "\uE7BA", NewGlyph = "\uE8A7";
+
+    /// <summary>The window button's menu, in the modern menu look (Menu settings): pin, close, force close.</summary>
+    private void WindowButton_RightUp(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not ContextMenu menu) return;
-        var windows = WindowsOf(menu.DataContext);
-        var pin = menu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Tag as string == "pin");
-        if (pin == null) return;
+        if (sender is not FrameworkElement button) return;
+        var windows = WindowsOf(button.DataContext);
+        if (windows.Count == 0) return;
+        e.Handled = true;
+        CloseThumbnails();
+
+        var menu = ModernMenu.Create();
         var program = windows.Select(w => w.ProcessPath).FirstOrDefault(p => p != null);
         bool storeApp = program == null || program.EndsWith("ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase);
-        pin.IsEnabled = !storeApp;
-        pin.Header = storeApp ? "Pin to taskbar (pin Store apps from the start menu)" : IsPinned(program!) ? "Unpin from taskbar" : "Pin to taskbar";
+        if (storeApp)
+            ModernMenu.Item(menu, PinGlyph, "Pin to taskbar (pin Store apps from the start menu)", null, enabled: false);
+        else if (IsPinned(program!))
+            ModernMenu.Item(menu, UnpinGlyph, "Unpin from taskbar", () => Unpin(program!));
+        else
+            ModernMenu.Item(menu, PinGlyph, "Pin to taskbar", () => Pin(new[] { program! }));
+        ModernMenu.Separator(menu);
+        ModernMenu.Item(menu, CloseGlyph, windows.Count > 1 ? "Close all windows" : "Close window",
+            () => { foreach (var w in windows) WindowTracker.Close(w.Handle); });
+        ModernMenu.Item(menu, ForceGlyph, "Force close (unsaved work is lost)", () => ForceCloseAll(windows));
+        OpenMenu(menu, button);
     }
 
-    private void PinWindow_Click(object sender, RoutedEventArgs e)
+    /// <summary>Opens a bar menu next to the button, on the screen side, and keeps an auto-hiding bar in meanwhile.</summary>
+    private void OpenMenu(ContextMenu menu, UIElement button)
     {
-        var program = WindowsOf((sender as FrameworkElement)?.DataContext).Select(w => w.ProcessPath).FirstOrDefault(p => p != null);
-        if (program == null) return;
-        if (IsPinned(program)) Unpin(program);
-        else Pin(new[] { program });
+        menu.PlacementTarget = button;
+        menu.Placement = Edge == TaskbarEdge.Top ? System.Windows.Controls.Primitives.PlacementMode.Bottom : System.Windows.Controls.Primitives.PlacementMode.Top;
+        menu.Opened += (_, _) => _openMenus++;
+        menu.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
+        menu.IsOpen = true;
     }
-
-    /// <summary>Right-click "Force close": ends the program of the window (or of each window in an app group).</summary>
-    private void ForceCloseWindow_Click(object sender, RoutedEventArgs e) => ForceCloseAll(WindowsOf((sender as FrameworkElement)?.DataContext));
 
     private void ForceCloseAll(List<TaskWindow> windows)
     {

@@ -47,6 +47,9 @@ public sealed class AppTheme
     public string? Material { get; set; }
     public Dictionary<string, string>? MaterialValues { get; set; }
 
+    /// <summary>Live glass: a glass material shows what's really behind the windows (they then don't show in screen capture).</summary>
+    public bool LiveGlass { get; set; }
+
     [JsonIgnore] public bool BuiltIn { get; init; }
 
     /// <summary>An editable copy (never built-in).</summary>
@@ -56,7 +59,7 @@ public sealed class AppTheme
             Name = name, Mode = Mode, Accent = Accent, Background = Background, BackgroundColor = BackgroundColor,
             BackgroundImage = BackgroundImage, ImageOpacity = ImageOpacity, CornerRadius = CornerRadius,
             FontFamily = FontFamily, CardOpacity = CardOpacity, Material = Material,
-            TextColor = TextColor, SecondaryTextColor = SecondaryTextColor, BorderColor = BorderColor,
+            TextColor = TextColor, SecondaryTextColor = SecondaryTextColor, BorderColor = BorderColor, LiveGlass = LiveGlass,
             MaterialValues = MaterialValues == null ? null : new Dictionary<string, string>(MaterialValues),
         };
 }
@@ -167,6 +170,13 @@ internal static class AppThemes
     private static readonly List<FluentWindow> Windows = new();
 
     /// <summary>Makes a settings window follow the app theme (now and when it changes).</summary>
+    /// <summary>
+    /// True for CHROVIQ's own windows while the app theme has a material with live glass on (see ScreenBehind).
+    /// </summary>
+    public static bool WantsLiveGlass(Window window) =>
+        Current.LiveGlass && Current.Background == AppThemeBackground.Material && Current.Material != null
+        && window is FluentWindow fluent && Windows.Contains(fluent);
+
     public static void Register(FluentWindow window)
     {
         if (Windows.Contains(window)) return;

@@ -371,23 +371,9 @@ public partial class TaskbarView : UserControl
         }
         if (windows.Count == 0) return;
 
-        var menu = new ContextMenu
-        {
-            PlacementTarget = anchor,
-            Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
-        };
-        foreach (var window in windows)
-        {
-            var item = new MenuItem
-            {
-                Header = window.Title,
-                Icon = new Image { Source = window.Icon, Width = 16, Height = 16 },
-                FontWeight = window.IsActive ? FontWeights.SemiBold : FontWeights.Normal,
-            };
-            var handle = window.Handle;
-            item.Click += (_, _) => { WindowTracker.ActivateOrMinimize(handle); _tracker?.Refresh(); };
-            menu.Items.Add(item);
-        }
+        var menu = AppMenuView.Create(GetMenuItems());
+        menu.PlacementTarget = anchor;
+        menu.Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top;
         menu.Opened += (_, _) => _openMenus++;
         menu.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
         menu.IsOpen = true;
@@ -404,13 +390,6 @@ public partial class TaskbarView : UserControl
         if (_look.MiddleClickForce) { ForceCloseAll(windows); return; }
         CloseThumbnails();
         foreach (var window in windows) WindowTracker.Close(window.Handle);
-    }
-
-    /// <summary>Right-click "Close": closes the window, or every window of an app group (each may still ask to save).</summary>
-    private void CloseWindow_Click(object sender, RoutedEventArgs e)
-    {
-        foreach (var window in WindowsOf((sender as FrameworkElement)?.DataContext))
-            WindowTracker.Close(window.Handle);
     }
 
     // ---------- Thumbnails ----------

@@ -46,7 +46,7 @@ internal static class ScreenBehind
         // Only the taskbar bars, and popups whose own "Live glass" setting is on: everything else (the designer's
         // preview, Windows Customizer's own windows, menus) must keep showing in screenshots and screen sharing,
         // so those use the wallpaper picture instead.
-        if (window is not AppBarWindow && window is not ILiveGlassWindow { WantsLiveGlass: true }) return false;
+        if (window is not AppBarWindow && window is not ILiveGlassWindow { WantsLiveGlass: true } && !AppThemes.WantsLiveGlass(window)) return false;
         var hwnd = new WindowInteropHelper(window).EnsureHandle();
         if (hwnd == IntPtr.Zero || !ExcludeFromCapture(hwnd)) return false;
 

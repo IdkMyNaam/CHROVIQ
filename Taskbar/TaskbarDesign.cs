@@ -88,6 +88,9 @@ public class TaskbarModule
     /// <summary>Desktops: show each desktop's name instead of its number.</summary>
     public bool? ShowNames { get; set; }
 
+    /// <summary>Tray: the ^ flyout uses the bar's material (when the bar has one). Empty counts as yes.</summary>
+    public bool? FlyoutBarMaterial { get; set; }
+
     /// <summary>Tray: icons not shown at all (ManagedShell identifiers of the icons).</summary>
     public List<string>? HiddenIcons { get; set; }
 

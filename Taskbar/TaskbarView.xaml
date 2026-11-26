@@ -154,15 +154,8 @@
                     Click="TaskButton_Click" MouseUp="TaskButton_MouseUp"
                     MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave"
                     PreviewMouseLeftButtonDown="DragSource_PreviewDown" PreviewMouseMove="DragSource_PreviewMove"
-                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture">
-                <Button.ContextMenu>
-                    <ContextMenu Opened="WindowMenu_Opened">
-                        <MenuItem Header="Pin to taskbar" Tag="pin" Click="PinWindow_Click" />
-                        <Separator />
-                        <MenuItem Header="Close" Click="CloseWindow_Click" />
-                        <MenuItem Header="Force close (unsaved work is lost)" Click="ForceCloseWindow_Click" />
-                    </ContextMenu>
-                </Button.ContextMenu>
+                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture"
+                    MouseRightButtonUp="WindowButton_RightUp">
                 <DockPanel>
                     <Grid DockPanel.Dock="Left" Width="{DynamicResource TaskIconSize}" Height="{DynamicResource TaskIconSize}" Margin="0,0,8,0">
                         <Image x:Name="ColorIcon" Source="{Binding Icon}" Opacity="{DynamicResource ColorIconOpacity}"
@@ -197,15 +190,8 @@
                     Click="TaskButton_Click" MouseUp="TaskButton_MouseUp"
                     MouseEnter="TaskButton_MouseEnter" MouseLeave="TaskButton_MouseLeave"
                     PreviewMouseLeftButtonDown="DragSource_PreviewDown" PreviewMouseMove="DragSource_PreviewMove"
-                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture">
-                <Button.ContextMenu>
-                    <ContextMenu Opened="WindowMenu_Opened">
-                        <MenuItem Header="Pin to taskbar" Tag="pin" Click="PinWindow_Click" />
-                        <Separator />
-                        <MenuItem Header="Close" Click="CloseWindow_Click" />
-                        <MenuItem Header="Force close (unsaved work is lost)" Click="ForceCloseWindow_Click" />
-                    </ContextMenu>
-                </Button.ContextMenu>
+                    PreviewMouseLeftButtonUp="DragSource_PreviewUp" LostMouseCapture="DragSource_LostCapture"
+                    MouseRightButtonUp="WindowButton_RightUp">
                 <Grid>
                     <Grid Width="{DynamicResource TaskIconOnlySize}" Height="{DynamicResource TaskIconOnlySize}">
                         <Image x:Name="ColorIcon" Source="{Binding Icon}" Opacity="{DynamicResource ColorIconOpacity}"

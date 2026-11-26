@@ -43,13 +43,7 @@ public partial class TaskbarView
             Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
             StaysOpen = false,
             AllowsTransparency = true,
-            Child = new Border
-            {
-                Background = new SolidColorBrush(ParseColor(module.FlyoutBackground, Color.FromArgb(0xF5, 0x24, 0x24, 0x24))),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(6),
-                Child = flyoutIcons,
-            },
+            Child = FlyoutSurface(module, flyoutIcons),
         };
         var more = GlyphButton(Edge == TaskbarEdge.Top ? "" : "", "Show hidden icons", null);
         more.Padding = new Thickness(6, 0, 6, 0);
@@ -73,6 +67,28 @@ public partial class TaskbarView
         row.Children.Add(more);
         row.Children.Add(icons);
         return row;
+    }
+
+    /// <summary>
+    /// The ^ flyout's surface: its own background color, or (by default, when the bar has a material) the bar's
+    /// background and material, so it looks like part of the taskbar.
+    /// </summary>
+    private FrameworkElement FlyoutSurface(TaskbarModule module, UIElement icons)
+    {
+        bool barMaterial = _look.Material != null && module.FlyoutBarMaterial != false;
+        var corner = new CornerRadius(Math.Max(8, Math.Min(_look.CornerRadius, 16)));
+        var background = !string.IsNullOrWhiteSpace(module.FlyoutBackground) || !barMaterial
+            ? ParseColor(module.FlyoutBackground, Color.FromArgb(0xF5, 0x24, 0x24, 0x24))
+            : BackgroundColor;
+        var layer = new Border { CornerRadius = corner, Background = new SolidColorBrush(background) };
+        var frame = new Border { CornerRadius = corner, Padding = new Thickness(6), Child = icons };
+        var surface = new Grid();
+        surface.Children.Add(layer);
+        surface.Children.Add(frame);
+        if (barMaterial && MaterialHost.Attach(layer, surface, _look.Material, _look.MaterialValues,
+                ParseColor(_look.Accent, SystemParameters.WindowGlassColor)) is { } error)
+            AppTrace.Log($"Tray flyout material: {error}");
+        return surface;
     }
 
     /// <summary>A row (or, in the flyout, a wrapping grid) of tray icon buttons.</summary>
@@ -150,9 +166,17 @@ public partial class TaskbarView
     private static bool IsPinClick(MouseButtonEventArgs e) =>
         e.ChangedButton == MouseButton.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
 
+    /// <summary>CHROVIQ's own icon: its clicks are handled here, not passed through Windows (left: open, right: menu).</summary>
+    private static bool IsOwnIcon(ShellTrayIcon? icon)
+    {
+        if (icon == null || icon.HWnd == IntPtr.Zero) return false;
+        NativeMethods.GetWindowThreadProcessId(icon.HWnd, out uint pid);
+        return pid == (uint)Environment.ProcessId;
+    }
+
     private void TrayIcon_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (IsPinClick(e)) { e.Handled = true; return; }
+        if (IsPinClick(e) || IsOwnIcon(IconOf(sender))) { e.Handled = true; return; }
         IconOf(sender)?.IconMouseDown(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);
     }
 
@@ -162,6 +186,13 @@ public partial class TaskbarView
         {
             if (IconOf(sender) is { } icon) TrayHost.TogglePin(icon);
             e.Handled = true;
+            return;
+        }
+        if (IsOwnIcon(IconOf(sender)))
+        {
+            e.Handled = true;
+            if (e.ChangedButton == MouseButton.Left) WindowsCustomizer.TrayIcon.Instance?.Click();
+            else if (e.ChangedButton == MouseButton.Right) WindowsCustomizer.TrayIcon.Instance?.ShowMenu();
             return;
         }
         IconOf(sender)?.IconMouseUp(e.ChangedButton, MouseHelper.GetCursorPositionParam(), DoubleClickTime);

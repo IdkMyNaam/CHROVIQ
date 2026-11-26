@@ -57,7 +57,8 @@ internal static class WallpaperBehind
         void Decide()
         {
             var window = Window.GetWindow(surface);
-            bool live = (Live && window is AppBarWindow) || window is ILiveGlassWindow { WantsLiveGlass: true };
+            bool live = (Live && window is AppBarWindow) || window is ILiveGlassWindow { WantsLiveGlass: true }
+                        || (window != null && AppThemes.WantsLiveGlass(window));
             if (live && ScreenBehind.Track(surface, effect)) return;
             TrackPicture(surface, effect);
         }

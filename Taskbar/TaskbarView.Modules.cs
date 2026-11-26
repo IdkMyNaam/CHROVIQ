@@ -294,24 +294,20 @@ public partial class TaskbarView
     /// <summary>Right-click menu of a pinned app: start another one, or close its windows.</summary>
     private ContextMenu RunningAppMenu(TaskGroup running, string path, string pinned, bool dockStyle)
     {
-        var menu = new ContextMenu();
-        var start = new MenuItem { Header = "Open new" };
-        start.Click += (_, _) => Launch(path, null);
-        var unpin = new MenuItem { Header = "Unpin from taskbar" };
-        unpin.Click += (_, _) => Unpin(pinned);
-        menu.Items.Add(start);
-        menu.Items.Add(unpin);
-        if (dockStyle)
+        // Built when it opens, so "Close" knows whether the app runs right now.
+        var menu = ModernMenu.Create();
+        menu.Opened += (_, _) =>
         {
-            var close = new MenuItem { Header = "Close" };
-            close.Click += (_, _) => { foreach (var w in running.Windows) WindowTracker.Close(w.Handle); };
-            var force = new MenuItem { Header = "Force close (unsaved work is lost)" };
-            force.Click += (_, _) => ForceCloseAll(running.Windows.ToList());
-            menu.Items.Add(new Separator());
-            menu.Items.Add(close);
-            menu.Items.Add(force);
-            menu.Opened += (_, _) => close.IsEnabled = force.IsEnabled = running.Windows.Count > 0;
-        }
+            menu.Items.Clear();
+            ModernMenu.Item(menu, NewGlyph, "Open new", () => Launch(path, null));
+            ModernMenu.Item(menu, UnpinGlyph, "Unpin from taskbar", () => Unpin(pinned));
+            if (!dockStyle) return;
+            bool runs = running.Windows.Count > 0;
+            ModernMenu.Separator(menu);
+            ModernMenu.Item(menu, CloseGlyph, running.Windows.Count > 1 ? "Close all windows" : "Close window",
+                () => { foreach (var w in running.Windows) WindowTracker.Close(w.Handle); }, enabled: runs);
+            ModernMenu.Item(menu, ForceGlyph, "Force close (unsaved work is lost)", () => ForceCloseAll(running.Windows.ToList()), enabled: runs);
+        };
         return menu;
     }
 

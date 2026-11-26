@@ -9,6 +9,7 @@ internal sealed class ThemeMaterialWindow : SettingsForm
         Hint("Drawn behind the content of CHROVIQ's own windows (main window, designer, settings). " +
              "Lower the card transparency on the Appearance page to let more of it show through the cards.");
         MaterialFields(theme.Material, name => theme.Material = name, () => theme.MaterialValues ??= new Dictionary<string, string>(),
-            "Animated materials redraw at the frame-rate limit (Taskbar page).");
+            "Animated materials redraw at the frame-rate limit (Taskbar page).",
+            (theme.LiveGlass, v => theme.LiveGlass = v));
     }
 }

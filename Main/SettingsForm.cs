@@ -56,7 +56,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
             Check("Live glass: show what's really behind it", live.Value, live.Set);
             Hint("For glass materials (Clear glass, Tinted glass): they show the windows and moving wallpaper behind instead of " +
                  "the wallpaper picture. While on, this window doesn't show in screenshots, recordings or screen sharing. " +
-                 "Takes effect the next time it opens.");
+                 "Popups: from the next time they open; CHROVIQ's own windows: right away.");
         }
         details = Section();
         FillMaterial(details, index < 0 ? null : materials[index], values);
