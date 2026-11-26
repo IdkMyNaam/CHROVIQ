@@ -15,7 +15,13 @@ namespace WindowsCustomizer;
 /// </summary>
 internal static partial class ReportSender
 {
-    /// <summary>The Discord webhook address. Empty: sending isn't set up (the report can still be saved as a .zip).</summary>
+    /// <summary>
+    /// The report relay (Relay\worker.js, a Cloudflare Worker): it holds the Discord webhook as a secret, checks each
+    /// report and limits how often anyone can send. This address is fine to be public. Empty: the older direct webhook
+    /// below is used instead (only in builds that have ReportSender.Secret.cs).
+    /// </summary>
+    public const string RelayUrl = "https://reports.chroviq.com/report";
+
     /// <summary>
     /// The Discord webhook address. It isn't in the public source: it comes from ReportSender.Secret.cs, a file git
     /// ignores, so only release builds made by the developer can send. Without that file this is empty, and sending
@@ -34,7 +40,7 @@ internal static partial class ReportSender
     /// <summary>Filled in by ReportSender.Secret.cs, when that file is there.</summary>
     static partial void LoadWebhook(ref string url);
 
-    public static bool IsSetUp => WebhookUrl.Length > 0;
+    public static bool IsSetUp => RelayUrl.Length > 0 || WebhookUrl.Length > 0;
 
     public enum Kind { Problem, Question }
 
@@ -66,6 +72,48 @@ internal static partial class ReportSender
         return message.ToString();
     }
 
+    /// <summary>Through the relay: plain fields only; the relay builds the Discord message itself.</summary>
+    private static async Task<string?> SendThroughRelayAsync(Kind kind, string report, string body, string? replyTo, string version)
+    {
+        const int maxReport = 440 * 1024; // the relay takes up to 450 KB; the newest log lines are at the end, so keep those
+        if (report.Length > maxReport) report = "(older lines left out)\n" + report[^maxReport..];
+        var payload = new
+        {
+            kind = kind == Kind.Problem ? "problem" : "question",
+            text = body,
+            replyTo = replyTo?.Trim() ?? "",
+            version,
+            windows = Environment.OSVersion.Version.ToString(),
+            report,
+        };
+        try
+        {
+            using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var response = await Http.PostAsync(RelayUrl, content);
+            string answer = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                _lastSent = DateTime.Now;
+                AppTrace.Log($"Report sent through the relay ({kind})");
+                return null;
+            }
+            AppTrace.Log($"Report not sent: {(int)response.StatusCode} {answer}");
+            // The relay explains why in plain words ("Too many reports...").
+            try
+            {
+                using var json = JsonDocument.Parse(answer);
+                if (json.RootElement.TryGetProperty("message", out var message) && message.GetString() is { Length: > 0 } why)
+                    return Loc.T(why);
+            }
+            catch (JsonException) { /* not the relay's answer */ }
+            return $"It wasn't sent (the server said {(int)response.StatusCode}). Try again later, or save the report as a .zip.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return $"It couldn't be sent ({ex.Message}). Check the internet connection, or save the report as a .zip.";
+        }
+    }
+
     private static string? Tail(string path, int lines)
     {
         if (!File.Exists(path)) return null;
@@ -90,6 +138,7 @@ internal static partial class ReportSender
         string version = Updates.Current.ToString(3);
         string body = text.Trim();
         if (body.Length > 3500) body = body[..3500] + "...";
+        if (RelayUrl.Length > 0) return await SendThroughRelayAsync(kind, report, body, replyTo, version);
         var payload = new
         {
             username = "CHROVIQ reports",

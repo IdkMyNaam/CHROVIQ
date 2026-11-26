@@ -13,6 +13,9 @@ public static class Program
     {
         if (args.Any(a => a.Equals("--launcher", StringComparison.OrdinalIgnoreCase)))
             return ShellLauncher.Run(args);
+        // The administrator copy for the sign-in screen settings: writes them and ends.
+        if (args.Any(a => a.Equals("--signin-admin", StringComparison.OrdinalIgnoreCase)))
+            return SignInScreen.RunAsAdmin(args);
         return RunApp();
     }
 

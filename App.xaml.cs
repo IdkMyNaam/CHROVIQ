@@ -13,13 +13,19 @@ public partial class App : Application
         try
         {
             Wallpaper.Preload();
+            // The welcome screen first (its own thread): it covers the screen while everything else starts.
+            var settings = AppSettings.Load();
+            Loc.Load(settings.Language); // its greeting in your language
+            var welcome = settings.Welcome ?? new WelcomeLook();
+            if (welcome.Enabled)
+                WelcomeScreen.Start(welcome, Monitors.All().Select(m => (m.Bounds, m.IsPrimary)).ToList());
             DesktopWindow.Early.AddRange(DesktopWindow.OpenForAllMonitors(null));
             StartupTimer.Mark("desktops opened (shell)");
             ShellMode.Log($"Desktops opened first ({DesktopWindow.Early.Count} monitor(s))");
             if (DesktopWindow.Early.FirstOrDefault() is { } first)
                 first.ContentRendered += (_, _) => { StartupTimer.Mark("desktop on screen (shell)"); ShellMode.Log("Desktop on screen"); };
-            // A spinner on the main monitor until the taskbar is up (its own thread: it turns while the app is busy).
-            if (Monitors.All().FirstOrDefault(m => m.IsPrimary) is { } primary) LoadingSpinner.Start(primary.Bounds);
+            // Without the welcome screen: a spinner on the main monitor until the taskbar is up (its own thread too).
+            if (!welcome.Enabled && Monitors.All().FirstOrDefault(m => m.IsPrimary) is { } primary) LoadingSpinner.Start(primary.Bounds);
         }
         catch (Exception ex)
         {

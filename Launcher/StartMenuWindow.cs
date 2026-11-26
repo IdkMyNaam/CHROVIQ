@@ -103,7 +103,18 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
             if ((e.OriginalSource as FrameworkElement)?.DataContext is { } item and (AppEntry or WebSearch)) Run(item);
         };
 
-        Deactivated += (_, _) => { if (!_dialogOpen) CloseQuietly(); };
+        Deactivated += (_, _) =>
+        {
+            if (_dialogOpen) return;
+            // Just opened (focus still settling, e.g. right after sign-in): take the focus back instead of closing.
+            if ((DateTime.Now - _shownAt).TotalMilliseconds < 700)
+            {
+                AppTrace.Log("Start menu: lost the focus right after opening; taking it back");
+                Dispatcher.BeginInvoke(() => { if (!_closing) { TakeFocus(); _box.Focus(); } });
+                return;
+            }
+            CloseQuietly();
+        };
         Closed += (_, _) => { if (_open == this) _open = null; };
         Loaded += async (_, _) =>
         {
@@ -284,7 +295,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     }
 
     /// <summary>The chosen picture file, else the Windows account picture (where Windows keeps it), else null.</summary>
-    private static ImageSource? UserPicture(string? chosen)
+    internal static ImageSource? UserPicture(string? chosen)
     {
         var candidates = new List<string>();
         if (!string.IsNullOrWhiteSpace(chosen)) candidates.Add(Environment.ExpandEnvironmentVariables(chosen.Trim()));
@@ -321,7 +332,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     private static extern bool GetUserNameEx(int format, System.Text.StringBuilder name, ref uint size);
 
     /// <summary>The account's display name ("Jane Doe"), or the sign-in name when Windows doesn't have one.</summary>
-    private static string DisplayName()
+    internal static string DisplayName()
     {
         try
         {
@@ -716,8 +727,12 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
 
     // ---------- Showing ----------
 
+    private DateTime _shownAt = DateTime.MaxValue;
+
     private void ShowAt(FrameworkElement? anchor, TaskbarEdge edge)
     {
+        _shownAt = DateTime.Now;
+        AppTrace.Log("Start menu: opening");
         // The start state goes on before the window shows, so it never flashes up fully drawn first.
         var animation = _context.Look.Opening ?? new PopupAnimation();
         if (Content is FrameworkElement content)

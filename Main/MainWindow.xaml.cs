@@ -210,6 +210,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         if (ShellMode.IsShell) StartShellMode();
         AppTrace.WatchForFreezes();
+        // The app list (Start menu, search) built in the background now, so the first Windows key press is quick.
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _ = AppSearch.Index());
         UpdateAltTab();
         StartupTimer.Mark("taskbars and Alt+Tab");
 
@@ -1647,8 +1649,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ShellMode.Log("Taskbar shown");
 
         if (ShellMode.RunStartupPrograms) _ = StartStartupProgramsAsync(registered);
-        // The sign-in spinner goes once the taskbar has been drawn.
-        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, LoadingSpinner.Stop);
+        // The welcome screen (or the spinner) goes once the taskbar has been drawn.
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () => { LoadingSpinner.Stop(); WelcomeScreen.Stop(); });
         Closed += (_, _) =>
         {
             foreach (var d in _desktops) d.Close();
@@ -1969,6 +1971,26 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _menuSettings = new MenuSettingsWindow(_settings.Menus ??= new MenuLook(), SaveSettings);
         _menuSettings.Closed += (_, _) => _menuSettings = null;
         _menuSettings.Show();
+    }
+
+    private WelcomeSettingsWindow? _welcomeSettings;
+
+    private void WelcomeSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_welcomeSettings != null) { _welcomeSettings.Activate(); return; }
+        _welcomeSettings = new WelcomeSettingsWindow(_settings.Welcome ??= new WelcomeLook(), SaveSettings);
+        _welcomeSettings.Closed += (_, _) => _welcomeSettings = null;
+        _welcomeSettings.Show();
+    }
+
+    private SignInSettingsWindow? _signInSettings;
+
+    private void SignInSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_signInSettings != null) { _signInSettings.Activate(); return; }
+        _signInSettings = new SignInSettingsWindow();
+        _signInSettings.Closed += (_, _) => _signInSettings = null;
+        _signInSettings.Show();
     }
 
     private TaskbarAnimationsWindow? _taskbarAnimations;

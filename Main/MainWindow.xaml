@@ -773,6 +773,28 @@
                                        Margin="0,0,8,8" Click="BackToExplorer_Click" />
                             <ui:Button Content="Backups folder" Icon="{ui:SymbolIcon Folder24}" Margin="0,0,8,8" Click="OpenBackups_Click" />
                         </WrapPanel>
+
+                        <TextBlock Text="Signing in" Style="{StaticResource Section}" />
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="HandWave24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Welcome screen" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="As your shell: shown by itself right after you sign in, until the taskbar is up (no extra sign-in). Clock, greeting and background are yours to choose." Style="{StaticResource CardText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Welcome screen..." Icon="{ui:SymbolIcon Settings24}" Click="WelcomeSettings_Click" />
+                        </ui:CardControl>
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="LockClosed24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Lock and sign-in screen" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="Windows' own lock screen picture, and how its sign-in screen looks. Signing in itself stays the same." Style="{StaticResource CardText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Sign-in screen..." Icon="{ui:SymbolIcon Settings24}" Click="SignInSettings_Click" />
+                        </ui:CardControl>
                     </StackPanel>
                 </ScrollViewer>
 

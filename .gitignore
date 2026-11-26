@@ -5,3 +5,7 @@ obj/
 *_wpftmp.csproj
 # The Discord webhook for problem reports: kept out of the public repository.
 Main/ReportSender.Secret.cs
+
+# Cloudflare Wrangler (the report relay)
+Relay/.wrangler/
+Relay/node_modules/
