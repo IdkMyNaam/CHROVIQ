@@ -113,6 +113,7 @@ internal static class ModernMenu
               </Grid.ColumnDefinitions>
               <TextBlock x:Name="Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                          FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              <ContentPresenter ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center"/>
               <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
               <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>

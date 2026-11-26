@@ -977,20 +977,20 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>A menu of widget types; the chosen one is added to the desktop and its settings open.</summary>
     private void AddWidget_Click(object sender, RoutedEventArgs e)
     {
-        var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        var menu = ModernMenu.Create();
+        menu.PlacementTarget = (UIElement)sender;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         foreach (var (type, name) in new[]
                  {
                      (WidgetType.Clock, "Clock and date"), (WidgetType.Stats, "CPU, memory and GPU"), (WidgetType.Weather, "Weather"),
                      (WidgetType.Media, "Media (what's playing)"), (WidgetType.Notes, "Notes"),
                  })
         {
-            var item = new MenuItem { Header = name };
-            item.Click += (_, _) =>
+            ModernMenu.Item(menu, "\uE710", name, () =>
             {
                 WidgetManager.Add(type);
                 ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
-            };
-            menu.Items.Add(item);
+            });
         }
         menu.IsOpen = true;
     }
@@ -1026,11 +1026,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>A menu of ready-made profiles; the chosen one is added (with a free name) and selected.</summary>
     private void AddExampleProfile_Click(object sender, RoutedEventArgs e)
     {
-        var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        var menu = ModernMenu.Create();
+        menu.PlacementTarget = (UIElement)sender;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         foreach (var example in ProfileStore.Examples())
         {
-            var item = new MenuItem { Header = example.Name };
-            item.Click += (_, _) =>
+            ModernMenu.Item(menu, "\uE710", example.Name, () =>
             {
                 string name = example.Name;
                 for (int n = 2; _profiles.Any(p => p.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)); n++)
@@ -1041,8 +1042,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 UpdateDeleteButton();
                 ScheduleSave();
                 StatusText.Text = $"Added \"{name}\". Change anything you like, then press Apply.";
-            };
-            menu.Items.Add(item);
+            });
         }
         menu.IsOpen = true;
     }

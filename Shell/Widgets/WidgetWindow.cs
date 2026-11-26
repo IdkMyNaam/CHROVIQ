@@ -89,21 +89,22 @@ internal sealed class WidgetWindow : Window
     /// <summary>Settings, lock, remove.</summary>
     private ContextMenu Menu()
     {
-        var menu = new ContextMenu();
-        var settings = new MenuItem { Header = "Widget settings..." };
-        settings.Click += (_, _) => _openSettings(this);
-        var locked = new MenuItem { Header = "Lock position and size", IsCheckable = true, IsChecked = Widget.Locked };
-        locked.Click += (_, _) => { Widget.Locked = locked.IsChecked; _changed(); UpdateResizeCorner(); };
-        var remove = new MenuItem { Header = "Remove widget" };
-        remove.Click += (_, _) =>
+        var menu = ModernMenu.Create();
+        ModernMenu.Item(menu, "\uE713", "Widget settings...", () => _openSettings(this));
+        MenuItem? locked = null;
+        locked = ModernMenu.Check(menu, "Lock position and size", Widget.Locked, () =>
+        {
+            Widget.Locked = !Widget.Locked;
+            locked!.IsChecked = Widget.Locked;
+            _changed();
+            UpdateResizeCorner();
+        });
+        ModernMenu.Separator(menu);
+        ModernMenu.Item(menu, "\uE74D", "Remove widget", () =>
         {
             if (MessageBox.Show($"Remove the {Widget} widget?", "CHROVIQ", MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
                 _remove(this);
-        };
-        menu.Items.Add(settings);
-        menu.Items.Add(locked);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(remove);
+        });
         return menu;
     }
 

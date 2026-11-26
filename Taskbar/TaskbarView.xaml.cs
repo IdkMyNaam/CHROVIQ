@@ -371,7 +371,16 @@ public partial class TaskbarView : UserControl
         }
         if (windows.Count == 0) return;
 
-        var menu = AppMenuView.Create(GetMenuItems());
+        // A list of the group's windows (with their icons); the active one in bold.
+        var menu = ModernMenu.Create();
+        foreach (var window in windows)
+        {
+            var handle = window.Handle;
+            var item = ModernMenu.Item(menu, "", "", () => { WindowTracker.ActivateOrMinimize(handle); _tracker?.Refresh(); });
+            item.Header = window.Title; // a window title isn't translated
+            item.Icon = new Image { Source = window.Icon, Width = 16, Height = 16 };
+            item.FontWeight = window.IsActive ? FontWeights.SemiBold : FontWeights.Normal;
+        }
         menu.PlacementTarget = anchor;
         menu.Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top;
         menu.Opened += (_, _) => _openMenus++;
@@ -471,29 +480,9 @@ public partial class TaskbarView : UserControl
     {
         if (GetMenuItems == null) return;
 
-        var menu = new ContextMenu
-        {
-            PlacementTarget = anchor,
-            Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top,
-        };
-        foreach (var entry in GetMenuItems())
-        {
-            if (entry.IsSeparator)
-            {
-                menu.Items.Add(new Separator());
-                continue;
-            }
-            var item = new MenuItem
-            {
-                Header = entry.Text,
-                IsChecked = entry.IsChecked,
-                IsEnabled = entry.IsEnabled,
-                InputGestureText = entry.Shortcut ?? "",
-            };
-            var onClick = entry.OnClick;
-            item.Click += (_, _) => onClick?.Invoke();
-            menu.Items.Add(item);
-        }
+        var menu = AppMenuView.Create(GetMenuItems());
+        menu.PlacementTarget = anchor;
+        menu.Placement = Edge == TaskbarEdge.Top ? PlacementMode.Bottom : PlacementMode.Top;
         menu.Opened += (_, _) => _openMenus++;
         menu.Closed += (_, _) => _openMenus = Math.Max(0, _openMenus - 1);
         menu.IsOpen = true;

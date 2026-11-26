@@ -41,6 +41,15 @@ public class StartMenuLook
     public bool ShowPinned { get; set; } = true;
     public bool ShowAllApps { get; set; } = true;
 
+    /// <summary>Files you opened lately (Windows' own list), between the pinned apps and all apps.</summary>
+    public bool ShowRecent { get; set; } = true;
+
+    /// <summary>How many recent files to show.</summary>
+    public int RecentCount { get; set; } = 6;
+
+    /// <summary>Folder buttons next to the power button: names from <see cref="StartFolder.KnownNames"/> or folder paths.</summary>
+    public List<string> Folders { get; set; } = new() { "Documents", "Downloads", "Pictures" };
+
     /// <summary>Size of the pinned app icons in pixels.</summary>
     public double PinnedIconSize { get; set; } = 32;
 

@@ -44,6 +44,9 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     private readonly ItemsControl _home = HomeList();
     private readonly ListBox _results = new() { Background = Brushes.Transparent, BorderThickness = new Thickness(0), Visibility = Visibility.Collapsed };
     private List<AppEntry> _apps = new();
+    /// <summary>Recent files: read in the background from the moment the menu is made.</summary>
+    private readonly Task<List<RecentFile>> _recentTask;
+    private List<RecentFile> _recent = new();
     private bool _closing;
     /// <summary>The home page is built; the opening animation is done (icons load after it, so it stays smooth).</summary>
     private readonly TaskCompletionSource _filled = new(), _opened = new();
@@ -84,6 +87,8 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         UseLayoutRounding = true;
         Width = Math.Clamp(look.Width, 360, 1600);
         Height = Math.Clamp(look.Height, 300, 1400);
+        int recentCount = Math.Clamp(look.RecentCount, 1, 20);
+        _recentTask = look.ShowRecent ? Task.Run(() => RecentFile.Load(recentCount)) : Task.FromResult(new List<RecentFile>());
 
         ApplyColors();
         Content = BuildLayout();
@@ -105,6 +110,8 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
             try
             {
                 _apps = await AppSearch.Index();
+                try { _recent = await _recentTask; }
+                catch (Exception ex) { AppTrace.Log($"Recent files: {ex.Message}"); }
                 FillHome();
                 UpdateSearch();
             }
@@ -207,7 +214,17 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         customizer.Click += (_, _) => { CloseQuietly(); _context.OpenCustomizer?.Invoke(); };
         var settings = FooterButton("", "Settings");
         settings.Click += (_, _) => { Start("ms-settings:"); CloseQuietly(); };
-        foreach (var b in new[] { power, customizer, settings })
+        var buttons = new List<Button> { power, customizer, settings };
+        // Folder buttons left of the settings button, in the chosen order (docked right, so added last-first).
+        var folders = (_context.Look.Folders ?? new List<string>()).Select(StartFolder.From).OfType<StartFolder>().ToList();
+        for (int i = folders.Count - 1; i >= 0; i--)
+        {
+            var folder = folders[i];
+            var button = FooterButton(folder.Glyph, StartFolder.IsKnown(folder.Name) ? Loc.T(folder.Name) : folder.Name);
+            button.Click += (_, _) => OpenFolder(folder);
+            buttons.Add(button);
+        }
+        foreach (var b in buttons)
         {
             DockPanel.SetDock(b, Dock.Right);
             footer.Children.Add(b);
@@ -351,7 +368,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
             double tileWidth = Math.Floor((Width - 2 * 18 - 20) / columns);
             var pins = _context.Pins.ToList();
             if (pins.Count == 0)
-                page.Add(new TextBlock { Text = "Right-click an app below and choose \"Pin to Start\".", Opacity = 0.6, Margin = new Thickness(4, 0, 0, 8) });
+                page.Add(new TextBlock { Text = Loc.T("Right-click an app below and choose \"Pin to Start\"."), Opacity = 0.6, Margin = new Thickness(4, 0, 0, 8) });
             for (int i = 0; i < pins.Count; i++)
             {
                 var app = pins[i].ToEntry();
@@ -369,6 +386,8 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
             }
             page.Add(tiles);
         }
+
+        if (look.ShowRecent) AddRecent(page);
 
         if (look.ShowAllApps)
         {
@@ -404,6 +423,75 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         LoadIconsGradually(pendingIcons);
     }
 
+    /// <summary>"Recent": the files opened lately in two columns, with when; their icons load after the opening animation.</summary>
+    private void AddRecent(List<UIElement> page)
+    {
+        page.Add(SectionHeader("Recent"));
+        if (_recent.Count == 0)
+        {
+            page.Add(new TextBlock
+            {
+                Text = Loc.T(RecentFile.WindowsKeepsList() ? "Files you open show up here."
+                    : "Windows doesn't keep a list of recent files. Turn on \"Show recently opened items\" in Windows Settings > Personalization > Start."),
+                Opacity = 0.6, Margin = new Thickness(4, 0, 0, 8), TextWrapping = TextWrapping.Wrap,
+            });
+            return;
+        }
+        var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 6) };
+        foreach (var file in _recent)
+        {
+            var image = new Image { Width = 24, Height = 24, Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            var path = file.Path;
+            _opened.Task.ContinueWith(_ => Dispatcher.InvokeAsync(() => { if (!_closing) image.Source ??= ShellIcons.Get(path, 32); }, DispatcherPriority.Background),
+                System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+
+            var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            lines.Children.Add(new TextBlock { Text = file.Name, TextTrimming = TextTrimming.CharacterEllipsis });
+            // Today: the time; before: the date (both in the PC's own format, so they need no translation).
+            string when = file.OpenedAt.Date == DateTime.Today ? file.OpenedAt.ToString("t") : file.OpenedAt.ToString("d");
+            lines.Children.Add(new TextBlock { Text = when, Opacity = 0.6, FontSize = Math.Max(8, FontSize - 2) });
+            var row = new DockPanel();
+            DockPanel.SetDock(image, Dock.Left);
+            row.Children.Add(image);
+            row.Children.Add(lines);
+
+            var button = new Button { Style = _flatButton, Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(8, 6, 8, 6), ToolTip = path };
+            var chosen = file;
+            button.Click += (_, _) => Run(chosen);
+            button.ContextMenu = FileMenu(chosen);
+            grid.Children.Add(button);
+        }
+        page.Add(grid);
+    }
+
+    private ContextMenu FileMenu(RecentFile file)
+    {
+        var menu = ModernMenu.Create();
+        menu.Opened += (_, _) => _dialogOpen = true;
+        menu.Closed += (_, _) => _dialogOpen = false;
+        Add(menu, OpenGlyph, "Open", () => Run(file));
+        Add(menu, FolderGlyph, "Open file location", () => { ShellLaunch.ShowInFolder(file.Path); CloseQuietly(); });
+        Add(menu, CopyGlyph, "Copy as path", () =>
+        {
+            try { Clipboard.SetText($"\"{file.Path}\""); }
+            catch (Exception) { /* the clipboard is busy: nothing copied */ }
+        });
+        return menu;
+    }
+
+    private void OpenFolder(StartFolder folder)
+    {
+        try { folder.Open(); }
+        catch (Exception ex)
+        {
+            _dialogOpen = true;
+            MessageBox.Show(this, $"{Loc.T("Could not open it:")}\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogOpen = false;
+        }
+        CloseQuietly();
+    }
+
     /// <summary>A list with its own scroll viewer and a virtualizing panel, scrolling smoothly by pixels.</summary>
     private static ItemsControl HomeList()
     {
@@ -429,7 +517,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     }
 
     private TextBlock SectionHeader(string text) =>
-        new() { Text = text, FontWeight = FontWeights.SemiBold, FontSize = FontSize + 2, Margin = new Thickness(4, 4, 0, 8) };
+        new() { Text = Loc.T(text), FontWeight = FontWeights.SemiBold, FontSize = FontSize + 2, Margin = new Thickness(4, 4, 0, 8) };
 
     /// <summary>Loads icons in small batches while the window is idle, so opening the menu stays instant.</summary>
     private void LoadIconsGradually(List<(Image image, AppEntry app)> pending)
@@ -451,12 +539,12 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
 
     private ContextMenu AppMenu(AppEntry app, int? pinIndex)
     {
-        var menu = new ContextMenu();
+        var menu = ModernMenu.Create();
         menu.Opened += (_, _) => _dialogOpen = true;   // the menu takes focus for a moment: stay open
         menu.Closed += (_, _) => _dialogOpen = false;
 
         bool pinned = _context.Pins.Any(p => p.LaunchPath.Equals(app.LaunchPath, StringComparison.OrdinalIgnoreCase));
-        Add(menu, pinned ? "Unpin from Start" : "Pin to Start", () =>
+        Add(menu, pinned ? UnpinGlyph : PinGlyph, pinned ? "Unpin from Start" : "Pin to Start", () =>
         {
             if (pinned) _context.Pins.RemoveAll(p => p.LaunchPath.Equals(app.LaunchPath, StringComparison.OrdinalIgnoreCase));
             else _context.Pins.Add(StartPin.From(app));
@@ -466,17 +554,17 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
 
         if (pinIndex is int index)
         {
-            Add(menu, "Move left", () => MovePin(index, -1), enabled: index > 0);
-            Add(menu, "Move right", () => MovePin(index, +1), enabled: index < _context.Pins.Count - 1);
+            Add(menu, LeftGlyph, "Move left", () => MovePin(index, -1), enabled: index > 0);
+            Add(menu, RightGlyph, "Move right", () => MovePin(index, +1), enabled: index < _context.Pins.Count - 1);
         }
 
         if (_context.PinToTaskbar != null)
-            Add(menu, "Pin to taskbar", () => _context.PinToTaskbar(app));
+            Add(menu, PinGlyph, "Pin to taskbar", () => _context.PinToTaskbar(app));
 
-        menu.Items.Add(new Separator());
+        ModernMenu.Separator(menu);
         // Store apps have no file to show or to run as administrator.
-        Add(menu, "Open file location", () => { ShellLaunch.ShowInFolder(app.LaunchPath); CloseQuietly(); }, enabled: !app.IsShellApp);
-        Add(menu, "Run as administrator", () =>
+        Add(menu, FolderGlyph, "Open file location", () => { ShellLaunch.ShowInFolder(app.LaunchPath); CloseQuietly(); }, enabled: !app.IsShellApp);
+        Add(menu, AdminGlyph, "Run as administrator", () =>
         {
             try { Process.Start(new ProcessStartInfo(app.LaunchPath) { UseShellExecute = true, Verb = "runas" })?.Dispose(); }
             catch (System.ComponentModel.Win32Exception) { /* the user said no to the admin prompt */ }
@@ -494,12 +582,13 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         FillHome();
     }
 
-    private static void Add(ItemsControl menu, string header, Action onClick, bool enabled = true)
-    {
-        var item = new MenuItem { Header = header, IsEnabled = enabled };
-        item.Click += (_, _) => onClick();
-        menu.Items.Add(item);
-    }
+    private static void Add(ItemsControl menu, string glyph, string header, Action onClick, bool enabled = true) =>
+        ModernMenu.Item(menu, glyph, header, onClick, enabled: enabled);
+
+    // Menu symbols (Segoe Fluent Icons).
+    private const string OpenGlyph = "", FolderGlyph = "", CopyGlyph = "", PinGlyph = "", UnpinGlyph = "",
+        LeftGlyph = "", RightGlyph = "", AdminGlyph = "", LockGlyph = "", SleepGlyph = "",
+        SignOutGlyph = "", RestartGlyph = "", PowerGlyph = "";
 
     // ---------- Power ----------
 
@@ -509,15 +598,17 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
 
     private void ShowPowerMenu(FrameworkElement anchor)
     {
-        var menu = new ContextMenu { PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
+        var menu = ModernMenu.Create();
+        menu.PlacementTarget = anchor;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
         menu.Opened += (_, _) => _dialogOpen = true;
         menu.Closed += (_, _) => _dialogOpen = false;
-        Add(menu, "Lock", () => { CloseQuietly(); LockWorkStation(); });
-        Add(menu, "Sleep", () => { CloseQuietly(); SetSuspendState(false, false, false); });
-        menu.Items.Add(new Separator());
-        Add(menu, "Sign out", () => Confirmed("Sign out? Programs that are open will be closed.", () => ExitWindowsEx(0 /* EWX_LOGOFF */, 0)));
-        Add(menu, "Restart", () => Confirmed("Restart the PC? Programs that are open will be closed.", () => Start("shutdown.exe", "/r /t 0")));
-        Add(menu, "Shut down", () => Confirmed("Shut down the PC? Programs that are open will be closed.", () => Start("shutdown.exe", "/s /t 0")));
+        Add(menu, LockGlyph, "Lock", () => { CloseQuietly(); LockWorkStation(); });
+        Add(menu, SleepGlyph, "Sleep", () => { CloseQuietly(); SetSuspendState(false, false, false); });
+        ModernMenu.Separator(menu);
+        Add(menu, SignOutGlyph, "Sign out", () => Confirmed("Sign out? Programs that are open will be closed.", () => ExitWindowsEx(0 /* EWX_LOGOFF */, 0)));
+        Add(menu, RestartGlyph, "Restart", () => Confirmed("Restart the PC? Programs that are open will be closed.", () => Start("shutdown.exe", "/r /t 0")));
+        Add(menu, PowerGlyph, "Shut down", () => Confirmed("Shut down the PC? Programs that are open will be closed.", () => Start("shutdown.exe", "/s /t 0")));
         menu.IsOpen = true;
     }
 
@@ -525,7 +616,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
     private void Confirmed(string question, Action action)
     {
         _dialogOpen = true;
-        var answer = MessageBox.Show(this, question, "CHROVIQ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        var answer = MessageBox.Show(this, Loc.T(question), "CHROVIQ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         _dialogOpen = false;
         if (answer != MessageBoxResult.Yes) { Activate(); return; }
         CloseQuietly();
@@ -585,6 +676,9 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
                 case AppEntry app:
                     app.Launch();
                     break;
+                case RecentFile file:
+                    Start(file.Path);
+                    break;
                 case WebSearch web:
                     var url = string.IsNullOrWhiteSpace(_context.Search.SearchUrl) ? TaskbarModule.DefaultSearchUrl : _context.Search.SearchUrl!;
                     var query = Uri.EscapeDataString(web.Text);
@@ -595,7 +689,7 @@ public sealed class StartMenuWindow : Window, ILiveGlassWindow
         catch (Exception ex)
         {
             _dialogOpen = true;
-            MessageBox.Show(this, $"Could not open it:\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"{Loc.T("Could not open it:")}\n{ex.Message}", "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
             _dialogOpen = false;
         }
         CloseQuietly();

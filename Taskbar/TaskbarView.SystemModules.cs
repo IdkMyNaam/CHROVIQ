@@ -77,10 +77,8 @@ public partial class TaskbarView
         if (module.ShowValue == true) content.Children.Add(value);
 
         var button = BarButton(content, "Volume");
-        var menu = new ContextMenu();
-        var settings = new MenuItem { Header = "Sound settings" };
-        settings.Click += (_, _) => Launch("ms-settings:sound", null);
-        menu.Items.Add(settings);
+        var menu = ModernMenu.Create();
+        ModernMenu.Item(menu, "\uE995", "Sound settings", () => Launch("ms-settings:sound", null));
         button.ContextMenu = menu;
 
         void Update()
@@ -203,16 +201,10 @@ public partial class TaskbarView
                     button.SetResourceReference(BorderBrushProperty, "AccentBrush");
                 }
                 button.Click += async (_, _) => await VirtualDesktops.SwitchToAsync(index);
-                var menu = new ContextMenu();
-                var add = new MenuItem { Header = "New desktop" };
-                add.Click += (_, _) => VirtualDesktops.Add();
-                var close = new MenuItem { Header = "Close the current desktop", ToolTip = "Its windows move to the desktop next to it" };
-                close.Click += (_, _) => VirtualDesktops.CloseCurrent();
-                var view = new MenuItem { Header = "Task View (all desktops)" };
-                view.Click += (_, _) => PressWinShortcut('\t');
-                menu.Items.Add(add);
-                menu.Items.Add(close);
-                menu.Items.Add(view);
+                var menu = ModernMenu.Create();
+                ModernMenu.Item(menu, "\uE710", "New desktop", VirtualDesktops.Add);
+                ModernMenu.Item(menu, "\uE711", "Close the current desktop", VirtualDesktops.CloseCurrent).ToolTip = Loc.T("Its windows move to the desktop next to it");
+                ModernMenu.Item(menu, "\uE7C4", "Task View (all desktops)", () => PressWinShortcut('\t'));
                 button.ContextMenu = menu;
                 row.Children.Add(button);
             }

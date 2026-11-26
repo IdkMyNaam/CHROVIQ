@@ -58,10 +58,33 @@ public sealed class StartMenuSettingsWindow : SettingsForm
 
         Header("Layout");
         Check("Show pinned apps", look.ShowPinned, v => look.ShowPinned = v);
+        Check("Show recent files", look.ShowRecent, v => look.ShowRecent = v);
+        Number("Number of recent files", look.RecentCount, 2, 20, v => look.RecentCount = (int)v);
         Check("Show all apps", look.ShowAllApps, v => look.ShowAllApps = v);
         Check("Search box at the bottom", look.SearchAtBottom, v => look.SearchAtBottom = v);
         Combo("Scroll bar", new[] { "Thin", "Hidden (scroll with the wheel)", "Windows" }, (int)look.Scrollbar, i => look.Scrollbar = (ScrollbarStyle)i);
         Hint("Pin apps by right-clicking them in the start menu. Web search and the number of search results come from Search settings.");
+
+        Hint("Recent files come from Windows' own list of files you opened. If it stays empty, turn on \"Show recently opened items\" in Windows Settings > Personalization > Start.");
+
+        // Folder buttons next to power: Windows' folders by name (shown in their fixed order), then your own paths.
+        Header("Folders next to the power button");
+        var folders = look.Folders ??= new List<string>();
+        var chosen = StartFolder.KnownNames.Where(folders.Contains).ToHashSet();
+        var own = folders.Where(f => !StartFolder.IsKnown(f)).ToList();
+        void SaveFolders()
+        {
+            folders.Clear();
+            folders.AddRange(StartFolder.KnownNames.Where(chosen.Contains));
+            folders.AddRange(own);
+        }
+        foreach (var name in StartFolder.KnownNames)
+            Check(name, chosen.Contains(name), v => { if (v) chosen.Add(name); else chosen.Remove(name); SaveFolders(); });
+        Text("Other folders", string.Join("; ", own), v =>
+        {
+            own = v.Split(';').Select(p => p.Trim().Trim('"')).Where(p => p.Length > 0).ToList();
+            SaveFolders();
+        }, "Full paths, separated by ; (like D:\\Projects; D:\\Games).");
 
         Header("User");
         Check("Show your name and picture", look.ShowUser, v => look.ShowUser = v);
