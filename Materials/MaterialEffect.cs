@@ -45,6 +45,21 @@ public sealed class MaterialEffect : ShaderEffect
         Input = ImplicitInput;
     }
 
+    /// <summary>One of its values changed (time, mouse, size, wallpaper, ...): a Direct3D material redraws then.</summary>
+    public event Action<DependencyProperty>? ValueChanged;
+
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        ValueChanged?.Invoke(e.Property);
+    }
+
+    /// <summary>The values as the shader gets them (for the Direct3D renderer, which passes them on itself).</summary>
+    public Point4D TimeValue => (Point4D)GetValue(TimeInfoProperty);
+    public Point4D SizeValue => (Point4D)GetValue(SizeInfoProperty);
+    public Point4D MouseValue => (Point4D)GetValue(MouseInfoProperty);
+    public Point4D ParameterValue(int index) => (Point4D)GetValue(ParameterProperties[index]);
+
     public Brush Input { get => (Brush)GetValue(InputProperty); set => SetValue(InputProperty, value); }
     public Brush Texture { get => (Brush)GetValue(TextureProperty); set => SetValue(TextureProperty, value); }
     /// <summary>The part of the wallpaper right behind the surface (see <see cref="WallpaperBehind"/>).</summary>

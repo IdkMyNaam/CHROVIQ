@@ -72,7 +72,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         try
         {
             Hint((material.Description ?? "") + (material.Animated ? " Animated." : ""));
-            Materials.Compile(material, out var error);
+            var error = Materials.Check(material);
             if (error != null) Hint("This material doesn't compile, so the plain background shows:\n" + error);
             var settings = values();
             foreach (var parameter in material.Parameters)

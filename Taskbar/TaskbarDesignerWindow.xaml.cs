@@ -779,7 +779,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
             : ""));
 
         // Doesn't compile: say why (the line numbers are those of material.hlsl).
-        Materials.Compile(current, out var error);
+        var error = Materials.Check(current);
         if (error != null)
             details.Children.Add(new TextBlock
             {

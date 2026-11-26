@@ -25,14 +25,18 @@ internal static class ShaderCompiler
     private const uint D3DCOMPILE_OPTIMIZATION_LEVEL3 = 1 << 15;
 
     /// <summary>Compiles; on failure <paramref name="error"/> has the compiler's messages (with line numbers of the file).</summary>
-    public static byte[]? Compile(string source, string fileName, out string? error)
+    public static byte[]? Compile(string source, string fileName, out string? error) =>
+        Compile(source, fileName, "main", "ps_3_0", out error);
+
+    /// <summary>Compiles one entry point to a shader model ("ps_3_0" for WPF, "ps_5_0" / "vs_5_0" for Direct3D 11).</summary>
+    public static byte[]? Compile(string source, string fileName, string entryPoint, string target, out string? error)
     {
         error = null;
         ID3DBlob? code = null, errors = null;
         try
         {
             int bytes = Encoding.ASCII.GetByteCount(source);
-            int hr = D3DCompile(source, (UIntPtr)bytes, fileName, IntPtr.Zero, IntPtr.Zero, "main", "ps_3_0",
+            int hr = D3DCompile(source, (UIntPtr)bytes, fileName, IntPtr.Zero, IntPtr.Zero, entryPoint, target,
                                 D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, out code, out errors);
             if (hr != 0 || code == null)
             {

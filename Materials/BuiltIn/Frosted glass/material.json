@@ -1,0 +1,20 @@
+{
+  "Name": "Frosted glass",
+  "Description": "A real, smooth blur of what's behind (Direct3D): like Windows' acrylic, but adjustable, with tint, grain and light on the edges. Works with live glass.",
+  "Renderer": "direct3d",
+  "Animated": false,
+  "UsesWallpaper": true,
+  "Passes": [
+    { "Entry": "BlurAcross", "Scale": 0.5 },
+    { "Entry": "BlurDown", "Scale": 0.5 },
+    { "Entry": "Finish" }
+  ],
+  "Parameters": [
+    { "Name": "Blur", "Type": "Slider", "Min": 1, "Max": 80, "Default": "30", "Hint": "How far the blur reaches, in pixels." },
+    { "Name": "Tint", "Type": "Color", "Default": "#202020" },
+    { "Name": "Tint strength", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.45" },
+    { "Name": "Saturation", "Type": "Slider", "Min": 0, "Max": 2, "Default": "1.2" },
+    { "Name": "Grain", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.3" },
+    { "Name": "Edge light", "Type": "Slider", "Min": 0, "Max": 1, "Default": "0.4" }
+  ]
+}

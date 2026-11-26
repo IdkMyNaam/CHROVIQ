@@ -46,9 +46,25 @@ public sealed class Material
     /// <summary>The shader uses WALLPAPER(uv): the part of the wallpaper right behind the surface.</summary>
     public bool UsesWallpaper { get; set; }
 
+    /// <summary>"direct3d": drawn with Direct3D 11 (Shader Model 5, several passes); otherwise a WPF effect (ps_3_0).</summary>
+    public string? Renderer { get; set; }
+
+    /// <summary>Direct3D only: the passes in order, each a function in material.hlsl; the last one is the result.</summary>
+    public List<MaterialPass> Passes { get; set; } = new();
+
+    [JsonIgnore] public bool IsDirect3D => string.Equals(Renderer?.Trim(), "direct3d", StringComparison.OrdinalIgnoreCase);
+
     [JsonIgnore] public string Folder { get; set; } = "";
     [JsonIgnore] public bool BuiltIn { get; set; }
     [JsonIgnore] public string ShaderFile => Path.Combine(Folder, "material.hlsl");
+}
+
+/// <summary>One pass of a Direct3D material: a function <c>float4 Name(float2 uv)</c>, drawn at a share of the size.</summary>
+public sealed class MaterialPass
+{
+    public string Entry { get; set; } = "Material";
+    /// <summary>Its size as a share of the surface (0.1–1); lower is faster, and fine for blurs. The last pass is always full size.</summary>
+    public double Scale { get; set; } = 1;
 }
 
 /// <summary>Finds materials, compiles them (cached), and makes the effect for a surface.</summary>
@@ -174,6 +190,15 @@ internal static class Materials
         if (error != null) AppTrace.Log($"Material \"{material.Name}\" doesn't compile: {error}");
         Cache[material.ShaderFile] = (written, shader, error);
         return shader;
+    }
+
+    /// <summary>Whether the material compiles (Direct3D ones as Shader Model 5, the others for WPF); the error, or null.</summary>
+    public static string? Check(Material material)
+    {
+        string? error;
+        if (material.IsDirect3D) D3DMaterialShaders.Compile(material, out error);
+        else Compile(material, out error);
+        return error;
     }
 
     /// <summary>The effect for a surface with the design's settings for this material (null if it doesn't compile).</summary>

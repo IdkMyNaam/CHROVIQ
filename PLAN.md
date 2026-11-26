@@ -109,7 +109,8 @@ Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widg
 - [x] Shader inputs: time, size, mouse, hover, accent color, parameters, texture, helper functions, and the wallpaper behind the surface
 - [x] Live glass: what's really on screen behind a surface (that window is then left out of screen capture)
 - [x] Safety and speed: compile errors shown with line numbers; animations pause for fullscreen apps and hidden windows; 15/30/60 fps limit
-- [ ] Later: a Direct3D surface for heavier effects (multi-pass blur, refraction, newer shader models)
+- [x] Direct3D materials: Shader Model 5, several passes (at their own resolution), shown through D3DImage;
+      Frosted glass and Refraction glass; a guide in Materials/README.md
 
 ### 5d. Customization everywhere
 - [x] Desktop icons: size, spacing, label font, color and shadow, hidden labels, choice of monitor

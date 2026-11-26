@@ -22,6 +22,10 @@
     <!-- The app's icon (exe, windows, taskbar buttons, Apps & features); also a resource for the tray. -->
     <ApplicationIcon>Assets\CHROVIQ.ico</ApplicationIcon>
     <Product>CHROVIQ</Product>
+    <!-- The file description: the name Task Manager and the exe's properties show (the file itself stays WindowsCustomizer.exe). -->
+    <AssemblyTitle>CHROVIQ</AssemblyTitle>
+    <Company>IdkMyNaam</Company>
+    <Copyright>© 2026 IdkMyNaam</Copyright>
     <Description>Customize the Windows taskbar, start menu, desktop and more.</Description>
   </PropertyGroup>
 
@@ -34,6 +38,8 @@
   <ItemGroup>
     <PackageReference Include="ManagedShell" Version="0.0.374" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4370.26" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D9" Version="3.8.3" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 
