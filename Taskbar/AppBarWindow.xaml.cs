@@ -103,7 +103,8 @@ public partial class AppBarWindow : Window
     private double _slide;          // 0 = fully shown, 1 = fully hidden
     private double _slideTarget;
 
-    private const double HideDelayMs = 700;
+    /// <summary>The auto-hide animation settings (style, length, speed curve, delay).</summary>
+    private static TaskbarAnimations Animations => TaskbarAnimations.Current;
 
     /// <summary>
     /// Checks the mouse 10 times a second: at the screen edge the bar slides in; once the mouse has
@@ -148,13 +149,12 @@ public partial class AppBarWindow : Window
         else
         {
             _mouseLeftAt ??= DateTime.Now;
-            if ((DateTime.Now - _mouseLeftAt.Value).TotalMilliseconds > HideDelayMs) SlideTo(1);
+            if ((DateTime.Now - _mouseLeftAt.Value).TotalMilliseconds > Math.Clamp(Animations.HideDelayMs, 0, 10000)) SlideTo(1);
         }
     }
 
     // The slide is timed (not a number of steps), so it looks the same however busy the PC is, and it is drawn
     // in step with the screen (CompositionTarget.Rendering) instead of on a timer that fires unevenly.
-    private const double SlideMs = 200;
     private readonly System.Diagnostics.Stopwatch _slideClock = new();
     private double _slideFrom;
     private bool _sliding;
@@ -181,10 +181,12 @@ public partial class AppBarWindow : Window
     private void OnSlideFrame(object? sender, EventArgs e)
     {
         double distance = Math.Abs(_slideTarget - _slideFrom);
-        double progress = distance < 0.001 ? 1 : Math.Min(1, _slideClock.Elapsed.TotalMilliseconds / (SlideMs * distance));
-        double eased = 1 - Math.Pow(1 - progress, 3); // quick start, gentle stop
+        double length = Animations.AutoHide == AutoHideStyle.None ? 0 : Math.Clamp(Animations.AutoHideMs, 0, 3000);
+        double progress = distance < 0.001 || length <= 0 ? 1 : Math.Min(1, _slideClock.Elapsed.TotalMilliseconds / (length * distance));
+        double eased = PopupAnimation.Ease(Animations.AutoHideEasing, progress);
         _slide = _slideFrom + (_slideTarget - _slideFrom) * eased;
         MoveToSlidePosition();
+        ApplyFade();
 
         if (progress < 1) return;
         _slide = _slideTarget;
@@ -214,8 +216,18 @@ public partial class AppBarWindow : Window
         else AppBar.MoveWindowOnly(this, _shownRect.Left, _shownRect.Top + offset); // animation frames: only move
     }
 
+    /// <summary>Fading styles: the bar's content goes see-through as it goes away (fully shown: no change).</summary>
+    private void ApplyFade()
+    {
+        if (Content is not UIElement content) return;
+        bool fades = _design.AutoHide && Animations.AutoHide is AutoHideStyle.Fade or AutoHideStyle.SlideAndFade;
+        content.Opacity = fades ? Math.Clamp(1 - _slide, 0, 1) : 1;
+    }
+
     private int SlideOffset(double slide)
     {
+        // "Fade": the bar stays in place while it fades, and moves off the screen only once it's fully away.
+        if (Animations.AutoHide == AutoHideStyle.Fade) slide = slide >= 0.999 ? 1 : 0;
         int height = _shownRect.Bottom - _shownRect.Top;
         int distanceToEdge = _edge == TaskbarEdge.Top ? _shownRect.Bottom - _strip.Top : _strip.Bottom - _shownRect.Top;
         int offset = (int)Math.Round(Math.Min(distanceToEdge, height + 20) * slide);

@@ -595,6 +595,18 @@
   "CPU, memory and GPU": "CPU、内存和 GPU",
   "Weather": "天气",
   "Media (what's playing)": "媒体（正在播放）",
-  "Notes": "便笺"
+  "Notes": "便笺",
+  "Taskbar animations": "任务栏动画",
+  "Tray flyout": "托盘弹出面板",
+  "The ^ panel with the hidden tray icons.": "包含隐藏托盘图标的 ^ 面板。",
+  "Window previews": "窗口预览",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "任务栏按钮上方的实时预览。缩放对其无效：预览由 Windows 自己绘制。",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "用于自动隐藏的设计：鼠标到达屏幕边缘时任务栏如何出现，以及如何再次离开。",
+  "Slide": "滑动",
+  "Slide and fade": "滑动并淡出",
+  "Fade": "淡入淡出",
+  "Hide after (ms)": "隐藏延迟（毫秒）",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "托盘弹出面板和窗口预览如何出现，以及自动隐藏如何进出",
+  "Animations...": "动画..."
  }
 }

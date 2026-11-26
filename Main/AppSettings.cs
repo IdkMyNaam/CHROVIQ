@@ -51,6 +51,9 @@ public class AppSettings
     /// <summary>The desktop's right-click menus (material).</summary>
     public MenuLook? Menus { get; set; }
 
+    /// <summary>The taskbars' animations: tray flyout, window previews, auto-hide.</summary>
+    public TaskbarAnimations? TaskbarAnimations { get; set; }
+
     /// <summary>The Alt+Tab switcher's look (colors, corners, material).</summary>
     public AltTabLook? AltTab { get; set; }
 

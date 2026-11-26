@@ -200,6 +200,14 @@ internal static class ModernMenu
         menu.Resources.MergedDictionaries.Add(styles);
         // The material on the menu's background layer, and on each submenu's when it opens.
         menu.Opened += (_, _) => AttachMaterial(menu);
+        // The opening animation (before the first frame is drawn); a menu above its button comes up from below.
+        Action? stopAnimation = null;
+        menu.Opened += (_, _) =>
+        {
+            stopAnimation?.Invoke();
+            stopAnimation = (Look?.Opening ?? MenuLook.DefaultOpening())
+                .Play(menu, fromBelow: menu.Placement == System.Windows.Controls.Primitives.PlacementMode.Top);
+        };
         menu.AddHandler(MenuItem.SubmenuOpenedEvent, new RoutedEventHandler((_, e) =>
         {
             if (e.OriginalSource is MenuItem item && item.Template?.FindName("PART_Popup", item) is System.Windows.Controls.Primitives.Popup { Child: { } child })

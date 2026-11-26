@@ -589,6 +589,18 @@
   "CPU, memory and GPU": "CPU, memoria y GPU",
   "Weather": "Tiempo",
   "Media (what's playing)": "Multimedia (lo que suena)",
-  "Notes": "Notas"
+  "Notes": "Notas",
+  "Taskbar animations": "Animaciones de la barra de tareas",
+  "Tray flyout": "Panel del área de notificación",
+  "The ^ panel with the hidden tray icons.": "El panel ^ con los iconos de notificación ocultos.",
+  "Window previews": "Vistas previas de ventanas",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "Las vistas previas en vivo sobre un botón de la barra de tareas. El zoom no se aplica: Windows dibuja las vistas previas por sí mismo.",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "Para diseños con ocultación automática: cómo aparece la barra cuando el ratón llega al borde de la pantalla, y cómo se vuelve a ir.",
+  "Slide": "Deslizar",
+  "Slide and fade": "Deslizar y desvanecer",
+  "Fade": "Desvanecer",
+  "Hide after (ms)": "Ocultar tras (ms)",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Cómo aparecen el panel de notificación y las vistas previas de ventanas, y cómo entra y sale la ocultación automática",
+  "Animations...": "Animaciones..."
  }
 }

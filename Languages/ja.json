@@ -593,6 +593,18 @@
   "CPU, memory and GPU": "CPU、メモリ、GPU",
   "Weather": "天気",
   "Media (what's playing)": "メディア（再生中）",
-  "Notes": "メモ"
+  "Notes": "メモ",
+  "Taskbar animations": "タスク バーのアニメーション",
+  "Tray flyout": "トレイのポップアップ",
+  "The ^ panel with the hidden tray icons.": "隠れたトレイ アイコンのある ^ パネル。",
+  "Window previews": "ウィンドウのプレビュー",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "タスク バーのボタンの上に出るライブ プレビュー。ズームは適用されません：プレビューは Windows 自身が描きます。",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "自動的に隠すデザイン用：マウスが画面の端に来たときのバーの出方と、隠れ方。",
+  "Slide": "スライド",
+  "Slide and fade": "スライドとフェード",
+  "Fade": "フェード",
+  "Hide after (ms)": "隠すまで（ミリ秒）",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "トレイのポップアップとウィンドウのプレビューの出方、自動的に隠すときの出入りの仕方",
+  "Animations...": "アニメーション..."
  }
 }

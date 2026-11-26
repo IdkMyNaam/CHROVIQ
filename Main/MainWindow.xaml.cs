@@ -110,6 +110,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         MaterialClock.FramesPerSecond = _settings.MaterialFps;
         _settings.Menus?.Apply(); // the desktop menus' material
+        TaskbarAnimations.Current = _settings.TaskbarAnimations ??= new TaskbarAnimations();
         ShowTaskbarWhileOpenCheck.IsChecked = _settings.ShowTaskbarWhileOpen;
         LiveGlassCheck.IsChecked = _settings.LiveGlass;
         _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
@@ -1967,6 +1968,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _menuSettings = new MenuSettingsWindow(_settings.Menus ??= new MenuLook(), SaveSettings);
         _menuSettings.Closed += (_, _) => _menuSettings = null;
         _menuSettings.Show();
+    }
+
+    private TaskbarAnimationsWindow? _taskbarAnimations;
+
+    private void TaskbarAnimations_Click(object sender, RoutedEventArgs e)
+    {
+        if (_taskbarAnimations != null) { _taskbarAnimations.Activate(); return; }
+        _taskbarAnimations = new TaskbarAnimationsWindow(_settings.TaskbarAnimations ??= new TaskbarAnimations(), SaveSettings);
+        _taskbarAnimations.Closed += (_, _) => _taskbarAnimations = null;
+        _taskbarAnimations.Show();
     }
 
     private AltTabSettingsWindow? _altTabSettings;

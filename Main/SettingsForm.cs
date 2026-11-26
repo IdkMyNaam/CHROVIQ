@@ -97,19 +97,19 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     protected void AnimationFields(PopupAnimation animation)
     {
+        StackPanel? custom = null; // this animation's own Custom fields (a form can have several animations)
         Combo("Animation", new[] { "None", "Fade in", "Slide in", "Zoom in", "Pop (zoom with a bounce)", "Custom" },
             (int)animation.Style, i =>
             {
                 animation.Style = (AnimationStyle)i;
-                if (_customAnimation != null)
-                    _customAnimation.Visibility = animation.Style == AnimationStyle.Custom ? Visibility.Visible : Visibility.Collapsed;
+                if (custom != null)
+                    custom.Visibility = animation.Style == AnimationStyle.Custom ? Visibility.Visible : Visibility.Collapsed;
             });
         Slider("Length (ms)", animation.DurationMs, 0, 1500, v => animation.DurationMs = Math.Round(v / 10) * 10);
         Combo("Speed curve", new[] { "Even", "Smooth (slows at the end)", "Strong (fast start)", "Overshoot", "Bounce", "Elastic" },
             (int)animation.Easing, i => animation.Easing = (AnimationEasing)i);
 
-        var custom = Section();
-        _customAnimation = custom;
+        custom = Section();
         custom.Visibility = animation.Style == AnimationStyle.Custom ? Visibility.Visible : Visibility.Collapsed;
         var previous = Target;
         Target = custom;
@@ -124,8 +124,6 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         finally { Target = previous; }
         Hint("Press \"Try it\" to see it. Custom mixes fade, slide and zoom the way you set them.");
     }
-
-    private StackPanel? _customAnimation;
 
     /// <summary>A slider with its value next to it.</summary>
     protected void Slider(string label, double value, double min, double max, Action<double> set)

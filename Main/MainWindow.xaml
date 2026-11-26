@@ -568,6 +568,17 @@
                         <StackPanel x:Name="MonitorDesignsPanel" Margin="0,0,0,4" />
 
                         <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="Sparkle24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Taskbar animations" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="How the tray flyout and window previews appear, and how auto-hide comes in and goes away" Style="{StaticResource CardText}" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Animations..." Icon="{ui:SymbolIcon Settings24}" Click="TaskbarAnimations_Click" />
+                        </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
                             <ui:CardControl.Icon><ui:SymbolIcon Symbol="ArrowSwap24" /></ui:CardControl.Icon>
                             <ui:CardControl.Header>
                                 <StackPanel>

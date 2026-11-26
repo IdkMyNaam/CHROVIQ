@@ -21,6 +21,15 @@ internal sealed class ThumbnailPopup : Window
     private readonly StackPanel _cells = new() { Orientation = Orientation.Horizontal };
     private readonly List<(IntPtr thumbnail, FrameworkElement placeholder, SIZE source)> _thumbnails = new();
     private IntPtr _hwnd;
+    private int _x, _y;            // where it is when fully shown (physical pixels)
+    private Action? _stopAnimation; // finishes the opening animation right away
+    private bool _closed;
+
+    private const int WS_EX_LAYERED = 0x80000, LWA_ALPHA = 0x2;
+    private const uint SWP_NOSIZE = 0x0001, SWP_NOZORDER = 0x0004;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint key, byte alpha, uint flags);
 
     /// <summary>A preview was clicked: the window to switch to.</summary>
     public event Action<IntPtr>? WindowClicked;
@@ -43,19 +52,30 @@ internal sealed class ThumbnailPopup : Window
         {
             _hwnd = new WindowInteropHelper(this).Handle;
             long exStyle = GetWindowLongPtr(_hwnd, GWL_EXSTYLE).ToInt64();
-            SetWindowLongPtr(_hwnd, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+            // Layered, so the whole window (previews included) can fade in; fully opaque otherwise.
+            SetWindowLongPtr(_hwnd, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED));
+            SetLayeredWindowAttributes(_hwnd, 0, 255, LWA_ALPHA);
 
             // Windows 11: rounded corners like other flyouts (ignored on Windows 10).
             int round = DWMWCP_ROUND;
             DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref round, sizeof(int));
         };
-        Closed += (_, _) => Unregister();
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            _stopAnimation?.Invoke();
+            Unregister();
+        };
     }
 
     /// <summary>Shows previews of <paramref name="windows"/> next to <paramref name="anchor"/>, on the screen side of the bar.</summary>
     public void ShowFor(IReadOnlyList<TaskWindow> windows, FrameworkElement anchor, TaskbarEdge edge)
     {
         _hwnd = new WindowInteropHelper(this).EnsureHandle();
+        _stopAnimation?.Invoke(); // moving to another button: the previous one's animation ends at once
+        _stopAnimation = null;
+        bool appearing = !IsVisible;
+        if (appearing) SetLayeredWindowAttributes(_hwnd, 0, 0, LWA_ALPHA); // invisible until the animation starts
         Unregister();
         SafeUi.Clear(_cells);
 
@@ -67,6 +87,61 @@ internal sealed class ThumbnailPopup : Window
         PlaceNear(anchor, edge);
         UpdateLayout();
         UpdateThumbnails();
+        if (appearing) _stopAnimation = AnimateIn(TaskbarAnimations.Current.Previews, edge);
+    }
+
+    /// <summary>
+    /// Fades and slides the whole window in (Windows draws the previews, so the window itself moves, not its
+    /// content). Zoom isn't used. Returns an action that ends it at once, in the final place.
+    /// </summary>
+    private Action AnimateIn(PopupAnimation animation, TaskbarEdge edge)
+    {
+        var (fade, distance, direction, _, easing) = animation.Resolve();
+        double duration = Math.Clamp(animation.DurationMs, 0, 3000);
+        if (animation.Style == AnimationStyle.None || duration <= 0 || (!fade && distance <= 0))
+        {
+            SetLayeredWindowAttributes(_hwnd, 0, 255, LWA_ALPHA);
+            return () => { };
+        }
+        double pixels = distance * VisualTreeHelper.GetDpi(this).DpiScaleX;
+        var (dx, dy) = direction switch
+        {
+            AnimationDirection.Up => (0.0, 1.0),
+            AnimationDirection.Down => (0.0, -1.0),
+            AnimationDirection.Left => (1.0, 0.0),
+            AnimationDirection.Right => (-1.0, 0.0),
+            _ => edge != TaskbarEdge.Top ? (0.0, 1.0) : (0.0, -1.0),
+        };
+        int x = _x, y = _y;
+        void Apply(double t)
+        {
+            if (_closed) return;
+            double e = PopupAnimation.Ease(easing, t);
+            byte alpha = fade ? (byte)Math.Round(Math.Clamp(e, 0, 1) * 255) : (byte)255;
+            SetLayeredWindowAttributes(_hwnd, 0, alpha, LWA_ALPHA);
+            SetWindowPos(_hwnd, IntPtr.Zero, x + (int)Math.Round(dx * pixels * (1 - e)), y + (int)Math.Round(dy * pixels * (1 - e)), 0, 0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        Apply(0);
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        bool finished = false;
+        EventHandler? frame = null;
+        void Finish()
+        {
+            if (finished) return;
+            finished = true;
+            CompositionTarget.Rendering -= frame;
+            Apply(1);
+        }
+        frame = (_, _) =>
+        {
+            double t = clock.Elapsed.TotalMilliseconds / duration;
+            if (t >= 1) Finish();
+            else Apply(t);
+        };
+        CompositionTarget.Rendering += frame;
+        return Finish;
     }
 
     /// <summary>Title and icon on top, the live preview (or a "minimized" note) below. Click to switch.</summary>
@@ -144,6 +219,8 @@ internal sealed class ThumbnailPopup : Window
         if (GetMonitorInfo(MonitorFromPoint(center, MONITOR_DEFAULTTONEAREST), ref info))
             x = Math.Clamp(x, info.rcWork.Left + gap, Math.Max(info.rcWork.Left + gap, info.rcWork.Right - width - gap));
 
+        _x = x;
+        _y = y;
         SetWindowPos(_hwnd, HWND_TOPMOST, x, y, width, height, SWP_NOACTIVATE);
     }
 

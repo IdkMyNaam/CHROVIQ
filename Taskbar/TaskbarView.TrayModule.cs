@@ -51,9 +51,14 @@ public partial class TaskbarView
         // Clicking ^ while the flyout is open: the mouse press already closed it (it closes on any click
         // outside), so the click that follows must not open it again.
         DateTime closedAt = DateTime.MinValue;
+        Action? stopAnimation = null;
         more.Click += (_, _) =>
         {
             if ((DateTime.Now - closedAt).TotalMilliseconds < 300) return;
+            // The start state goes on before it opens, so the flyout never flashes up fully drawn first.
+            stopAnimation?.Invoke();
+            if (popup.Child is FrameworkElement surface)
+                stopAnimation = TaskbarAnimations.Current.TrayFlyout.Play(surface, fromBelow: Edge != TaskbarEdge.Top);
             popup.IsOpen = true;
         };
         popup.Opened += (_, _) => _openMenus++;

@@ -594,6 +594,18 @@
   "CPU, memory and GPU": "CPU, 메모리, GPU",
   "Weather": "날씨",
   "Media (what's playing)": "미디어(재생 중)",
-  "Notes": "메모"
+  "Notes": "메모",
+  "Taskbar animations": "작업 표시줄 애니메이션",
+  "Tray flyout": "트레이 플라이아웃",
+  "The ^ panel with the hidden tray icons.": "숨겨진 트레이 아이콘이 있는 ^ 패널.",
+  "Window previews": "창 미리 보기",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "작업 표시줄 단추 위의 실시간 미리 보기. 확대는 적용되지 않습니다: 미리 보기는 Windows가 직접 그립니다.",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "자동 숨기기 디자인용: 마우스가 화면 가장자리에 닿을 때 바가 나타나는 방식과 다시 사라지는 방식.",
+  "Slide": "슬라이드",
+  "Slide and fade": "슬라이드와 페이드",
+  "Fade": "페이드",
+  "Hide after (ms)": "숨기기까지(ms)",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "트레이 플라이아웃과 창 미리 보기가 나타나는 방식, 자동 숨기기가 들어오고 나가는 방식",
+  "Animations...": "애니메이션..."
  }
 }

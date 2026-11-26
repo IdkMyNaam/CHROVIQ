@@ -16,6 +16,14 @@ public sealed class MenuLook
     public string? FontFamily { get; set; }
     public double FontSize { get; set; } = 13;
 
+    /// <summary>How a menu appears: by default a quick fade with a small slide, like Windows 11's menus.</summary>
+    public PopupAnimation Opening { get; set; } = DefaultOpening();
+
+    public static PopupAnimation DefaultOpening() => new()
+    {
+        Style = AnimationStyle.Custom, DurationMs = 160, Easing = AnimationEasing.Smooth, Fade = true, Distance = 10,
+    };
+
     /// <summary>Hands the look to the menus (they read it each time they open).</summary>
     public void Apply()
     {
@@ -46,6 +54,9 @@ internal sealed class MenuSettingsWindow : SettingsForm
         Slider("Corner radius", look.CornerRadius, 0, 20, v => look.CornerRadius = Math.Round(v));
         Font("Font", look.FontFamily ?? "Segoe UI Variable Text", v => look.FontFamily = v == "Segoe UI Variable Text" ? null : v);
         Slider("Font size", look.FontSize, 9, 20, v => look.FontSize = Math.Round(v));
+
+        Header("Opening");
+        AnimationFields(look.Opening ??= MenuLook.DefaultOpening());
         MaterialFields(look.Material, name => look.Material = name, () => look.MaterialValues ??= new Dictionary<string, string>(),
             "Drawn behind the menu entries; the light or dark menu colors stay.");
     }

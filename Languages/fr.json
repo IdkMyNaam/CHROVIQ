@@ -579,6 +579,17 @@
   "Clock and date": "Horloge et date",
   "CPU, memory and GPU": "Processeur, mémoire et GPU",
   "Weather": "Météo",
-  "Media (what's playing)": "Média (en cours de lecture)"
+  "Media (what's playing)": "Média (en cours de lecture)",
+  "Taskbar animations": "Animations de la barre des tâches",
+  "Tray flyout": "Panneau de la zone de notification",
+  "The ^ panel with the hidden tray icons.": "Le panneau ^ avec les icônes de notification masquées.",
+  "Window previews": "Aperçus des fenêtres",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "Les aperçus en direct au-dessus d'un bouton de la barre des tâches. Le zoom ne s'y applique pas : Windows dessine lui-même les aperçus.",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "Pour les designs masqués automatiquement : comment la barre apparaît quand la souris atteint le bord de l'écran, puis repart.",
+  "Slide": "Glisser",
+  "Slide and fade": "Glisser et fondu",
+  "Fade": "Fondu",
+  "Hide after (ms)": "Masquer après (ms)",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Comment le panneau de notification et les aperçus des fenêtres apparaissent, et comment le masquage automatique entre et sort"
  }
 }

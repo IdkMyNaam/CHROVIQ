@@ -579,6 +579,18 @@
   "CPU, memory and GPU": "CPU, Arbeitsspeicher und GPU",
   "Weather": "Wetter",
   "Media (what's playing)": "Medien (was gerade läuft)",
-  "Notes": "Notizen"
+  "Notes": "Notizen",
+  "Taskbar animations": "Taskleisten-Animationen",
+  "Tray flyout": "Infobereich-Flyout",
+  "The ^ panel with the hidden tray icons.": "Das ^-Feld mit den ausgeblendeten Infobereichssymbolen.",
+  "Window previews": "Fenstervorschauen",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "Die Live-Vorschauen über einer Taskleistenschaltfläche. Zoom gilt hier nicht: Windows zeichnet die Vorschauen selbst.",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "Für Designs mit automatischem Ausblenden: wie die Leiste erscheint, wenn die Maus den Bildschirmrand erreicht, und wieder verschwindet.",
+  "Slide": "Schieben",
+  "Slide and fade": "Schieben und Ausblenden",
+  "Fade": "Ausblenden",
+  "Hide after (ms)": "Ausblenden nach (ms)",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Wie das Infobereich-Flyout und die Fenstervorschauen erscheinen und wie das automatische Ausblenden ein- und ausfährt",
+  "Animations...": "Animationen..."
  }
 }

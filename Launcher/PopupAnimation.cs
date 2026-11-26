@@ -42,7 +42,7 @@ public sealed class PopupAnimation
     public static PopupAnimation Default(AnimationStyle style, double ms) => new() { Style = style, DurationMs = ms };
 
     /// <summary>The values to animate with: the preset's, or (Custom) the ones set here.</summary>
-    private (bool fade, double distance, AnimationDirection direction, double startScale, AnimationEasing easing) Resolve() => Style switch
+    internal (bool fade, double distance, AnimationDirection direction, double startScale, AnimationEasing easing) Resolve() => Style switch
     {
         AnimationStyle.Fade => (true, 0, AnimationDirection.FromTaskbar, 1, Easing),
         AnimationStyle.Slide => (true, 60, AnimationDirection.FromTaskbar, 1, Easing),
@@ -131,7 +131,7 @@ public sealed class PopupAnimation
     }
 
     /// <summary>0..1 → eased 0..1 (Overshoot and Elastic briefly go past 1).</summary>
-    private static double Ease(AnimationEasing easing, double t)
+    internal static double Ease(AnimationEasing easing, double t)
     {
         t = Math.Clamp(t, 0, 1);
         switch (easing)

@@ -583,6 +583,18 @@
   "CPU, memory and GPU": "CPU, geheugen en GPU",
   "Weather": "Weer",
   "Media (what's playing)": "Media (wat er speelt)",
-  "Notes": "Notities"
+  "Notes": "Notities",
+  "Taskbar animations": "Taakbalkanimaties",
+  "Tray flyout": "Systeemvak-paneel",
+  "The ^ panel with the hidden tray icons.": "Het ^-paneel met de verborgen systeemvakpictogrammen.",
+  "Window previews": "Venstervoorbeelden",
+  "The live previews over a taskbar button. Zoom doesn't apply to them: Windows draws the previews themselves.": "De live voorbeelden boven een taakbalkknop. Zoomen geldt hier niet: Windows tekent de voorbeelden zelf.",
+  "For designs with auto-hide: how the bar comes in when the mouse reaches the screen edge, and goes away again.": "Voor ontwerpen met automatisch verbergen: hoe de balk verschijnt als de muis de schermrand raakt, en weer weggaat.",
+  "Slide": "Schuiven",
+  "Slide and fade": "Schuiven en vervagen",
+  "Fade": "Vervagen",
+  "Hide after (ms)": "Verbergen na (ms)",
+  "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Hoe het systeemvak-paneel en de venstervoorbeelden verschijnen, en hoe automatisch verbergen in- en uitschuift",
+  "Animations...": "Animaties..."
  }
 }
