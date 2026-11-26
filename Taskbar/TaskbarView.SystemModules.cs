@@ -236,6 +236,9 @@ public partial class TaskbarView
         return button;
     }
 
+    /// <summary>Opens CHROVIQ's calendar next to an element (the clock, as the shell); set by the main window.</summary>
+    public static Action<FrameworkElement, TaskbarEdge>? CalendarOpener { get; set; }
+
     /// <summary>Opens Windows Customizer's start menu next to an element; set by the main window.</summary>
     public static Action<FrameworkElement, TaskbarEdge>? StartMenuOpener { get; set; }
 

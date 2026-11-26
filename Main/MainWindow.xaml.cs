@@ -1701,6 +1701,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ShellMode.Log("Taskbar shown");
 
         if (ShellMode.RunStartupPrograms) _ = StartStartupProgramsAsync(registered);
+        TakeOverWindowsPanelKeys();
         // The welcome screen (or the spinner) goes once the taskbar has been drawn.
         Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () => { LoadingSpinner.Stop(); WelcomeScreen.Stop(); });
         Closed += (_, _) =>
@@ -1710,6 +1711,51 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             ShellMode.Log("CHROVIQ closed");
         };
     }
+
+    private readonly List<GlobalHotKey> _shellKeys = new();
+    private KeyboardHookThread? _shellKeyHook;
+
+    /// <summary>
+    /// As the shell, Win+A and Win+N do nothing (Windows' Quick Settings and notification panel need Explorer), so they
+    /// open CHROVIQ's own Quick Settings and calendar instead.
+    /// </summary>
+    private void TakeOverWindowsPanelKeys()
+    {
+        var refused = new Dictionary<uint, Action>(); // virtual key -> what it opens, for the keyboard hook
+        void Key(System.Windows.Input.Key key, Action open)
+        {
+            Action logged = () => { ShellMode.Log($"Win+{key} pressed"); open(); };
+            var hotkey = new GlobalHotKey(this, System.Windows.Input.ModifierKeys.Windows, key);
+            if (hotkey.IsRegistered)
+            {
+                hotkey.Pressed += logged;
+                _shellKeys.Add(hotkey);
+                return;
+            }
+            ShellMode.Log($"Win+{key}: Windows didn't give it to CHROVIQ; catching it with the keyboard hook instead");
+            hotkey.Dispose();
+            refused[(uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(key)] = logged;
+        }
+        Key(System.Windows.Input.Key.A, () => QuickSettingsWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), null, TaskbarEdge.Bottom, ShowFromTray));
+        Key(System.Windows.Input.Key.N, () => CalendarWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook()));
+        ShellMode.Log($"Win+A and Win+N: {_shellKeys.Count} of 2 as hotkeys");
+        if (refused.Count == 0) return;
+
+        // The keyboard hook: Win held, then the key: open it (and Windows doesn't get the key).
+        const int WM_KEYDOWN = 0x0100, WM_SYSKEYDOWN = 0x0104;
+        _shellKeyHook = new KeyboardHookThread("Win+A / Win+N", (int message, in KeyboardHookThread.KeyInfo key) =>
+        {
+            if (message is not (WM_KEYDOWN or WM_SYSKEYDOWN) || !refused.TryGetValue(key.vkCode, out var open)) return false;
+            bool win = (GetAsyncKeyState(0x5B) & 0x8000) != 0 || (GetAsyncKeyState(0x5C) & 0x8000) != 0; // left or right Windows key
+            if (!win) return false;
+            _winKeyHook?.ShortcutUsed(); // releasing Win next mustn't open the start menu
+            Dispatcher.InvokeAsync(open);
+            return true;
+        });
+        Closed += (_, _) => _shellKeyHook?.Dispose();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
 
     /// <summary>The startup programs, only once our shell window is registered (or after 35 s at most).</summary>
     private static async Task StartStartupProgramsAsync(Task<bool> registered)
@@ -1868,6 +1914,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             SaveSettings();
         };
         TaskbarView.QuickSettingsOpener = (anchor, edge) => QuickSettingsWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), anchor, edge, ShowFromTray);
+        TaskbarView.CalendarOpener = (anchor, edge) => CalendarWindow.Toggle(_settings.QuickSettings ??= new QuickSettingsLook(), anchor, edge);
 
         var action = _settings.EffectiveWinKey;
         _loading = true;

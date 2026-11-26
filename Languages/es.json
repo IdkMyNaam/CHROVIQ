@@ -715,6 +715,11 @@
   "Open the widgets folder": "Abrir la carpeta de widgets",
   "How to make a widget": "Cómo hacer un widget",
   "Previews of minimized windows": "Vistas previas de ventanas minimizadas",
-  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "Las vistas previas de la barra de tareas y de Alt+Tab muestran una ventana minimizada tal como se vio por última vez. Las imágenes solo se guardan en la memoria, nunca en el disco."
+  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "Las vistas previas de la barra de tareas y de Alt+Tab muestran una ventana minimizada tal como se vio por última vez. Las imágenes solo se guardan en la memoria, nunca en el disco.",
+  "Today": "Hoy",
+  "Next month": "Mes siguiente",
+  "Previous month": "Mes anterior",
+  "Notification settings": "Configuración de notificaciones",
+  "Date and time": "Fecha y hora"
  }
 }

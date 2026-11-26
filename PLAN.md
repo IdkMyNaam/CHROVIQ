@@ -67,7 +67,8 @@ CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Cod
 - [x] Work area handling without Explorer
 - [x] File browsing: a hidden shell window is registered, so folders open in File Explorer without Explorer taking over the shell
 - [x] Diagnostics: `shell.log` with timed steps and every Explorer start
-- [ ] Windows notifications, Win+A and Win+N (they depend on Explorer)
+- [x] Win+A (CHROVIQ's Quick Settings) and Win+N (a calendar panel, also from the clock) as the shell
+- [ ] A list of other apps' notifications as the shell (needs MSIX packaging; the pop-ups themselves do appear)
 - [ ] Use as the shell on a main account (tested so far in a dedicated test account)
 
 ## Phase 5: Ready for everyday use

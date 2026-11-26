@@ -703,6 +703,11 @@
   "Open the widgets folder": "Ouvrir le dossier des widgets",
   "How to make a widget": "Comment créer un widget",
   "Previews of minimized windows": "Aperçus des fenêtres réduites",
-  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "Les aperçus de la barre des tâches et d'Alt+Tab montrent une fenêtre réduite telle qu'elle était en dernier. Les images restent uniquement en mémoire et ne sont jamais enregistrées."
+  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "Les aperçus de la barre des tâches et d'Alt+Tab montrent une fenêtre réduite telle qu'elle était en dernier. Les images restent uniquement en mémoire et ne sont jamais enregistrées.",
+  "Today": "Aujourd'hui",
+  "Next month": "Mois suivant",
+  "Previous month": "Mois précédent",
+  "Notification settings": "Paramètres de notification",
+  "Date and time": "Date et heure"
  }
 }

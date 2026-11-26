@@ -709,6 +709,11 @@
   "Open the widgets folder": "De widgetmap openen",
   "How to make a widget": "Hoe maak je een widget",
   "Previews of minimized windows": "Voorbeelden van geminimaliseerde vensters",
-  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "De voorbeelden van de taakbalk en Alt+Tab tonen een geminimaliseerd venster zoals het er het laatst uitzag. De afbeeldingen blijven alleen in het geheugen en worden nooit opgeslagen."
+  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "De voorbeelden van de taakbalk en Alt+Tab tonen een geminimaliseerd venster zoals het er het laatst uitzag. De afbeeldingen blijven alleen in het geheugen en worden nooit opgeslagen.",
+  "Today": "Vandaag",
+  "Next month": "Volgende maand",
+  "Previous month": "Vorige maand",
+  "Notification settings": "Meldingsinstellingen",
+  "Date and time": "Datum en tijd"
  }
 }

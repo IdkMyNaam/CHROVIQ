@@ -38,8 +38,17 @@ internal sealed class WinKeyHook : IDisposable
     private static extern uint SendInput(uint count, INPUT[] inputs, int size);
 
     private readonly KeyboardHookThread _hook;
-    private bool _winDown;
-    private bool _usedAsShortcut;
+    private volatile bool _winDown;
+    private volatile bool _usedAsShortcut;
+
+    /// <summary>
+    /// Another hook used a Windows-key shortcut (Win+A, Win+N as the shell) and kept the key to itself, so this hook
+    /// never saw it: releasing Win now isn't "Win on its own".
+    /// </summary>
+    public void ShortcutUsed()
+    {
+        if (_winDown) _usedAsShortcut = true;
+    }
 
     /// <summary>The Windows key was pressed and released on its own. Raised on the hook's thread: hand it to the UI thread.</summary>
     public event Action? Pressed;

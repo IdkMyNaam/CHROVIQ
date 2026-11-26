@@ -721,6 +721,11 @@
   "Open the widgets folder": "打开小组件文件夹",
   "How to make a widget": "如何制作小组件",
   "Previews of minimized windows": "最小化窗口的预览",
-  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "任务栏和 Alt+Tab 的预览会显示最小化窗口最后的样子。这些图片只保存在内存中，从不写入磁盘。"
+  "The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved.": "任务栏和 Alt+Tab 的预览会显示最小化窗口最后的样子。这些图片只保存在内存中，从不写入磁盘。",
+  "Today": "今天",
+  "Next month": "下个月",
+  "Previous month": "上个月",
+  "Notification settings": "通知设置",
+  "Date and time": "日期和时间"
  }
 }

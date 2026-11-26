@@ -398,7 +398,12 @@ public partial class TaskbarView
         }));
 
         var button = BarButton(lines, "Notifications and calendar (Win+N)");
-        button.Click += (_, _) => PressWinShortcut('N');
+        // As the shell, Windows' own panel needs Explorer: CHROVIQ's calendar instead.
+        button.Click += (_, _) =>
+        {
+            if (ShellMode.IsShell && CalendarOpener != null) CalendarOpener(button, Edge);
+            else PressWinShortcut('N');
+        };
         return button;
     }
 
