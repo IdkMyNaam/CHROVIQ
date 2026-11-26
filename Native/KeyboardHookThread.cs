@@ -49,8 +49,9 @@ internal sealed class KeyboardHookThread : IDisposable
         _thread = new Thread(() =>
         {
             _threadId = GetCurrentThreadId();
-            using (var module = Process.GetCurrentProcess().MainModule)
-                _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(module?.ModuleName), 0);
+            // This app's own module (null = the .exe). Not Process.MainModule: that lists every loaded DLL first,
+            // which took about a second at startup.
+            _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
             if (_hook == IntPtr.Zero) error = Marshal.GetLastWin32Error();
             ready.Set();
             if (_hook == IntPtr.Zero) return;

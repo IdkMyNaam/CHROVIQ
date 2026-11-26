@@ -54,7 +54,9 @@ public static class WindowsTaskbar
             _originalAutoHide = knownOriginalAutoHide ?? IsAutoHide();
 
         IsHiding = true;
-        EnforceHidden();
+        // In the background: Explorer takes about a second to switch to auto-hide and rearrange the screen,
+        // and nothing here needs to wait for that (it made startup a second slower).
+        Task.Run(EnforceHidden);
 
         // Hide it again whenever Explorer shows it: right away through a window event, plus a check every
         // 3 seconds as a safety net (also catches an Explorer restart, which needs the event hooked again).
@@ -135,10 +137,14 @@ public static class WindowsTaskbar
         if (primary == IntPtr.Zero) return; // Explorer restarting; try again next tick
 
         if (!IsAutoHide()) SetAutoHide(true); // frees the screen space the taskbar reserves
+        // Async: ask Explorer to hide them without waiting until it's done (it can be busy for a moment).
         foreach (var taskbar in AllTaskbars())
             if (IsWindowVisible(taskbar))
-                ShowWindow(taskbar, SW_HIDE);
+                ShowWindowAsync(taskbar, SW_HIDE);
     }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ShowWindowAsync(IntPtr hwnd, int cmd);
 
     private static void SetAutoHide(bool on)
     {

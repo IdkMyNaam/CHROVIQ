@@ -55,6 +55,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     public MainWindow()
     {
         // The language, before any window is made (each translates its texts as it opens).
+        StartupTimer.Mark("main window starts");
+        ContentRendered += (_, _) => StartupTimer.Mark("main window on screen", done: true);
         Loc.Load(_settings.Language);
         Loaded += (_, _) => Loc.TranslateTree(this);
 
@@ -68,8 +70,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             if (e.PropertyName == nameof(SystemParameters.HighContrast)) Dispatcher.InvokeAsync(() => AppThemes.Apply(EffectiveAppTheme()));
         };
         InitializeComponent();
+        StartupTimer.Mark("main window built (XAML)");
         AppThemes.Register(this);
         SetUpAppearance();
+        StartupTimer.Mark("app themes");
         // While this window is open (on screen: not minimized, not in the tray), auto-hiding taskbars show,
         // so you see what you change. Can be turned off on the Taskbar page.
         IsVisibleChanged += (_, _) => UpdateKeepTaskbarShown();
@@ -78,6 +82,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         VersionText.Text = $"Version {typeof(App).Assembly.GetName().Version?.ToString(3)}";
         BuildAccentSwatches();
         LoadCursorChoices();
+        StartupTimer.Mark("cursor list");
 
         string? loadWarning;
         try
@@ -127,6 +132,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _gameWatcher = new GameWatcher(_settings);
         _gameWatcher.StatusChanged += message => StatusText.Text = message;
         _gameWatcher.Start();
+        StartupTimer.Mark("profiles and game watcher");
 
         // Daily wallpaper.
         _dailyWallpaper = new DailyWallpaper(_settings.DailyWallpaper ??= new DailyWallpaperSettings(), SaveSettings);
@@ -137,6 +143,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         DailyWallpaperCheck.IsChecked = _settings.DailyWallpaper.Enabled;
         ShowDailyWallpaper();
         Dispatcher.BeginInvoke(async () => await _dailyWallpaper.UpdateAsync(), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        StartupTimer.Mark("daily wallpaper");
 
         // Snap layouts.
         _snap = new SnapEngine(_settings.Snap ??= new SnapSettings(), this);
@@ -144,6 +151,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Dispatcher.BeginInvoke(_snap.Update, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
         FillLanguages();
+        StartupTimer.Mark("snap and languages");
 
         // Updates: the card, and a quiet check once a day.
         AutoUpdateCheck.IsChecked = _settings.CheckForUpdates;
@@ -157,6 +165,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Desktop widgets.
         ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
         WidgetManager.Start(_settings, SaveSettings);
+        StartupTimer.Mark("widgets");
 
         // Automatic profile switching (time and app rules).
         _profileSwitcher = new ProfileSwitcher(_settings, async name =>
@@ -174,27 +183,34 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         _current = _profiles.FirstOrDefault(p => p.Name == _settings.LastAppliedProfile);
         SetUpTrayAndHotKey();
+        StartupTimer.Mark("tray icon and hotkeys");
         WatchDisplayChanges();
         SetUpSearch();
+        StartupTimer.Mark("search and Windows key");
         UpdateShellStatus();
 
         // Which tray icons stay on the bar (Ctrl+click an icon to change it); remembered in the settings.
         TrayHost.SavedPins = _settings.TrayPinned?.ToArray();
         TrayHost.PinsChanged = pins => { _settings.TrayPinned = pins.ToList(); SaveSettings(); };
         LoadDesigns();
+        StartupTimer.Mark("taskbar designs");
         WatchDesignFiles();
 
         if (_settings.ShowTaskbar)
         {
             SetTaskbarVisible(true);
+            StartupTimer.Mark("taskbars opened");
+            // Once the main window is on screen: hiding it makes Explorer rearrange the screen, and every bar
+            // answers that, which held up the first draw by about a second.
             if (_settings.HideWindowsTaskbar)
-                SetWindowsTaskbarHidden(true);
+                Dispatcher.BeginInvoke(() => SetWindowsTaskbarHidden(true), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
         UpdateHideWindowsTaskbarCheck();
 
         if (ShellMode.IsShell) StartShellMode();
         AppTrace.WatchForFreezes();
         UpdateAltTab();
+        StartupTimer.Mark("taskbars and Alt+Tab");
 
         // Windows shutting down or signing out must not be blocked by "hide instead of close".
         Application.Current.SessionEnding += (_, _) => _exiting = true;

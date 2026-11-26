@@ -116,7 +116,10 @@ public partial class TaskbarView
     {
         try
         {
-            return BuildModule(module);
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var element = BuildModule(module);
+            if (clock.ElapsedMilliseconds > 15) AppTrace.Log($"Taskbar: the {module.Type} module took {clock.ElapsedMilliseconds} ms to build");
+            return element;
         }
         catch (Exception ex)
         {

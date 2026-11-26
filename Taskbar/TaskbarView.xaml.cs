@@ -129,7 +129,9 @@ public partial class TaskbarView : UserControl
         }
 
         SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
+        var layoutClock = System.Diagnostics.Stopwatch.StartNew();
         Root.Child = BuildLayout();
+        AppTrace.Log($"Taskbar: built in {layoutClock.ElapsedMilliseconds} ms");
         if (EverySecond != null) _secondTimer.Start(); // only when a module needs it (volume, CPU/memory)
     }
 

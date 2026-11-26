@@ -32,7 +32,8 @@ internal static class Watchdog
 
         string arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" " +
                            $"-WaitForProcessId {Environment.ProcessId}" + (keepAutoHide ? " -KeepAutoHide" : "");
-        if (_helper is { HasExited: false } && _helperArguments == arguments) return; // already running as wanted
+        // Already running as wanted (checked without asking the process, which can wait: see Stop).
+        if (_helper != null && _helperArguments == arguments) return;
 
         Stop();
         try
@@ -53,16 +54,24 @@ internal static class Watchdog
     /// <summary>Stops the helper (the app is restoring things itself, or nothing needs restoring).</summary>
     public static void Stop()
     {
-        try
-        {
-            if (_helper is { HasExited: false }) _helper.Kill();
-        }
-        catch (Exception)
-        {
-            // Already gone.
-        }
-        _helper?.Dispose();
+        var helper = _helper;
         _helper = null;
         _helperArguments = null;
+        if (helper == null) return;
+        // In the background: asking a process whether it has ended can wait about a second, and this runs at
+        // startup (it made starting a second slower). The new helper is started meanwhile; both restore the
+        // same way, so a moment of overlap is harmless.
+        Task.Run(() =>
+        {
+            try
+            {
+                if (!helper.HasExited) helper.Kill();
+            }
+            catch (Exception)
+            {
+                // Already gone.
+            }
+            helper.Dispose();
+        });
     }
 }

@@ -6,6 +6,7 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        StartupTimer.Mark("app starts (.NET and WPF loaded)");
         // A settings restore staged earlier goes into place first, before anything reads the settings.
         SettingsBackup.ApplyPending(e.Args);
 

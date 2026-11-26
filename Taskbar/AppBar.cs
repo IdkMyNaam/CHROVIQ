@@ -96,6 +96,23 @@ internal sealed class AppBar : IDisposable
         UpdatePosition();
     }
 
+    private System.Windows.Threading.DispatcherTimer? _positionTimer;
+
+    /// <summary>
+    /// A moment later, once: Windows sends "positions changed" several times in a row (every bar that moves sets off
+    /// the others), and each update is a round trip to Explorer, which may be busy. One update after they settle.
+    /// </summary>
+    private void UpdatePositionSoon()
+    {
+        if (_positionTimer == null)
+        {
+            _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+            _positionTimer.Tick += (_, _) => { _positionTimer.Stop(); UpdatePosition(); };
+        }
+        _positionTimer.Stop();
+        _positionTimer.Start();
+    }
+
     /// <summary>Asks Windows for a free strip at our edge, reserves it, and lets the owner place the window.</summary>
     public void UpdatePosition()
     {
@@ -171,7 +188,7 @@ internal sealed class AppBar : IDisposable
             switch (wParam.ToInt32())
             {
                 case ABN_POSCHANGED:
-                    UpdatePosition(); // another bar or the Windows taskbar moved
+                    UpdatePositionSoon(); // another bar or the Windows taskbar moved
                     break;
                 case ABN_FULLSCREENAPP:
                     // Windows doesn't say which monitor this is about, so check our own monitor.
