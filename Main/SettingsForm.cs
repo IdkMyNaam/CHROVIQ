@@ -221,14 +221,14 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     private StackPanel NewSection(string name)
     {
         var page = new StackPanel { Visibility = Visibility.Collapsed };
-        page.Children.Add(new TextBlock { Text = name, FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) });
+        page.Children.Add(new TextBlock { Text = Loc.T(name), FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) });
         _pages.Children.Add(page);
 
         var label = new DockPanel();
         var icon = new Wpf.Ui.Controls.SymbolIcon(SectionIcon(name)) { FontSize = 20, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
         DockPanel.SetDock(icon, Dock.Left);
         label.Children.Add(icon);
-        label.Children.Add(new TextBlock { Text = name, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+        label.Children.Add(new TextBlock { Text = Loc.T(name), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
         var tile = new Border { Child = label, CornerRadius = new CornerRadius(6), Margin = new Thickness(0, 2, 0, 2), Cursor = System.Windows.Input.Cursors.Hand };
         int index = _sections.Count;
         tile.MouseLeftButtonUp += (_, _) => Choose(index);
@@ -291,14 +291,14 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
     private void Card(string label, UIElement control, string? hint = null)
     {
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 0, 0, 6) });
+        stack.Children.Add(new TextBlock { Text = Loc.T(label), Margin = new Thickness(0, 0, 0, 6) });
         stack.Children.Add(control);
         if (hint != null) stack.Children.Add(HintText(hint));
         Fields.Children.Add(new Wpf.Ui.Controls.Card { Content = stack, Margin = new Thickness(0, 0, 0, 4), Padding = new Thickness(14, 10, 14, 12) });
     }
 
     private static TextBlock HintText(string text) =>
-        FluentLook.Secondary(new TextBlock { Text = text, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
+        FluentLook.Secondary(new TextBlock { Text = Loc.T(text), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
 
     protected void Hint(string text) => Fields.Children.Add(HintText(text));
 
@@ -356,7 +356,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
         toggle.Click += (_, _) => { set(toggle.IsChecked == true); _save(); };
         Fields.Children.Add(new Wpf.Ui.Controls.CardControl
         {
-            Header = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap },
+            Header = new TextBlock { Text = Loc.T(label), TextWrapping = TextWrapping.Wrap },
             Content = toggle,
             Margin = new Thickness(0, 0, 0, 4),
         });
@@ -364,7 +364,7 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
 
     protected void Combo(string label, string[] options, int selected, Action<int> set)
     {
-        var box = new ComboBox { ItemsSource = options, SelectedIndex = selected };
+        var box = new ComboBox { ItemsSource = options.Select(Loc.T).ToArray(), SelectedIndex = selected };
         box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) { set(box.SelectedIndex); _save(); } };
         Card(label, box);
     }

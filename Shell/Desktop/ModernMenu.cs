@@ -227,7 +227,7 @@ internal static class ModernMenu
     {
         var item = new MenuItem
         {
-            Style = (Style)Styles()["Item"], Tag = glyph, Header = text, InputGestureText = shortcut ?? "", IsEnabled = enabled,
+            Style = (Style)Styles()["Item"], Tag = glyph, Header = Loc.T(text), InputGestureText = shortcut ?? "", IsEnabled = enabled,
         };
         if (action != null) item.Click += (_, e) => { if (e.OriginalSource == item) action(); };
         parent.Items.Add(item);

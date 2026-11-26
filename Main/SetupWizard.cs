@@ -79,6 +79,7 @@ internal sealed class SetupWizard : FluentWindow
             2 => KeysPage(),
             _ => DonePage(),
         };
+        Loc.TranslateTree(_page); // each step is built when it's shown
         _back.Visibility = _step == 0 ? Visibility.Hidden : Visibility.Visible;
         _next.Content = _step == Steps - 1 ? "Finish" : "Next";
         _stepText.Text = $"Step {_step + 1} of {Steps}";

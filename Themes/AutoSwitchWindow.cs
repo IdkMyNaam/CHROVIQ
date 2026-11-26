@@ -72,6 +72,7 @@ internal sealed class AutoSwitchWindow : Wpf.Ui.Controls.FluentWindow
         if (_rules.Count == 0)
             _rows.Children.Add(FluentLook.Secondary(new TextBlock { Text = "No rules yet. Add one below.", Margin = new Thickness(4, 8, 0, 0) }));
         for (int i = 0; i < _rules.Count; i++) _rows.Children.Add(Row(_rules[i], i));
+        Loc.TranslateTree(_rows);
     }
 
     /// <summary>One rule as a card: icon, "At [21:00]" or "While [app] runs", "use" [profile], move up, remove.</summary>

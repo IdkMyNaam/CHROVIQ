@@ -35,6 +35,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
         _getActiveName = getActiveName;
         _setActive = setActive;
         InitializeComponent();
+        Loaded += (_, _) => Loc.TranslateTree(this);
         AppThemes.Register(this); // the app theme, now and when it changes
         FluentLook.Shield(PreviewFrame); // the preview looks exactly like the real bar, not like this window
         LiveCheck.IsChecked = _liveSetting;
@@ -935,18 +936,18 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
     private static void Header(Panel panel, string text) =>
         panel.Children.Add(new TextBlock
         {
-            Text = text,
+            Text = Loc.T(text),
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, panel.Children.Count == 0 ? 0 : 14, 0, 4),
         });
 
     private static void Label(Panel panel, string text) =>
-        panel.Children.Add(new TextBlock { Text = text, Margin = new Thickness(0, 8, 0, 2) });
+        panel.Children.Add(new TextBlock { Text = Loc.T(text), Margin = new Thickness(0, 8, 0, 2) });
 
     private static void Hint(Panel panel, string text) =>
         panel.Children.Add(new TextBlock
         {
-            Text = text,
+            Text = Loc.T(text),
             Foreground = Brushes.Gray,
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap,
@@ -955,7 +956,7 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
 
     private static Button SmallButton(string text, Action onClick)
     {
-        var button = new Button { Content = text, Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 0) };
+        var button = new Button { Content = Loc.T(text), Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 0) };
         button.Click += (_, _) => onClick();
         return button;
     }
@@ -1058,14 +1059,14 @@ public partial class TaskbarDesignerWindow : Wpf.Ui.Controls.FluentWindow
     private void ComboField(Panel panel, string label, string[] options, int selected, Action<int> set)
     {
         Label(panel, label);
-        var box = new ComboBox { ItemsSource = options, SelectedIndex = Math.Clamp(selected, 0, options.Length - 1) };
+        var box = new ComboBox { ItemsSource = options.Select(Loc.T).ToArray(), SelectedIndex = Math.Clamp(selected, 0, options.Length - 1) };
         box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) { set(box.SelectedIndex); Changed(); } };
         panel.Children.Add(box);
     }
 
     private void CheckField(Panel panel, string label, bool value, Action<bool> set, string? hint = null)
     {
-        var check = new CheckBox { Content = label, IsChecked = value, Margin = new Thickness(0, 8, 0, 0) };
+        var check = new CheckBox { Content = Loc.T(label), IsChecked = value, Margin = new Thickness(0, 8, 0, 0) };
         check.Click += (_, _) => { set(check.IsChecked == true); Changed(); };
         panel.Children.Add(check);
         if (hint != null) Hint(panel, hint);
