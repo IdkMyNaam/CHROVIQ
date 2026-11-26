@@ -605,6 +605,8 @@
   "Fade": "フェード",
   "Hide after (ms)": "隠すまで（ミリ秒）",
   "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "トレイのポップアップとウィンドウのプレビューの出方、自動的に隠すときの出入りの仕方",
-  "Animations...": "アニメーション..."
+  "Animations...": "アニメーション...",
+  "Icons on every monitor": "すべての画面にアイコン",
+  "As your shell: drag icons from one monitor to another and they stay there. New icons go to the monitor chosen below.": "シェルとして：アイコンを別の画面にドラッグすると、そこに残ります。新しいアイコンは下で選んだ画面に置かれます。"
  }
 }

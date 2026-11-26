@@ -52,6 +52,31 @@ internal static class Wallpaper
     }
 
     /// <summary>Loads a picture for drawing on any thread (frozen); null if it can't be read.</summary>
+    private static readonly Dictionary<string, Task<System.Windows.Media.Imaging.BitmapSource?>> Loading = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The picture of a wallpaper file, read once in the background and shared by every monitor's desktop.</summary>
+    public static Task<System.Windows.Media.Imaging.BitmapSource?> LoadShared(string file)
+    {
+        string key = file + "|" + (File.Exists(file) ? File.GetLastWriteTimeUtc(file).Ticks : 0); // the same path can hold a new picture
+        lock (Loading)
+        {
+            if (!Loading.TryGetValue(key, out var task))
+            {
+                // Only the latest picture is kept (an old one would only take memory).
+                foreach (var old in Loading.Keys.Where(k => !k.StartsWith(file + "|", StringComparison.OrdinalIgnoreCase)).ToList()) Loading.Remove(old);
+                Loading[key] = task = Task.Run(() => Load(file));
+            }
+            return task;
+        }
+    }
+
+    /// <summary>Starts reading the current wallpaper right away (at sign-in as the shell, before the desktops need it).</summary>
+    public static void Preload()
+    {
+        try { if (Current().File is { } file) LoadShared(file); }
+        catch (Exception) { /* the desktop reads it later anyway */ }
+    }
+
     public static System.Windows.Media.Imaging.BitmapSource? Load(string file)
     {
         try

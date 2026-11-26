@@ -595,6 +595,8 @@
   "Fade": "Vervagen",
   "Hide after (ms)": "Verbergen na (ms)",
   "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Hoe het systeemvak-paneel en de venstervoorbeelden verschijnen, en hoe automatisch verbergen in- en uitschuift",
-  "Animations...": "Animaties..."
+  "Animations...": "Animaties...",
+  "Icons on every monitor": "Pictogrammen op elk scherm",
+  "As your shell: drag icons from one monitor to another and they stay there. New icons go to the monitor chosen below.": "Als je shell: sleep pictogrammen van het ene scherm naar het andere en ze blijven daar. Nieuwe pictogrammen komen op het scherm dat je hieronder kiest."
  }
 }

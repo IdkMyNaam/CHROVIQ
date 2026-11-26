@@ -270,7 +270,7 @@ public sealed partial class DesktopWindow
                 x = cell.Item1 * cellWidth;
                 y = cell.Item2 * cellHeight;
             }
-            Layout.Positions[item.Path] = new IconPosition(x, y);
+            Layout.Positions[item.Path] = PositionHere(x, y, Layout.Positions.GetValueOrDefault(item.Path));
         }
         DesktopLayout.SaveSoon();
         Arrange();

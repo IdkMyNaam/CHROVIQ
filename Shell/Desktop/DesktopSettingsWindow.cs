@@ -29,6 +29,12 @@ internal sealed class DesktopSettingsWindow : SettingsForm
         if (monitors.Count > 1)
         {
             Header("Monitor");
+            Check("Icons on every monitor", layout.IconsOnEveryMonitor, v =>
+            {
+                layout.IconsOnEveryMonitor = v;
+                monitorChanged();
+            });
+            Hint("As your shell: drag icons from one monitor to another and they stay there. New icons go to the monitor chosen below.");
             var names = new[] { "The main monitor" }.Concat(monitors.Select((m, i) =>
                 $"Monitor {i + 1}{(m.IsPrimary ? " (main)" : "")}: {m.Bounds.Right - m.Bounds.Left}×{m.Bounds.Bottom - m.Bounds.Top}")).ToArray();
             int selected = layout.IconMonitor == null ? 0 : monitors.FindIndex(m => m.Device == layout.IconMonitor) + 1;

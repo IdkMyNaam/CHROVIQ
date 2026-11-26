@@ -21,16 +21,19 @@ public sealed partial class DesktopWindow : Window
 {
     private readonly MonitorInfo _monitor;
     private readonly bool _showIcons;
+    /// <summary>The monitor that gets icons without a monitor of their own (new ones, or from a monitor that's gone).</summary>
+    private readonly bool _isHome;
     private readonly bool _preview;
     private readonly System.Windows.Shapes.Rectangle _wallpaper = new();
 
     /// <summary>Opens the Windows Customizer window (from the desktop's right-click menu).</summary>
     public Action? OpenCustomizer { get; set; }
 
-    internal DesktopWindow(MonitorInfo monitor, bool showIcons, bool preview = false)
+    internal DesktopWindow(MonitorInfo monitor, bool showIcons, bool preview = false, bool isHome = true)
     {
         _monitor = monitor;
         _showIcons = showIcons;
+        _isHome = isHome;
         _preview = preview;
         UseLayoutRounding = true;
         // Opaque, with the wallpaper drawn here: without Explorer nothing else draws it (the screen stays black).
@@ -68,6 +71,31 @@ public sealed partial class DesktopWindow : Window
             foreach (var w in _watchers) w.Dispose();
         };
     }
+
+    /// <summary>
+    /// One desktop per monitor, with the icons on the monitor chosen in Desktop settings (the main one if none, or if
+    /// it's gone), or on every monitor.
+    /// </summary>
+    internal static List<DesktopWindow> OpenForAllMonitors(Action? openCustomizer)
+    {
+        var desktops = new List<DesktopWindow>();
+        var monitors = Monitors.All();
+        string? iconMonitor = DesktopLayout.Current.IconMonitor;
+        if (iconMonitor == null || !monitors.Any(m => m.Device == iconMonitor))
+            iconMonitor = monitors.FirstOrDefault(m => m.IsPrimary)?.Device;
+        foreach (var monitor in monitors)
+        {
+            bool home = monitor.Device == iconMonitor;
+            var desktop = new DesktopWindow(monitor, showIcons: home || DesktopLayout.Current.IconsOnEveryMonitor, isHome: home)
+                { OpenCustomizer = openCustomizer };
+            desktop.Show();
+            desktops.Add(desktop);
+        }
+        return desktops;
+    }
+
+    /// <summary>Desktops opened at sign-in before the rest of the app (see App.OnStartup); the main window takes them over.</summary>
+    internal static List<DesktopWindow> Early { get; } = new();
 
     /// <summary>The real desktops that are open (not previews): desktop widgets sit just above them.</summary>
     public static readonly List<IntPtr> BackHandles = new();
@@ -157,13 +185,19 @@ public sealed partial class DesktopWindow : Window
     // ---------- Wallpaper ----------
 
     /// <summary>Draws the user's wallpaper (loaded in the background) with its placement and background color.</summary>
+    private string? _shownWallpaper; // file, its time and placement of the picture on screen
+
     private void ShowWallpaper()
     {
         var (file, placement, color) = Wallpaper.Current();
         Background = new SolidColorBrush(color);
+        // Applied again with the same picture (CHROVIQ does that at sign-in): nothing to redraw.
+        string shown = $"{file}|{(file != null && File.Exists(file) ? File.GetLastWriteTimeUtc(file).Ticks : 0)}|{placement}";
+        if (shown == _shownWallpaper && _wallpaper.Fill != null) return;
+        _shownWallpaper = shown;
         if (file == null) { _wallpaper.Fill = null; ShellMode.Log("Desktop: no wallpaper picture, only the background color"); return; }
 
-        Task.Run(() => Wallpaper.Load(file)).ContinueWith(t =>
+        Wallpaper.LoadShared(file).ContinueWith(t =>
         {
             if (t.Result is not { } image) { _wallpaper.Fill = null; return; }
             var brush = new ImageBrush(image) { AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };

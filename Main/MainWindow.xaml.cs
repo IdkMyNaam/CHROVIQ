@@ -1647,6 +1647,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ShellMode.Log("Taskbar shown");
 
         if (ShellMode.RunStartupPrograms) _ = StartStartupProgramsAsync(registered);
+        // The sign-in spinner goes once the taskbar has been drawn.
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, LoadingSpinner.Stop);
         Closed += (_, _) =>
         {
             foreach (var d in _desktops) d.Close();
@@ -1663,22 +1665,21 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         await StartupApps.RunAllAsync(ShellMode.Log);
     }
 
-    /// <summary>One desktop per monitor (icons on the main one).</summary>
+    /// <summary>One desktop per monitor: icons on the chosen one, or on every monitor.</summary>
     private void OpenDesktops()
     {
         foreach (var d in _desktops) d.Close();
         _desktops.Clear();
-        // The icons go on the monitor chosen in Desktop settings (the main one if none, or if it's gone).
-        var monitors = Monitors.All();
-        string? iconMonitor = DesktopLayout.Current.IconMonitor;
-        if (iconMonitor == null || !monitors.Any(m => m.Device == iconMonitor))
-            iconMonitor = monitors.FirstOrDefault(m => m.IsPrimary)?.Device;
-        foreach (var monitor in monitors)
+        // At sign-in the desktops are on screen already (opened before the rest of the app): take them over.
+        if (DesktopWindow.Early.Count > 0)
         {
-            var desktop = new DesktopWindow(monitor, showIcons: monitor.Device == iconMonitor) { OpenCustomizer = ShowFromTray };
-            desktop.Show();
-            _desktops.Add(desktop);
+            _desktops.AddRange(DesktopWindow.Early);
+            DesktopWindow.Early.Clear();
+            foreach (var d in _desktops) d.OpenCustomizer = ShowFromTray;
+            ShellMode.Log($"Desktops taken over ({_desktops.Count} monitor(s), opened at sign-in)");
+            return;
         }
+        _desktops.AddRange(DesktopWindow.OpenForAllMonitors(ShowFromTray));
         ShellMode.Log($"Desktops opened on {_desktops.Count} monitor(s)");
     }
 

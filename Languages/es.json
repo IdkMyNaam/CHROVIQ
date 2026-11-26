@@ -601,6 +601,8 @@
   "Fade": "Desvanecer",
   "Hide after (ms)": "Ocultar tras (ms)",
   "How the tray flyout and window previews appear, and how auto-hide comes in and goes away": "Cómo aparecen el panel de notificación y las vistas previas de ventanas, y cómo entra y sale la ocultación automática",
-  "Animations...": "Animaciones..."
+  "Animations...": "Animaciones...",
+  "Icons on every monitor": "Iconos en cada pantalla",
+  "As your shell: drag icons from one monitor to another and they stay there. New icons go to the monitor chosen below.": "Como shell: arrastra iconos de una pantalla a otra y se quedan allí. Los iconos nuevos van a la pantalla elegida abajo."
  }
 }

@@ -54,7 +54,7 @@ CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Cod
       and an alphabetical list; a separate search window for apps and the web
 - [x] Power options (lock, sleep, sign out, restart, shut down; the last three ask first)
 - [x] Opened from the Start module, the Windows key or the app menu
-- [ ] Later: recent files, folders of pinned apps
+- [x] Recent files (from Windows' own list) and folder buttons next to power (Windows' folders or your own)
 
 ## Phase 4: Shell replacement
 - [x] Recovery first: `Restore-Shell.ps1` (with a dry run), .reg backups, a launcher that starts Explorer whenever the app ends
@@ -87,14 +87,15 @@ CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Cod
 - [x] Multi-select, drag and drop, Cut/Copy/Paste and Undo (including restoring from the Recycle Bin)
 - [x] Windows' own desktop icons (Recycle Bin, This PC, ...)
 - [x] Own Alt+Tab switcher with live previews
-- [ ] Later: "Text Document" in New when Notepad doesn't register it; the classic menu for items from both desktop folders at once
+- [x] "Text Document" always in New
+- [ ] Later: the classic menu for items from both desktop folders at once
 
 ### 5c. Modern user interface
 - [x] Main window redesigned with WPF-UI: sidebar navigation, Mica, rounded corners, Segoe Fluent icons, light/dark following Windows
 - [x] All settings windows in the same style, with short explanations and clearly marked risky options
 - [x] App themes (Windows, Dark glass, Midnight, Light clean, High contrast) and custom themes (mode, accent, background,
       corners, card transparency, font, material) with a live editor and import/export
-- [ ] Later: more built-in themes, and theme fields for text colors and borders
+- [x] Six more built-in themes (Retro, Ocean, Forest, Sunset, Nord, Paper) and theme fields for text and border colors
 
 ### 5c+. Shader materials
 Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widgets) can use a material: a GPU pixel shader.
@@ -111,7 +112,8 @@ Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widg
 - [x] Menus, Alt+Tab, start menu, search and tray: colors, sizes, fonts, layout, scroll bars and materials
 - [x] Opening animations for popups: presets or fully custom (fade, slide, zoom, easing, duration)
 - [x] Settings windows organized in sections, in the style of the taskbar designer
-- [ ] Later: icons on every monitor at once; animations for menus, the tray flyout, previews and auto-hide
+- [x] Icons on every monitor at once (drag them between monitors)
+- [x] Animations for menus, the tray flyout, window previews and auto-hide
 
 ### 5e. Installer and releases
 - [x] Per-user installer (Inno Setup, no administrator rights), with Start menu shortcut, optional start at sign-in and desktop shortcut;
@@ -133,10 +135,10 @@ Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widg
 - [x] Daily wallpaper from Bing, Windows Spotlight or a folder
 - [x] Accessibility: keyboard navigation, screen reader names, Windows contrast themes
 - [x] Translation support: language picker and translation templates
-- [ ] Translations into other languages
-- [ ] Laptop screen brightness in Quick Settings
+- [x] Translations: Dutch, German, French, Spanish, Chinese, Japanese and Korean
+- [x] Laptop screen brightness in Quick Settings
 - [ ] A notification center (requires MSIX packaging)
-- [ ] Problem reports sent by email, and a support button
+- [x] Problem reports sent to the developer, a Help and support page, and a support button (Ko-fi)
 
 ## Open questions
 - Should widgets become a plugin system?

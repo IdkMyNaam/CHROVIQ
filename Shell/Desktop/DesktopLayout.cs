@@ -8,8 +8,17 @@ public enum DesktopIconSize { Small, Medium, Large }
 
 public enum DesktopSort { Name, Size, ItemType, DateModified }
 
-/// <summary>Where an icon sits on the desktop, in device-independent pixels from the top-left of the icon area.</summary>
-public sealed record IconPosition(double X, double Y);
+/// <summary>
+/// Where an icon sits on the desktop, in device-independent pixels from the top-left of the icon area, and on which
+/// monitor (its device name; null = the monitor with the icons). X below 0: on that monitor, but no spot yet.
+/// </summary>
+public sealed record IconPosition(double X, double Y,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Monitor = null)
+{
+    /// <summary>On its monitor, but waiting for the next free spot (after "Sort by").</summary>
+    [JsonIgnore]
+    public bool Unplaced => X < 0 || Y < 0;
+}
 
 /// <summary>
 /// The desktop's "View" and "Sort by" choices and where every icon is, like Windows keeps them.
@@ -50,8 +59,11 @@ public sealed class DesktopLayout
     /// <summary>A soft shadow under the names, so they're readable on any wallpaper.</summary>
     public bool LabelShadow { get; set; } = true;
 
-    /// <summary>The monitor that shows the icons (its device name); null = the main monitor.</summary>
+    /// <summary>The monitor that shows the icons (its device name); null = the main monitor. With icons on every monitor: where new icons go.</summary>
     public string? IconMonitor { get; set; }
+
+    /// <summary>Icons on every monitor (as your shell): each icon stays on the monitor you drag it to.</summary>
+    public bool IconsOnEveryMonitor { get; set; }
 
     // ---------- Grid ----------
 
@@ -80,7 +92,8 @@ public sealed class DesktopLayout
         var (newWidth, newHeight) = Cell;
         if (oldWidth == newWidth && oldHeight == newHeight) return;
         foreach (var (path, position) in Positions.ToList())
-            Positions[path] = new IconPosition(Math.Round(position.X / oldWidth) * newWidth, Math.Round(position.Y / oldHeight) * newHeight);
+            if (!position.Unplaced)
+                Positions[path] = position with { X = Math.Round(position.X / oldWidth) * newWidth, Y = Math.Round(position.Y / oldHeight) * newHeight };
     }
 
     // ---------- Load / save ----------

@@ -30,6 +30,7 @@ public sealed partial class DesktopWindow
         try { last.Value.Undo(); }
         catch (Exception ex) { MessageBox.Show(this, $"Could not undo: {ex.Message}", "Desktop", MessageBoxButton.OK, MessageBoxImage.Warning); }
         Refresh();
+        DesktopLayout.NotifyChanged(); // the other monitors' desktops too (icons may go back to them)
     }
 
     // ---------- What the steps do ----------

@@ -8,9 +8,9 @@ namespace WindowsCustomizer;
 /// Phase 4: Windows Customizer as the shell (instead of Explorer), for the current user only.
 ///
 /// Turning it on writes the "Shell" value in the user's own Winlogon key (HKCU), never the
-/// machine-wide one, so other accounts keep Explorer. The value starts ShellLauncher.ps1, not the
-/// app directly: the launcher starts Explorer whenever the app ends, so a crash never leaves the user
-/// without a shell. A .reg backup of the key is saved first. Restore-Shell.ps1 undoes it without the app.
+/// machine-wide one, so other accounts keep Explorer. The value starts the launcher ("--launcher", see
+/// ShellLauncher.cs), not the app directly: the launcher starts Explorer whenever the app ends, so a crash never
+/// leaves the user without a shell. (Older versions used ShellLauncher.ps1; that value still works.) A .reg backup of the key is saved first. Restore-Shell.ps1 undoes it without the app.
 /// </summary>
 internal static class ShellMode
 {
@@ -121,13 +121,13 @@ internal static class ShellMode
         return OwnedByExplorer(GetShellWindow()) || OwnedByExplorer(FindWindow("Shell_TrayWnd", null));
     }
 
-    private static string LauncherPath => Path.Combine(AppContext.BaseDirectory, "ShellLauncher.ps1");
+    private static string AppPath => Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "WindowsCustomizer.exe");
 
-    /// <summary>The command Windows runs at sign-in when we are the shell.</summary>
-    private static string LauncherCommand =>
-        // conhost --headless: no console window at all. (-WindowStyle Hidden alone isn't enough on Windows 11:
-        // Windows Terminal, the default console there, still shows a window.)
-        $"conhost.exe --headless powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{LauncherPath}\"";
+    /// <summary>
+    /// The command Windows runs at sign-in when we are the shell: this app's own launcher mode, which starts in a
+    /// fraction of a second (the older PowerShell launcher took most of a second just to start PowerShell).
+    /// </summary>
+    private static string LauncherCommand => $"\"{AppPath}\" --launcher";
 
     /// <summary>The user's own shell setting, or null when Windows uses its default (Explorer).</summary>
     public static string? CurrentUserShell()
@@ -138,7 +138,8 @@ internal static class ShellMode
 
     /// <summary>True if Windows Customizer is set as this user's shell (takes effect at the next sign-in).</summary>
     public static bool IsInstalled() =>
-        CurrentUserShell() is { } shell && shell.Contains("ShellLauncher.ps1", StringComparison.OrdinalIgnoreCase);
+        CurrentUserShell() is { } shell &&
+        (shell.Contains("--launcher", StringComparison.OrdinalIgnoreCase) || shell.Contains("ShellLauncher.ps1", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Exports the user's Winlogon key to a .reg file in the backups folder; returns its path.</summary>
     public static string Backup(string reason)
@@ -158,12 +159,12 @@ internal static class ShellMode
 
     /// <summary>
     /// Makes Windows Customizer this user's shell from the next sign-in. Backs up first; refuses if the
-    /// launcher or the restore script is missing (they are the safety net).
+    /// restore script is missing (it is the safety net, with the launcher built into the app).
     /// </summary>
     public static string Install()
     {
-        if (!File.Exists(LauncherPath))
-            throw new FileNotFoundException("ShellLauncher.ps1 is missing next to the app, so the shell can't be switched safely.");
+        if (!File.Exists(AppPath))
+            throw new FileNotFoundException("The app can't be found where it runs from, so the shell can't be switched safely.");
         if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "Restore-Shell.ps1")))
             throw new FileNotFoundException("Restore-Shell.ps1 is missing next to the app, so the shell can't be switched safely.");
 

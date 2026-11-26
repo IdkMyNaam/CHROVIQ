@@ -40,6 +40,36 @@ public sealed partial class DesktopWindow
 
     private static DesktopLayout Layout => DesktopLayout.Current;
 
+    // ---------- Icons on every monitor ----------
+
+    /// <summary>Each monitor's desktop shows only the icons on that monitor (as the shell; the preview shows all).</summary>
+    private bool EveryMonitor => !_preview && Layout.IconsOnEveryMonitor;
+
+    private static HashSet<string> KnownMonitors() =>
+        Monitors.All().Select(m => m.Device).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Is a saved position on this desktop's monitor? No monitor (or one that's gone): the home monitor's.</summary>
+    private bool OnThisMonitor(IconPosition? position, HashSet<string> known) =>
+        !EveryMonitor || (position?.Monitor is { } device && known.Contains(device)
+            ? string.Equals(device, _monitor.Device, StringComparison.OrdinalIgnoreCase)
+            : _isHome);
+
+    private bool IsMine(string path, HashSet<string> known) =>
+        OnThisMonitor(Layout.Positions.TryGetValue(path, out var position) ? position : null, known);
+
+    /// <summary>A spot on this desktop: with icons on every monitor it's marked as this monitor's; otherwise it keeps its mark.</summary>
+    private IconPosition PositionHere(double x, double y, IconPosition? before) =>
+        new(x, y, EveryMonitor ? _monitor.Device : before?.Monitor);
+
+    /// <summary>Did icons move to or from this monitor (on another desktop window, or by Undo)?</summary>
+    private bool NeedsRelist()
+    {
+        var known = KnownMonitors();
+        var shown = _items.Select(i => i.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return _items.Any(i => !IsMine(i.Path, known))
+               || Layout.Positions.Any(p => !shown.Contains(p.Key) && OnThisMonitor(p.Value, known));
+    }
+
     private static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }
 
     private void SetUpIcons()
@@ -73,7 +103,8 @@ public sealed partial class DesktopWindow
             foreach (var item in _items) SizeIcon(item);
             _shownIconPixels = Layout.IconPixels;
         }
-        Arrange();
+        if (EveryMonitor && NeedsRelist()) Refresh(); // icons came to (or left) this monitor
+        else Arrange();
     }
 
     // ---------- Reading the Desktop folders ----------
@@ -107,6 +138,10 @@ public sealed partial class DesktopWindow
             }
         }
 
+        // With icons on every monitor, this desktop keeps only the ones on its own monitor.
+        var allThere = found.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var monitors = KnownMonitors();
+        found = found.Where(f => IsMine(f.Path, monitors)).ToList();
         var stillThere = found.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var gone in _items.Where(i => !stillThere.Contains(i.Path)).ToList())
         {
@@ -124,7 +159,7 @@ public sealed partial class DesktopWindow
         }
 
         // Forget positions of icons that are gone (keeps desktop.json small).
-        foreach (var path in Layout.Positions.Keys.Where(p => !stillThere.Contains(p)).ToList())
+        foreach (var path in Layout.Positions.Keys.Where(p => !allThere.Contains(p)).ToList())
             Layout.Positions.Remove(path);
 
         // The Recycle Bin's picture shows whether it's empty: look again.
@@ -254,7 +289,7 @@ public sealed partial class DesktopWindow
         var placed = new List<DesktopItem>();
         foreach (var item in Sorted(_items, Layout.SortBy))
         {
-            if (!Layout.Positions.TryGetValue(item.Path, out var position)) continue;
+            if (!Layout.Positions.TryGetValue(item.Path, out var position) || position.Unplaced) continue;
             double x = Math.Clamp(position.X, 0, Math.Max(0, (columns - 1) * cellWidth));
             double y = Math.Clamp(position.Y, 0, Math.Max(0, (rows - 1) * cellHeight));
             var cell = ((int)Math.Round(x / cellWidth), Math.Min(rows - 1, (int)Math.Round(y / cellHeight)));
@@ -265,7 +300,11 @@ public sealed partial class DesktopWindow
                 y = cell.Item2 * cellHeight;
             }
             taken.Add(cell);
-            if (position.X != x || position.Y != y) { Layout.Positions[item.Path] = new IconPosition(x, y); changed = true; }
+            if (position.X != x || position.Y != y || (EveryMonitor && position.Monitor != _monitor.Device))
+            {
+                Layout.Positions[item.Path] = PositionHere(x, y, position);
+                changed = true;
+            }
             Place(item, x, y);
             placed.Add(item);
         }
@@ -276,7 +315,7 @@ public sealed partial class DesktopWindow
             var cell = NextFree((0, 0));
             taken.Add(cell);
             double x = cell.Item1 * cellWidth, y = cell.Item2 * cellHeight;
-            Layout.Positions[item.Path] = new IconPosition(x, y);
+            Layout.Positions[item.Path] = PositionHere(x, y, Layout.Positions.GetValueOrDefault(item.Path));
             changed = true;
             Place(item, x, y);
         }
@@ -320,7 +359,9 @@ public sealed partial class DesktopWindow
     private void SortIcons(DesktopSort sort)
     {
         Layout.SortBy = sort;
-        Layout.Positions.Clear(); // every icon gets the next free cell, in the new order
+        // Every icon gets the next free cell in the new order, on the monitor it's on.
+        foreach (var (path, position) in Layout.Positions.ToList())
+            Layout.Positions[path] = position with { X = -1, Y = -1 };
         DesktopLayout.NotifyChanged();
     }
 

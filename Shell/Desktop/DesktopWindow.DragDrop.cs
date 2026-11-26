@@ -122,8 +122,8 @@ public sealed partial class DesktopWindow
             var paths = files.ToList();
             RememberPositions("Move", paths.ToDictionary(p => p, p => Layout.Positions.TryGetValue(p, out var pos) ? pos : null, StringComparer.OrdinalIgnoreCase));
             AssignCellsFrom(spot, paths);
-            DesktopLayout.SaveSoon();
-            Arrange();
+            DesktopLayout.NotifyChanged(); // every desktop: the icons may have come from another monitor
+            Refresh();
             return;
         }
         if (effect == DragDropEffects.Link) { CreateShortcuts(files, folder, target == null ? at : null); return; }
@@ -162,14 +162,15 @@ public sealed partial class DesktopWindow
         var (cellWidth, cellHeight) = Layout.Cell;
         int rows = Math.Max(1, (int)(_iconArea.ActualHeight / cellHeight));
         var placing = paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var taken = Layout.Positions.Where(p => !placing.Contains(p.Key))
+        var known = KnownMonitors();
+        var taken = Layout.Positions.Where(p => !placing.Contains(p.Key) && !p.Value.Unplaced && OnThisMonitor(p.Value, known))
                           .Select(p => ((int)Math.Round(p.Value.X / cellWidth), (int)Math.Round(p.Value.Y / cellHeight))).ToHashSet();
         int index = (int)(Math.Max(0, spot.X) / cellWidth) * rows + Math.Min(rows - 1, (int)(Math.Max(0, spot.Y) / cellHeight));
         foreach (var path in paths)
         {
             while (taken.Contains((index / rows, index % rows))) index++;
             taken.Add((index / rows, index % rows));
-            Layout.Positions[path] = new IconPosition(index / rows * cellWidth, index % rows * cellHeight);
+            Layout.Positions[path] = PositionHere(index / rows * cellWidth, index % rows * cellHeight, Layout.Positions.GetValueOrDefault(path));
         }
     }
 
