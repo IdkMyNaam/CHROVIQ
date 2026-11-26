@@ -300,6 +300,9 @@ public abstract class SettingsForm : Wpf.Ui.Controls.FluentWindow
 
     protected void Hint(string text) => Fields.Children.Add(HintText(text));
 
+    /// <summary>A card with your own control under the label.</summary>
+    protected void AddCard(string label, UIElement control, string? hint = null) => Card(label, control, hint);
+
     /// <summary>Any control of your own on the current section's page.</summary>
     protected void Add(UIElement element) => Fields.Children.Add(element);
 

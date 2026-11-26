@@ -1,0 +1,9 @@
+{
+  "name": "Analog clock",
+  "author": "CHROVIQ",
+  "version": "1.0",
+  "description": "A clock with hands, in the widget's own colors. Uses no data from CHROVIQ and no network.",
+  "width": 200,
+  "height": 200,
+  "background": "#66202020"
+}

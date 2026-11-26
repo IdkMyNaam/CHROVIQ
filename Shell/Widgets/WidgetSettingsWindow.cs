@@ -1,7 +1,7 @@
 namespace WindowsCustomizer;
 
 /// <summary>A widget's settings: what it shows, its size and place, colors and text, and a material. Changes show right away.</summary>
-internal sealed class WidgetSettingsWindow : SettingsForm
+internal sealed partial class WidgetSettingsWindow : SettingsForm
 {
     public WidgetSettingsWindow(DesktopWidget w, Action save, Action tryIt)
         : base($"{w} widget", save, tryIt)
@@ -36,6 +36,9 @@ internal sealed class WidgetSettingsWindow : SettingsForm
             case WidgetType.Notes:
                 Hint("Type right in the note on the desktop; it's saved by itself.");
                 break;
+            case WidgetType.Web:
+                WebFields(w, save);
+                break;
         }
 
         Header("Size and place");
@@ -53,6 +56,7 @@ internal sealed class WidgetSettingsWindow : SettingsForm
         Number("Corner radius", w.CornerRadius, 0, 100, v => w.CornerRadius = v);
 
         MaterialFields(w.Material, name => w.Material = name, () => w.MaterialValues ??= new Dictionary<string, string>(),
-            "Drawn behind the widget. Glass materials show the wallpaper behind it.");
+            "Drawn behind the widget. Glass materials show the wallpaper behind it.",
+            (w.LiveGlass, v => w.LiveGlass = v));
     }
 }

@@ -46,7 +46,10 @@ CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Cod
 - [x] Floating dock style, auto-hide, screen edge per design, a different design per monitor
 - [x] Window grouping by app, live thumbnails, middle-click to close, dock-style pinned apps, tinted icons, icon-color glow, hover fade
 - [x] Taskbar designer with a live preview; designs can be linked to profiles and imported/exported
-- [ ] Later: widgets as plugins
+- [x] Widgets as plugins: web widgets (HTML, CSS, JavaScript) with live data, allowed addresses, chosen files and
+      approved commands only; import and export as .zip; three examples and a guide (Widgets/README.md)
+- [x] Live glass for widgets; previews of minimized windows in the taskbar and Alt+Tab
+- [ ] Web widgets: right-click and dragging inside the page (so far only on the widget's edge)
 
 ## Phase 3: Start menu and search
 - [x] Installed apps from Start Menu shortcuts and the shell Apps folder (including Store apps, with their own icons)
@@ -143,5 +146,4 @@ Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widg
 - [x] A welcome screen right after signing in as the shell, and options for Windows' lock and sign-in screen
 
 ## Open questions
-- Should widgets become a plugin system?
 - Which further settings should a profile control?

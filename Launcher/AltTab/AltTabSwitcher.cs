@@ -335,6 +335,11 @@ internal sealed class AltTabSwitcher : IDisposable
                 DwmQueryThumbnailSourceSize(thumbnail, out var source);
                 _thumbnails.Add((thumbnail, preview, source));
             }
+            else if (minimized && WindowSnapshots.Get(window.Handle) is { } picture)
+            {
+                // How it looked last, a little dimmed (it's a picture, not live).
+                preview.Child = new Image { Source = picture, Stretch = Stretch.Uniform, Opacity = 0.85 };
+            }
             else
             {
                 preview.Child = new TextBlock

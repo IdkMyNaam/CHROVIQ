@@ -157,9 +157,16 @@ internal sealed class ThumbnailPopup : Window
         double height = source.cx > 0
             ? Math.Clamp(ThumbWidth * source.cy / source.cx, 50, MaxThumbHeight)
             : 60;
+        // Minimized: how it looked last (when that's turned on and there's a picture of it).
+        var picture = thumbnail == IntPtr.Zero ? WindowSnapshots.Get(window.Handle) : null;
+        if (picture != null) height = Math.Clamp(ThumbWidth * picture.PixelHeight / Math.Max(1, picture.PixelWidth), 50, MaxThumbHeight);
 
         var placeholder = new Border { Width = ThumbWidth, Height = height, Margin = new Thickness(0, 6, 0, 0) };
-        if (thumbnail == IntPtr.Zero)
+        if (thumbnail == IntPtr.Zero && picture != null)
+        {
+            placeholder.Child = new Image { Source = picture, Stretch = Stretch.Uniform, Opacity = 0.85 };
+        }
+        else if (thumbnail == IntPtr.Zero)
         {
             placeholder.Child = new TextBlock
             {

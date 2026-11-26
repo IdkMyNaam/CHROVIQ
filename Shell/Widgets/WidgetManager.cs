@@ -35,11 +35,37 @@ internal static class WidgetManager
         Open.Clear();
     }
 
+    /// <summary>Web widgets may run approved commands (Widget settings, for all widgets at once).</summary>
+    public static bool CommandsAllowed
+    {
+        get => _settings?.WidgetCommands == true;
+        set
+        {
+            if (_settings == null) return;
+            _settings.WidgetCommands = value;
+            _save?.Invoke();
+            foreach (var window in Open.Where(w => w.Widget.Type == WidgetType.Web).ToList()) Rebuild(window.Widget);
+        }
+    }
+
+    /// <summary>Adds a web widget (a plugin), sized as its widget.json asks, and opens its settings.</summary>
+    public static void Add(WidgetPlugin plugin)
+    {
+        var widget = DesktopWidget.Create(WidgetType.Web);
+        widget.Plugin = plugin.Key;
+        widget.PluginName = plugin.Name;
+        widget.Width = Math.Clamp(plugin.Manifest.Width, 80, 2000);
+        widget.Height = Math.Clamp(plugin.Manifest.Height, 50, 2000);
+        if (!string.IsNullOrWhiteSpace(plugin.Manifest.Background)) widget.Background = plugin.Manifest.Background.Trim();
+        AddWidget(widget);
+    }
+
     /// <summary>Adds a widget of this type near the top left of the main monitor's work area, and opens its settings.</summary>
-    public static void Add(WidgetType type)
+    public static void Add(WidgetType type) => AddWidget(DesktopWidget.Create(type));
+
+    private static void AddWidget(DesktopWidget widget)
     {
         if (_settings == null) return;
-        var widget = DesktopWidget.Create(type);
         var work = SystemParameters.WorkArea;
         int n = _settings.Widgets.Count;
         widget.Left = work.Left + 40 + 30 * (n % 8);

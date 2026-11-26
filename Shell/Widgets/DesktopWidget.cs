@@ -1,6 +1,6 @@
 namespace WindowsCustomizer;
 
-public enum WidgetType { Clock, Stats, Weather, Media, Notes }
+public enum WidgetType { Clock, Stats, Weather, Media, Notes, Web }
 
 /// <summary>
 /// One desktop widget: what it shows, where it is and how it looks. Saved in settings.json (AppSettings.Widgets).
@@ -33,6 +33,8 @@ public sealed class DesktopWidget
     public double FontSize { get; set; } = 14;
     public string? Material { get; set; }
     public Dictionary<string, string>? MaterialValues { get; set; }
+    /// <summary>Live glass: a glass material shows what's really behind the widget (it's then left out of screen capture).</summary>
+    public bool LiveGlass { get; set; }
 
     // ---------- Clock ----------
 
@@ -64,6 +66,19 @@ public sealed class DesktopWidget
 
     public string? Text { get; set; }
 
+    // ---------- Web widgets (plugins) ----------
+
+    /// <summary>Which web widget: "builtin:&lt;folder&gt;" or "user:&lt;folder&gt;" (see WidgetPlugins).</summary>
+    public string? Plugin { get; set; }
+    /// <summary>Its name when it was added (shown if its folder is ever gone).</summary>
+    public string? PluginName { get; set; }
+    /// <summary>The files you chose for it, by the widget's file id.</summary>
+    public Dictionary<string, string>? PluginFiles { get; set; }
+    /// <summary>The fingerprint of the commands you approved (WidgetPlugin.CommandsFingerprint); null = none approved.</summary>
+    public string? ApprovedCommands { get; set; }
+    /// <summary>F12 opens the browser's developer tools for it (for making widgets).</summary>
+    public bool DeveloperTools { get; set; }
+
     public override string ToString() => Type switch
     {
         WidgetType.Clock => "Clock",
@@ -71,6 +86,7 @@ public sealed class DesktopWidget
         WidgetType.Weather => string.IsNullOrWhiteSpace(City) ? "Weather" : $"Weather: {City}",
         WidgetType.Media => "Media",
         WidgetType.Notes => "Notes",
+        WidgetType.Web => string.IsNullOrWhiteSpace(PluginName) ? "Widget" : PluginName,
         _ => Type.ToString(),
     };
 

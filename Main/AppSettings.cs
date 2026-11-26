@@ -111,6 +111,12 @@ public class AppSettings
     /// <summary>Show the desktop widgets.</summary>
     public bool ShowWidgets { get; set; } = true;
 
+    /// <summary>Web widgets may run the commands you approved for them. Off by default: commands can do anything on the PC.</summary>
+    public bool WidgetCommands { get; set; }
+
+    /// <summary>Taskbar and Alt+Tab previews show minimized windows as they last looked (pictures kept only in memory).</summary>
+    public bool MinimizedPreviews { get; set; }
+
     /// <summary>The desktop widgets (clock, stats, weather, media, notes), their places and looks.</summary>
     public List<DesktopWidget> Widgets { get; set; } = new();
 

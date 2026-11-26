@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="ManagedShell" Version="0.0.374" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4370.26" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 
@@ -48,6 +49,8 @@
     <None Remove="Materials\BuiltIn\**" />
     <Resource Include="Assets\CHROVIQ.ico" />
     <None Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The web widgets that come with CHROVIQ (and the guide for making your own). -->
+    <None Include="Widgets\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Materials\BuiltIn\**\*" CopyToOutputDirectory="PreserveNewest" Link="Materials\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body {
+    display: flex; align-items: center; gap: 12px; padding: 12px; box-sizing: border-box;
+    color: var(--chroviq-text, #fff); font-family: var(--chroviq-font, "Segoe UI", sans-serif); user-select: none;
+  }
+  #cover { width: 84px; height: 84px; border-radius: 8px; object-fit: cover; flex: none; background: rgba(255,255,255,0.08); }
+  #info { flex: 1; min-width: 0; }
+  #title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #artist { font-size: 13px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  #controls { display: flex; gap: 6px; margin-top: 10px; }
+  button {
+    border: none; background: rgba(255,255,255,0.08); color: inherit; width: 34px; height: 34px; border-radius: 50%;
+    font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; font-size: 14px; cursor: pointer;
+  }
+  button:hover { background: rgba(255,255,255,0.18); }
+  #play { background: var(--chroviq-accent, #0078d4); }
+  .idle #controls, .idle #cover { opacity: 0.4; }
+</style>
+</head>
+<body class="idle">
+  <img id="cover" alt="">
+  <div id="info">
+    <div id="title">Nothing playing</div>
+    <div id="artist"></div>
+    <div id="controls">
+      <button title="Previous" onclick="chroviq.media.previous()">&#xE892;</button>
+      <button id="play" title="Play or pause" onclick="chroviq.media.playPause()">&#xE768;</button>
+      <button title="Next" onclick="chroviq.media.next()">&#xE893;</button>
+    </div>
+  </div>
+<script>
+  // CHROVIQ sends { type: "media", active, playing, title, artist, cover } whenever something changes.
+  chroviq.on('media', m => {
+    document.body.classList.toggle('idle', !m.active);
+    document.getElementById('title').textContent = m.active ? (m.title || 'Unknown') : 'Nothing playing';
+    document.getElementById('artist').textContent = m.active ? m.artist : '';
+    document.getElementById('play').innerHTML = m.playing ? '&#xE769;' : '&#xE768;';
+    const cover = document.getElementById('cover');
+    if (m.cover) cover.src = m.cover; else cover.removeAttribute('src');
+  });
+</script>
+</body>
+</html>

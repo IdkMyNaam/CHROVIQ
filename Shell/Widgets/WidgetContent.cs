@@ -29,6 +29,7 @@ internal abstract class WidgetContent : IDisposable
         WidgetType.Stats => new StatsContent(widget, foreground, accent),
         WidgetType.Weather => new WeatherContent(widget, foreground, accent, changed),
         WidgetType.Media => new MediaContent(widget, foreground, accent),
+        WidgetType.Web => new WebWidgetContent(widget, foreground, accent),
         _ => new NotesContent(widget, foreground, accent, changed),
     };
 

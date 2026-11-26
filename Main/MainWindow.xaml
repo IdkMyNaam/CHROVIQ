@@ -605,6 +605,17 @@
                                 <ComboBoxItem Content="The bar of the window's monitor" />
                             </ComboBox>
                         </ui:CardControl>
+
+                        <ui:CardControl Style="{StaticResource Card}">
+                            <ui:CardControl.Icon><ui:SymbolIcon Symbol="ImageMultiple24" /></ui:CardControl.Icon>
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Previews of minimized windows" Style="{StaticResource CardTitle}" />
+                                    <TextBlock Text="The taskbar's and Alt+Tab's previews show a minimized window as it last looked. The pictures are kept only in memory, never saved." Style="{StaticResource CardText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="MinimizedPreviewsCheck" Click="MinimizedPreviewsCheck_Click" />
+                        </ui:CardControl>
                     </StackPanel>
                 </ScrollViewer>
 

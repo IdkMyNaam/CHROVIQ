@@ -1,0 +1,9 @@
+{
+  "name": "Now playing",
+  "author": "CHROVIQ",
+  "version": "1.0",
+  "description": "What's playing in any app that tells Windows (Spotify, browsers, players), with its cover and controls.",
+  "width": 340,
+  "height": 110,
+  "data": ["media"]
+}

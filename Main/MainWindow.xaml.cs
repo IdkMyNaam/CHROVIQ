@@ -111,6 +111,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         MaterialClock.FramesPerSecond = _settings.MaterialFps;
         _settings.Menus?.Apply(); // the desktop menus' material
         TaskbarAnimations.Current = _settings.TaskbarAnimations ??= new TaskbarAnimations();
+        MinimizedPreviewsCheck.IsChecked = _settings.MinimizedPreviews;
+        WindowSnapshots.SetEnabled(_settings.MinimizedPreviews);
         ShowTaskbarWhileOpenCheck.IsChecked = _settings.ShowTaskbarWhileOpen;
         LiveGlassCheck.IsChecked = _settings.LiveGlass;
         _loading = true; // setting the edge box raises SelectionChanged; don't treat that as a user change
@@ -995,7 +997,57 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
             });
         }
+        // Web widgets (plugins): the ones that come with CHROVIQ, and your own.
+        var plugins = WidgetPlugins.All();
+        if (plugins.Count > 0) ModernMenu.Separator(menu);
+        foreach (var plugin in plugins)
+            ModernMenu.Item(menu, plugin.Origin == WidgetOrigin.BuiltIn ? "\uE774" : "\uE71D", plugin.Name, () => AddWebWidget(plugin)).Header = plugin.Name;
+        ModernMenu.Separator(menu);
+        ModernMenu.Item(menu, "\uE8B5", "Import a widget (.zip)...", ImportWidget);
+        ModernMenu.Item(menu, "\uE838", "Open the widgets folder", () =>
+        {
+            System.IO.Directory.CreateDirectory(WidgetPlugins.UserFolder);
+            ShellLaunch.OpenFolder(WidgetPlugins.UserFolder);
+        });
+        ModernMenu.Item(menu, "\uE897", "How to make a widget", () =>
+        {
+            try { ShellLaunch.Start("https://github.com/IdkMyNaam/CHROVIQ/blob/main/Widgets/README.md"); } catch (Exception) { /* no browser */ }
+        });
         menu.IsOpen = true;
+    }
+
+    /// <summary>Adds a web widget; one that isn't CHROVIQ's own first says what it wants to use.</summary>
+    private void AddWebWidget(WidgetPlugin plugin)
+    {
+        var wants = new List<string>();
+        if (plugin.NetworkOrigins is { Count: > 0 } network) wants.Add(Loc.T("connect to:") + " " + string.Join(", ", network));
+        if (plugin.Manifest.Files.Count > 0) wants.Add(Loc.T("read files you choose for it"));
+        if (plugin.Manifest.Commands.Count > 0) wants.Add(Loc.T("run commands (only once you approve them)"));
+        if (plugin.Origin != WidgetOrigin.BuiltIn && wants.Count > 0)
+        {
+            string question = string.Format(Loc.T("Add \"{0}\"? It wants to:"), plugin.Name) + "\n\n" +
+                              string.Join("\n", wants.Select(x => "  • " + x)) + "\n\n" + plugin.OriginText;
+            if (MessageBox.Show(this, question, "CHROVIQ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        }
+        WidgetManager.Add(plugin);
+        ShowWidgetsCheck.IsChecked = _settings.ShowWidgets;
+    }
+
+    private void ImportWidget()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = Loc.T("Import a widget"), Filter = "Zip (*.zip)|*.zip" };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var plugin = WidgetPlugins.Import(dialog.FileName);
+            if (MessageBox.Show(this, string.Format(Loc.T("\"{0}\" is imported. Add it to the desktop now?"), plugin.Name), "CHROVIQ",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                AddWebWidget(plugin);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, Loc.T("It couldn't be imported:") + "\n" + ex.Message, "CHROVIQ", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void AutoSwitchCheck_Click(object sender, RoutedEventArgs e)
@@ -1971,6 +2023,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _menuSettings = new MenuSettingsWindow(_settings.Menus ??= new MenuLook(), SaveSettings);
         _menuSettings.Closed += (_, _) => _menuSettings = null;
         _menuSettings.Show();
+    }
+
+    private void MinimizedPreviewsCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.MinimizedPreviews = MinimizedPreviewsCheck.IsChecked == true;
+        WindowSnapshots.SetEnabled(_settings.MinimizedPreviews);
+        SaveSettings();
     }
 
     private WelcomeSettingsWindow? _welcomeSettings;

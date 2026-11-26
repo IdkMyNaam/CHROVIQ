@@ -1,0 +1,9 @@
+{
+  "name": "System monitor",
+  "author": "CHROVIQ",
+  "version": "1.0",
+  "description": "CPU, memory and GPU use as rings, updated every second.",
+  "width": 320,
+  "height": 140,
+  "data": ["stats"]
+}
