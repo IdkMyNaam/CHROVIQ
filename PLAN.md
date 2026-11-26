@@ -138,7 +138,9 @@ Every surface (taskbar, start menu, search, Alt+Tab, Quick Settings, menus, widg
 - [x] Translations: Dutch, German, French, Spanish, Chinese, Japanese and Korean
 - [x] Laptop screen brightness in Quick Settings
 - [ ] A notification center (requires MSIX packaging)
-- [x] Problem reports sent to the developer, a Help and support page, and a support button (Ko-fi)
+- [x] Problem reports sent to the developer through a relay (the webhook is never in the app), a Help and support page,
+      and a support button (Ko-fi)
+- [x] A welcome screen right after signing in as the shell, and options for Windows' lock and sign-in screen
 
 ## Open questions
 - Should widgets become a plugin system?
