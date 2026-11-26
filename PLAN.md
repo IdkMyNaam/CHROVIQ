@@ -73,8 +73,12 @@ CHROVIQ is developed with the help of AI (Anthropic's Claude, through Claude Cod
 - [x] Measured first: about 1.3-2 s to the first window, about 0.5 % of one core when idle, about 100 MB of private memory
 - [x] Fewer timers and less polling; event-based wherever Windows allows it
 - [x] Release build with ReadyToRun
-- [ ] Load features only when used, and investigate memory use (icons, search index, tray)
-- [ ] Check trimming and package size
+- [x] Startup measured step by step (logged in trace.log) and halved, from about 3.4 s to 1.75 s: four places that waited
+      on Explorer or on Windows (hiding the Windows taskbar, the watchdog helper, the keyboard hooks, repeated bar
+      position updates) no longer hold up the start
+- [x] Memory investigated: the app's own data is about 12.5 MB with no leaks; the rest (about 110 MB in total) is .NET,
+      WPF and the graphics driver. The app list, search index and icons already load only when first used
+- [x] Package size: about 59 MB with .NET included. Trimming isn't supported for WPF apps; ReadyToRun adds size but keeps startup fast
 
 ### 5b. Desktop on par with Windows
 - [x] Desktop preview: the shell desktop in a normal window, to try everything without switching shells

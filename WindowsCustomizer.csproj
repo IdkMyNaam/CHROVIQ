@@ -16,7 +16,7 @@
          so the manifest is the right place. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <!-- The version people see (About page, installer, update check). Raise it for every release. -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <!-- The app's icon (exe, windows, taskbar buttons, Apps & features); also a resource for the tray. -->
     <ApplicationIcon>Assets\CHROVIQ.ico</ApplicationIcon>
     <Product>CHROVIQ</Product>
